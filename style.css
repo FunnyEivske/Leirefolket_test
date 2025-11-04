@@ -1,0 +1,12 @@
+/* Importerer de valgte fontene */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Playfair+Display:wght@700&display=swap');
+
+/* Setter Inter som standard brødtekst-font */
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+/* Egendefinert klasse for 'Playfair Display' */
+.font-display {
+    font-family: 'Playfair Display', serif;
+}

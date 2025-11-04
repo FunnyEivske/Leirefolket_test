@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="no" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Galleri - Leirefolket Keramikkverksted</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+    <!-- Felles stilark -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-stone-50 text-stone-800">
+
+    <!-- Header & Navigasjon -->
+    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
+        <nav class="container mx-auto px-6 py-3">
+            <div class="flex items-center justify-between">
+                <a href="index.html#hjem" class="flex items-center space-x-3">
+                    <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/LogoPNG.png" alt="Leirefolket Logo" class="h-12 w-12 rounded-full object-cover">
+                    <span class="text-xl font-semibold text-stone-700">Leirefolket</span>
+                </a>
+                <!-- Desktop-meny -->
+                <div class="hidden md:flex items-center space-x-6">
+                    <a href="om-oss.html" class="text-stone-600 hover:text-amber-800 transition-colors">Om oss</a>
+                    <a href="kurs.html" class="text-stone-600 hover:text-amber-800 transition-colors">Kurs</a>
+                    <a href="galleri.html" class="text-amber-700 font-semibold hover:text-amber-800 transition-colors">Galleri</a>
+                    <a href="kontakt.html" class="text-stone-600 hover:text-amber-800 transition-colors">Kontakt</a>
+                    <!-- Medlemsside-lenke (skjult som standard) -->
+                    <a id="member-link" href="medlem.html" class="hidden text-amber-700 font-semibold hover:text-amber-800 transition-colors">Medlemsside</a>
+                    
+                    <!-- Innloggingsknapper -->
+                    <a id="login-link" href="login.html" class="bg-amber-700 hover:bg-amber-800 text-white font-bold py-2 px-5 rounded-full text-sm transition-colors">
+                        Logg inn
+                    </a>
+                    <button id="logout-button" class="hidden bg-stone-500 hover:bg-stone-600 text-white font-bold py-2 px-5 rounded-full text-sm transition-colors">
+                        Logg ut
+                    </button>
+                </div>
+                <!-- Mobilmeny-knapp -->
+                <div class="md:hidden">
+                    <button id="mobile-menu-button" class="text-stone-700 focus:outline-none">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                    </button>
+                </div>
+            </div>
+            <!-- Mobilmeny -->
+            <div id="mobile-menu" class="hidden md:hidden mt-4 space-y-2">
+                <a href="om-oss.html" class="block py-2 text-stone-600 hover:text-amber-800">Om oss</a>
+                <a href="kurs.html" class="block py-2 text-stone-600 hover:text-amber-800">Kurs</a>
+                <a href="galleri.html" class="block py-2 text-amber-700 font-semibold hover:text-amber-800">Galleri</a>
+                <a href="kontakt.html" class="block py-2 text-stone-600 hover:text-amber-800">Kontakt</a>
+                <!-- Mobilmeny-lenker for medlem og innlogging -->
+                <a id="mobile-member-link" href="medlem.html" class="hidden block py-2 text-amber-700 font-semibold hover:text-amber-800">Medlemsside</a>
+                <a id="mobile-login-link" href="login.html" class="w-full text-left block py-2 text-stone-600 hover:text-amber-800">
+                    Logg inn
+                </a>
+                <button id="mobile-logout-button" class="hidden w-full text-left block py-2 text-stone-600 hover:text-amber-800">
+                    Logg ut
+                </button>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <!-- Galleri -->
+        <section id="galleri" class="py-20 bg-white">
+            <div class="container mx-auto px-6">
+                <div class="text-center mb-12">
+                    <h1 class="font-display text-5xl font-bold text-stone-800 mb-4">Galleri</h1>
+                    <p class="max-w-2xl mx-auto text-lg text-stone-600">Se et utvalg av arbeid laget av våre medlemmer og kursdeltakere.</p>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                    <div class="group relative overflow-hidden rounded-lg">
+                        <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_285524412_1392032511223904_334964565194714511_n.jpg" alt="Tre håndlagde kopper i gresset" class="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-300">
+                    </div>
+                    <div class="group relative overflow-hidden rounded-lg">
+                        <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_237550029_985634491998704_2289782621579533345_n.jpg" alt="Sosial samling utendørs" class="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-300">
+                    </div>
+                    <div class="group relative overflow-hidden rounded-lg">
+                        <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_220734257_240046884432034_8044610736397101717_n.jpg" alt="Ulike keramikkprosjekter på et bord" class="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-300">
+                    </div>
+                    <div class="group relative overflow-hidden rounded-lg">
+                        <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_272761735_502242294657127_7500690158820959309_n.jpg" alt="Håndlaget kopp med te i sollys" class="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-300">
+                    </div>
+                     <div class="group relative overflow-hidden rounded-lg">
+                        <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_402373843_207530515718940_5720018105310533277_n.jpg" alt="Blågrå keramikkskåler" class="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-300">
+                    </div>
+                     <div class="group relative overflow-hidden rounded-lg">
+                        <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_262908339_116340794204309_5975237680806499548_n.jpg" alt="Blå keramikkskål og kopp" class="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-300">
+                    </div>
+                     <div class="group relative overflow-hidden rounded-lg">
+                        <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_243993330_1688809814796099_4483165310636397652_n.jpg" alt="Sosial samling rundt en pizzaovn" class="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-300">
+                    </div>
+                     <div class="group relative overflow-hidden rounded-lg">
+                        <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_244211512_2590542797757596_1183204420076510305_n.jpg" alt="Kursdeltakere som sitter ute i solen" class="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-300">
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-stone-800 text-stone-300 py-10">
+        <div class="container mx-auto px-6 text-center">
+            <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/LogoPNGwhite.png" alt="Leirefolket Logo" class="h-16 w-16 mx-auto mb-4 rounded-full object-cover">
+            <p class="mb-4 font-semibold text-lg">Leirefolket Keramikkverksted</p>
+            <p class="mb-4">Nye Teglverks vei 23, 4614 Kristiansand</p>
+            <div class="flex justify-center space-x-6 mb-4">
+                <!-- Sosiale medier-ikoner -->
+                <a href="https://www.instagram.com/leirefolket_keramikkverksted/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" class="hover:text-white transition-colors">
+                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                        <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                    </svg>
+                </a>
+                <a href="https://www.facebook.com/leirefolketkeramikkverksted/?locale=nb_NO" target="_blank" rel="noopener noreferrer" aria-label="Facebook" class="hover:text-white transition-colors">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clip-rule="evenodd" />
+                    </svg>
+                </a>
+            </div>
+            <p class="text-sm text-stone-400">&copy; 2025 Leirefolket Keramikkverksted. Alle rettigheter forbeholdt.</p>
+        </div>
+    </footer>
+
+    <!-- Firebase og hoved-script -->
+    <script type="module" src="firebase.js"></script>
+    <script type="module" src="script.js"></script>
+</body>
+</html>
