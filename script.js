@@ -1,5 +1,5 @@
 // Importer Firebase-ting og authReady-promiset
-import { app, auth, db, authReady } from './firebase.js'; // <-- FJERNET appId-import
+import { app, auth, db, appId, authReady } from './firebase.js';
 import { 
     signInWithEmailAndPassword, 
     signOut, 
@@ -7,12 +7,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { 
     doc, 
-    getDoc,
-    setDoc // <-- NY IMPORT: For å kunne skrive til databasen
+    getDoc 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-// --- FIKS: Definer appId med riktig global variabel ---
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // --- GLOBAL STATE ---
 /**
@@ -24,16 +20,19 @@ export let authState = {
     role: null // 'member', 'admin', eller null
 };
 
-// --- UI-ELEMENTER (Oppdatert til å bruke <a>-lenker) ---
+// --- UI-ELEMENTER ---
+// Desktop-nav
 const loginLink = document.getElementById('login-link');
 const logoutButton = document.getElementById('logout-button');
 const memberLink = document.getElementById('member-link');
+// Mobil-nav
 const mobileLoginLink = document.getElementById('mobile-login-link');
 const mobileLogoutButton = document.getElementById('mobile-logout-button');
 const mobileMemberLink = document.getElementById('mobile-member-link');
+// Mobilmeny-kontroller
 const mobileMenuButton = document.getElementById('mobile-menu-button');
 const mobileMenu = document.getElementById('mobile-menu');
-// Fjernet modal-elementer: loginModal, closeModalButton, loginForm, loginError
+
 
 // --- KJERNEFUNKSJONER ---
 
@@ -56,9 +55,8 @@ async function fetchUserRole(uid) {
             const data = docSnap.data();
             return data.role || null; // Returnerer rollen, f.eks. 'admin'
         } else {
-            // Endret: Returnerer null, men logger ikke lenger en advarsel
-            // console.warn(`User role document not found for UID: ${uid} at path: ${roleDocPath}`);
-            return null; // Fant ikke noe rolle-dokument (dette er OK nå)
+            console.warn(`User role document not found for UID: ${uid} at path: ${roleDocPath}`);
+            return null; // Fant ikke noe rolle-dokument
         }
     } catch (error) {
         console.error("Error fetching user role:", error);
@@ -68,6 +66,7 @@ async function fetchUserRole(uid) {
 
 /**
  * Oppdaterer UI basert på innloggingsstatus og rolle.
+ * Bruker 'hidden' klassen definert i style.css
  * @param {object|null} user - Firebase user-objektet.
  * @param {string|null} role - Brukerens rolle.
  */
@@ -131,7 +130,7 @@ function protectLoginPage() {
  * Håndterer innlogging via skjemaet (kun på login.html).
  */
 async function handleLogin(e) {
-    e.preventDefault(); // <-- Denne forhindrer at siden laster på nytt med '?'
+    e.preventDefault();
     // Hent elementer her, siden de kun finnes på login.html
     const loginError = document.getElementById('login-error');
     const email = document.getElementById('login-email').value;
@@ -147,7 +146,7 @@ async function handleLogin(e) {
         // (rolle-sjekk og redirect via protectLoginPage)
     } catch (error) {
         console.error("Login failed:", error.code);
-        if (error.code === 'auth/invalid-credential') {
+        if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
             loginError.textContent = 'Feil e-post eller passord.';
         } else {
             loginError.textContent = 'En feil oppstod. Prøv igjen.';
@@ -167,7 +166,8 @@ async function handleLogout() {
         if (window.location.pathname.endsWith('/medlem.html')) {
             window.location.href = 'index.html';
         }
-    } catch (error) {
+    } catch (error)
+        {
         console.error("Logout failed:", error);
     }
 }
@@ -175,36 +175,28 @@ async function handleLogout() {
 // --- EVENT LISTENERS ---
 
 // Mobilmeny
-if (mobileMenuButton) {
+if (mobileMenuButton && mobileMenu) {
     mobileMenuButton.addEventListener('click', () => {
-        if (mobileMenu) mobileMenu.classList.toggle('hidden');
+        const isHidden = mobileMenu.classList.toggle('hidden');
+        mobileMenuButton.setAttribute('aria-expanded', !isHidden);
     });
 }
 
-// Lukk mobilmeny ved klikk på lenke (for ankerskroll)
+// Lukk mobilmeny ved klikk på lenke
 if (mobileMenu) {
-    mobileMenu.querySelectorAll('a[href^="#"]').forEach(link => {
+    mobileMenu.querySelectorAll('a').forEach(link => {
         link.addEventListener('click', () => {
-            if (mobileMenu) mobileMenu.classList.add('hidden');
+            mobileMenu.classList.add('hidden');
+            mobileMenuButton.setAttribute('aria-expanded', 'false');
         });
     });
 }
+
 
 // Skjema- og logg-ut-knapper
 [logoutButton, mobileLogoutButton].forEach(btn => {
     if (btn) btn.addEventListener('click', handleLogout);
 });
-
-// --- FIKS: FLYTTET DENNE UT AV AUTHREADY ---
-// Koble til innloggingsskjemaet umiddelbart hvis vi er på login.html
-// Dette forhindrer en "race condition" der brukeren sender skjemaet
-// FØR authReady er fullført.
-if (window.location.pathname.endsWith('/login.html')) {
-    const loginForm = document.getElementById('login-form');
-    if (loginForm) {
-        loginForm.addEventListener('submit', handleLogin);
-    }
-}
 
 
 // --- HOVED-AUTENTISERINGSLYTTER ---
@@ -219,32 +211,16 @@ authReady.then(async (initialUser) => {
     console.log("Auth ready. Initial user:", initialUser ? initialUser.uid : null);
     
     if (initialUser) {
-        let role = await fetchUserRole(initialUser.uid);
+        const role = await fetchUserRole(initialUser.uid);
         if (role) {
-            // Brukeren har en rolle, fortsett som normalt
             authState.user = initialUser;
             authState.role = role;
         } else {
-            // *** NY LOGIKK ***
-            // Brukeren finnes ikke, så vi oppretter 'member'-rolle
-            console.log(`User ${initialUser.uid} not found in roles. Creating 'member' role.`);
-            try {
-                const newRoleRef = doc(db, `/artifacts/${appId}/public/data/userRoles/${initialUser.uid}`);
-                await setDoc(newRoleRef, { role: 'member' });
-                
-                // Nå som rollen er opprettet, fortsett som 'member'
-                authState.user = initialUser;
-                authState.role = 'member';
-            } catch (error) {
-                console.error("Error creating default member role:", error);
-                // Logg ut hvis vi feilet å opprette rollen
-                authState.user = null;
-                authState.role = null;
-                await handleLogout(); // Kaller handleLogout for å rydde opp
-            }
+            // Gyldig bruker, men mangler rolle. Logg ut.
+            console.warn("User has auth but no role. Forcing logout.");
+            await handleLogout(); // Dette vil tømme authState
         }
     } else {
-        // Ingen bruker logget inn
         authState.user = null;
         authState.role = null;
     }
@@ -254,34 +230,32 @@ authReady.then(async (initialUser) => {
     protectMemberPage();
     protectLoginPage();
 
+    // --- SIDE-SPESIFIKK EVENT LISTENER (LOGIN-SKJEMA) ---
+    // Koble kun til innloggingsskjemaet hvis vi er på login.html
+    if (window.location.pathname.endsWith('/login.html')) {
+        const loginForm = document.getElementById('login-form');
+        if (loginForm) {
+            loginForm.addEventListener('submit', handleLogin);
+        }
+    }
+
     // Start den permanente lytteren for ENDRINGER
     onAuthStateChanged(auth, async (user) => {
         console.log("Auth state changed. New user:", user ? user.uid : null);
         
         if (user) {
             // Bruker logget nettopp inn (eller er fortsatt logget inn)
-            let role = await fetchUserRole(user.uid);
-            if (role) {
-                // Normal innlogging, bruker har allerede en rolle
-                authState.user = user;
-                authState.role = role;
-            } else {
-                // *** NY LOGIKK ***
-                // Brukeren finnes ikke (førstegangs innlogging), opprett 'member'-rolle
-                console.log(`User ${user.uid} not found in roles. Creating 'member' role.`);
-                try {
-                    const newRoleRef = doc(db, `/artifacts/${appId}/public/data/userRoles/${user.uid}`);
-                    await setDoc(newRoleRef, { role: 'member' });
-                    
-                    // Fortsett som 'member'
+            // Unngå å hente rolle på nytt hvis vi allerede har den
+            if (!authState.user || authState.user.uid !== user.uid) {
+                const role = await fetchUserRole(user.uid);
+                if (role) {
+                    // Normal innlogging
                     authState.user = user;
-                    authState.role = 'member';
-                } catch (error) {
-                    console.error("Error creating default member role:", error);
-                    // Logg ut hvis vi feilet å opprette rollen
-                    authState.user = null;
-                    authState.role = null;
-                    await handleLogout(); // Kaller handleLogout for å rydde opp
+                    authState.role = role;
+                } else {
+                    // Bruker logget inn, men har ingen rolle. Logg ut.
+                    console.warn("User signed in but has no role. Forcing logout.");
+                    await handleLogout(); // Dette vil tømme authState og kalle onAuthStateChanged på nytt
                 }
             }
         } else {

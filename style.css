@@ -1,29 +1,660 @@
-/* Importerer de valgte fontene */
-@import url('https_fonts.googleapis.com_css2_family_Inter_wght_400_500_700_family_Playfair+Display_wght_700_display_swap.css');
+/* --- Importer Fonter --- */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Playfair+Display:wght@700&display=swap');
 
-/* Setter Inter som standard brødtekst-font */
-body {
-    font-family: 'Inter', sans-serif;
-}
-
-/* Egendefinert klasse for 'Playfair Display' */
-.font-display {
-    font-family: 'Playfair Display', serif;
-}
-
-/* --- FIKS FOR FOOTER ---
-  Dette tvinger footeren til bunnen på sider med lite innhold.
+/*
+==========================================
+  CSS Variabler (Roter)
+==========================================
 */
+:root {
+  /* Fonter */
+  --font-body: 'Inter', sans-serif;
+  --font-display: 'Playfair Display', serif;
+
+  /* Farger */
+  --color-primary: #b45309;        /* amber-700 */
+  --color-primary-dark: #92400e;   /* amber-800 */
+  --color-primary-darker: #78350f; /* amber-900 */
+  
+  --color-secondary: #3f3f46;      /* stone-700 */
+  --color-secondary-dark: #292524; /* stone-800 */
+  --color-secondary-light: #57534e; /* stone-600 */
+
+  --color-text-base: #1c1917;      /* stone-900 */
+  --color-text-muted: #57534e;     /* stone-600 */
+  --color-text-light: #fafaf9;     /* stone-50 */
+  --color-text-footer: #d6d3d1;    /* stone-300 */
+  --color-text-footer-muted: #a8a29e; /* stone-400 */
+
+  --color-bg-light: #fafaf9;      /* stone-50 */
+  --color-bg-medium: #f5f5f4;     /* stone-100 */
+  --color-bg-dark: #292524;       /* stone-800 */
+  --color-bg-white: #ffffff;
+
+  --color-border: #d6d3d1;        /* stone-300 */
+  --color-error: #dc2626;         /* red-600 */
+
+  /* Annet */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+  --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+  --border-radius-sm: 0.375rem; /* 6px */
+  --border-radius-md: 0.5rem;  /* 8px */
+  --border-radius-lg: 0.75rem; /* 12px */
+  --border-radius-full: 9999px;
+
+  --transition-colors: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+  --transition-transform: transform 0.2s ease;
+}
+
+/*
+==========================================
+  Nullstilling (Reset) og Basis
+==========================================
+*/
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
 html {
-    height: 100%; /* Sørger for at HTML-elementet fyller hele høyden */
+  scroll-behavior: smooth;
+  font-size: 16px;
 }
 
 body {
-    min-height: 100vh; /* Sørger for at body er MINST 100% av skjermhøyden */
-    display: flex; /* Aktiverer flexbox */
-    flex-direction: column; /* Setter retningen til vertikal (stable innhold) */
+  font-family: var(--font-body);
+  color: var(--color-text-base);
+  background-color: var(--color-bg-light);
+  line-height: 1.6;
 }
 
-main {
-    flex-grow: 1; /* Forteller <main>-elementet at det skal vokse og ta all tilgjengelig plass */
+img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+a {
+  color: var(--color-primary);
+  text-decoration: none;
+  transition: var(--transition-colors);
+}
+
+a:hover {
+  color: var(--color-primary-dark);
+}
+
+ul, ol {
+  list-style-position: inside;
+}
+
+/*
+==========================================
+  Hjelpeklasser (Utility Classes)
+==========================================
+*/
+.container {
+  width: 100%;
+  /* max-width: 1100px;  <-- FJERNET DENNE */
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 1.5rem;  /* 24px */
+  padding-right: 1.5rem; /* 24px */
+}
+
+.section {
+  padding-top: 5rem;    /* 80px */
+  padding-bottom: 5rem; /* 80px */
+}
+
+.section-bg-medium {
+  background-color: var(--color-bg-medium);
+}
+
+.section-bg-white {
+  background-color: var(--color-bg-white);
+}
+
+.text-center {
+  text-align: center;
+}
+
+.text-left {
+  text-align: left;
+}
+
+/* Skjuler elementer */
+.hidden {
+  display: none !important;
+}
+
+/*
+==========================================
+  Typografi
+==========================================
+*/
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  color: var(--color-text-base);
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+h1 {
+  font-size: 3rem;    /* 48px */
+  margin-bottom: 1rem;
+}
+
+h2 {
+  font-size: 2.25rem; /* 36px */
+  margin-bottom: 1.5rem;
+}
+
+h3 {
+  font-size: 1.5rem;  /* 24px */
+}
+
+p {
+  margin-bottom: 1rem;
+  font-size: 1rem;
+  color: var(--color-text-muted);
+}
+
+/* Større avsnitt-tekst */
+.text-lg {
+  font-size: 1.125rem; /* 18px */
+  line-height: 1.7;
+}
+
+/*
+==========================================
+  Knapper
+==========================================
+*/
+.button {
+  display: inline-block;
+  font-family: var(--font-body);
+  font-weight: 700;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: var(--border-radius-full);
+  cursor: pointer;
+  transition: var(--transition-colors), var(--transition-transform);
+  text-align: center;
+  font-size: 0.875rem; /* 14px */
+}
+
+.button:hover {
+  transform: scale(1.05);
+}
+
+/* Primær knapp (Oransje) */
+.button-primary {
+  background-color: var(--color-primary);
+  color: var(--color-text-light);
+}
+
+.button-primary:hover {
+  background-color: var(--color-primary-dark);
+  color: var(--color-text-light);
+}
+
+/* Sekundær knapp (Mørk grå) */
+.button-secondary {
+  background-color: var(--color-secondary);
+  color: var(--color-text-light);
+}
+
+.button-secondary:hover {
+  background-color: var(--color-secondary-dark);
+  color: var(--color-text-light);
+}
+
+/* Større knapp */
+.button-lg {
+  padding: 0.75rem 2rem;
+  font-size: 1.125rem; /* 18px */
+}
+
+/* Logg ut-knapp (spesial) */
+#logout-button, #mobile-logout-button {
+  background-color: #78716c; /* stone-500 */
+}
+#logout-button:hover, #mobile-logout-button:hover {
+  background-color: #57534e; /* stone-600 */
+}
+
+/*
+==========================================
+  Skjema (Forms)
+==========================================
+*/
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+.form-label {
+  display: block;
+  font-weight: 500;
+  color: var(--color-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius-md);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  transition: var(--transition-colors);
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(180, 83, 9, 0.2); /* Ring-effekt */
+}
+
+.form-textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.form-error {
+  color: var(--color-error);
+  font-size: 0.875rem;
+  text-align: center;
+  margin-top: 1rem;
+}
+
+/*
+==========================================
+  Header & Navigasjon
+==========================================
+*/
+.main-header {
+  background-color: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(10px);
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: var(--shadow-sm);
+}
+
+.main-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+.logo-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem; /* 12px */
+  text-decoration: none;
+}
+
+.logo-img {
+  height: 3rem; /* 48px */
+  width: 3rem;  /* 48px */
+  border-radius: var(--border-radius-full);
+  object-fit: cover;
+}
+
+.logo-text {
+  font-size: 1.25rem; /* 20px */
+  font-weight: 600;
+  color: var(--color-secondary);
+}
+
+/* Desktop-meny */
+.nav-menu-desktop {
+  display: none; /* Skjult på mobil */
+  align-items: center;
+  gap: 1.5rem; /* 24px */
+}
+
+.nav-link {
+  color: var(--color-secondary-light);
+  transition: var(--transition-colors);
+  font-weight: 500;
+}
+
+.nav-link:hover {
+  color: var(--color-primary-dark);
+}
+
+/* Aktiv lenke (og medlemslenke) */
+.nav-link-active {
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* Mobilmeny-knapp */
+.mobile-menu-button {
+  display: block; /* Vises på mobil */
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--color-secondary);
+}
+.mobile-menu-icon {
+  width: 1.5rem; /* 24px */
+  height: 1.5rem; /* 24px */
+}
+
+/* Mobilmeny (skjult som standard) */
+.nav-menu-mobile {
+  display: none; /* Starter skjult */
+  padding-top: 1rem;
+}
+
+.nav-menu-mobile .nav-link,
+.nav-menu-mobile .nav-link-active,
+.nav-menu-mobile .button {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 0;
+  text-align: left;
+}
+
+.nav-menu-mobile .button {
+  margin-top: 0.5rem;
+  padding-left: 0;
+}
+
+/*
+==========================================
+  Footer
+==========================================
+*/
+.main-footer {
+  background-color: var(--color-bg-dark);
+  color: var(--color-text-footer);
+  padding-top: 2.5rem;
+  padding-bottom: 2.5rem;
+  text-align: center;
+}
+
+.footer-logo {
+  height: 4rem; /* 64px */
+  width: 4rem;  /* 64px */
+  margin-left: auto;
+  margin-right: auto;
+  margin-bottom: 1rem;
+  border-radius: var(--border-radius-full);
+  object-fit: cover;
+}
+
+.footer-title {
+  font-size: 1.125rem; /* 18px */
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--color-text-light);
+}
+
+.footer-address {
+  margin-bottom: 1rem;
+}
+
+.social-links {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem; /* 24px */
+  margin-bottom: 1rem;
+}
+
+.social-link {
+  color: var(--color-text-footer);
+}
+
+.social-link:hover {
+  color: var(--color-text-light);
+}
+
+.social-icon {
+  width: 1.5rem; /* 24px */
+  height: 1.5rem; /* 24px */
+}
+
+.footer-copyright {
+  font-size: 0.875rem; /* 14px */
+  color: var(--color-text-footer-muted);
+}
+
+/*
+==========================================
+  Spesifikke Sider/Seksjoner
+==========================================
+*/
+
+/* --- Hero (index.html) --- */
+.hero-section {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-size: cover;
+  background-position: center;
+  text-align: center;
+  color: var(--color-text-light);
+  padding: 2rem;
+}
+
+.hero-overlay {
+  position: absolute;
+  inset: 0; /* top, right, bottom, left = 0 */
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.hero-content {
+  position: relative; /* Over overlayen */
+  max-width: 800px; /* Økt fra 600px til 800px */
+  /* Sentrerer innholdet i hero selv om container er full bredde */
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* NY REGEL: Sikrer at tekst i hero alltid er lys */
+.hero-content h1,
+.hero-content p {
+  color: var(--color-text-light);
+}
+
+
+/* --- Om Oss Teaser (index.html) & Om Oss (om-oss.html) --- */
+.about-section .grid-container,
+.om-oss-page .grid-container {
+  display: grid;
+  gap: 3rem;
+  align-items: center;
+}
+.about-section .grid-image,
+.om-oss-page .grid-image {
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-xl);
+  width: 100%;
+}
+.about-section .grid-text,
+.om-oss-page .grid-text {
+  text-align: left;
+}
+.about-section .grid-text h2,
+.om-oss-page .grid-text h2 {
+  margin-bottom: 1.5rem;
+}
+
+/* --- Kurs Teaser (index.html) --- */
+.kurs-grid {
+  display: grid;
+  gap: 2rem;
+}
+
+.kurs-card {
+  background-color: var(--color-bg-white);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-lg);
+  overflow: hidden;
+  transition: var(--transition-transform);
+}
+.kurs-card:hover {
+  transform: translateY(-8px);
+}
+.kurs-card-image {
+  width: 100%;
+  height: 12rem; /* 192px */
+  object-fit: cover;
+}
+.kurs-card-content {
+  padding: 1.5rem;
+}
+.kurs-card-content h3 {
+  color: var(--color-primary-darker);
+}
+
+/* --- Galleri Teaser (index.html) & Galleri (galleri.html) --- */
+.gallery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+}
+
+.gallery-item {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--border-radius-lg);
+}
+
+.gallery-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+.gallery-item:hover .gallery-image {
+  transform: scale(1.1);
+}
+
+/* --- Kontakt (kontakt.html) --- */
+.form-container {
+  max-width: 600px;
+  margin-left: auto;
+  margin-right: auto;
+  background-color: var(--color-bg-white);
+  padding: 2rem;
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-md);
+}
+
+/* --- Logg inn (login.html) --- */
+.login-page-main {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 80vh; /* Mindre enn 100vh for å se header */
+  padding: 4rem 0;
+}
+.login-form-container {
+  background-color: var(--color-bg-white);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-xl);
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 400px;
+}
+.login-form-container .button {
+  width: 100%;
+}
+
+/* --- Medlemsside (medlem.html) --- */
+.medlem-container {
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+#new-post-container {
+  background-color: var(--color-bg-white);
+  padding: 1.5rem;
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-md);
+  margin-bottom: 2rem;
+}
+#new-post-container h2 {
+  color: var(--color-primary-darker);
+}
+#new-post-container .button {
+  width: 100%;
+}
+
+.feed-item {
+  background-color: var(--color-bg-white);
+  padding: 1.5rem;
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-md);
+  margin-bottom: 1.5rem;
+}
+.feed-item h3 {
+  color: var(--color-primary-darker);
+  margin-bottom: 0.5rem;
+}
+.feed-item-meta {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  margin-bottom: 1rem;
+}
+.feed-item-content {
+  color: var(--color-secondary);
+}
+.feed-item-content p {
+  color: var(--color-secondary);
+}
+
+/*
+==========================================
+  Responsive Design (Media Queries)
+==========================================
+*/
+
+/* --- Tablet (og større) --- */
+@media (min-width: 768px) {
+  /* Skjul mobilmeny, vis desktop-meny */
+  .mobile-menu-button {
+    display: none;
+  }
+  .nav-menu-desktop {
+    display: flex;
+  }
+  .nav-menu-mobile {
+    display: none !important; /* Alltid skjult på desktop */
+  }
+
+  /* Grid-systemer */
+  .about-section .grid-container,
+  .om-oss-page .grid-container {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .kurs-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  
+  .gallery-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+  
+  .form-container {
+    padding: 2.5rem;
+  }
 }

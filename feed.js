@@ -1,5 +1,5 @@
 // Importer nødvendige funksjoner
-import { db, authReady } from './firebase.js'; // <-- FJERNET appId-import
+import { db, appId, authReady } from './firebase.js';
 import { authState } from './script.js'; // Importer den delte authState
 import { 
     collection, 
@@ -9,9 +9,6 @@ import {
     query,
     orderBy // Importer orderBy
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-// --- FIKS: Definer appId med riktig global variabel ---
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // --- UI-ELEMENTER ---
 const newPostContainer = document.getElementById('new-post-container');
@@ -30,6 +27,8 @@ const feedCollectionPath = `/artifacts/${appId}/public/data/feed`;
  * Viser eller skjuler admin-funksjoner (f.eks. "Nytt innlegg"-skjema).
  */
 function toggleAdminFeatures() {
+    if (!newPostContainer) return; // Ikke på riktig side
+    
     if (authState.role === 'admin') {
         newPostContainer.classList.remove('hidden');
     } else {
@@ -64,28 +63,30 @@ function setupFeedListener() {
 
     onSnapshot(q, (snapshot) => {
         if (feedLoading) feedLoading.classList.add('hidden');
+        if (!feedContainer) return; // Avbryt hvis containeren ikke finnes
+        
         feedContainer.innerHTML = ''; // Tøm containeren
 
         if (snapshot.empty) {
-            feedContainer.innerHTML = '<p class="text-stone-600 text-center">Ingen innlegg ennå.</p>';
+            feedContainer.innerHTML = '<p class="text-lg text-center">Ingen innlegg ennå.</p>';
             return;
         }
 
         snapshot.forEach(doc => {
             const post = doc.data();
             const postElement = document.createElement('article');
-            postElement.className = 'bg-white p-6 rounded-lg shadow-md animate-fade-in';
+            postElement.className = 'feed-item';
             
             // Gjør om \n til <br> for HTML-visning
             const contentHtml = post.content.replace(/\n/g, '<br>');
 
             postElement.innerHTML = `
-                <h3 class="text-2xl font-bold text-amber-900 mb-2">${post.title}</h3>
-                <p class="text-sm text-stone-500 mb-4">
-                    Publisert av <span class="font-semibold">${post.authorName || 'Admin'}</span>
+                <h3>${post.title}</h3>
+                <p class="feed-item-meta">
+                    Publisert av <span style="font-weight: 500;">${post.authorName || 'Admin'}</span>
                     den ${formatTimestamp(post.createdAt)}
                 </p>
-                <div class="text-stone-700 space-y-4">${contentHtml}</div>
+                <div class="feed-item-content">${contentHtml}</div>
             `;
             feedContainer.appendChild(postElement);
         });
@@ -93,7 +94,9 @@ function setupFeedListener() {
     }, (error) => {
         console.error("Error fetching feed:", error);
         if (feedLoading) feedLoading.classList.add('hidden');
-        feedContainer.innerHTML = '<p class="text-red-600 text-center">Kunne ikke laste feeden. Sjekk konsollen for feil.</p>';
+        if (feedContainer) {
+            feedContainer.innerHTML = '<p class="form-error">Kunne ikke laste feeden. Sjekk konsollen for feil.</p>';
+        }
     });
 }
 
@@ -165,7 +168,9 @@ if (document.getElementById('feed-container')) {
 
     }).catch(error => {
         console.error("Feed.js: Error waiting for authReady:", error);
-        feedContainer.innerHTML = '<p class="text-red-600 text-center">En alvorlig feil oppstod under lasting.</p>';
+        if(feedContainer) {
+            feedContainer.innerHTML = '<p class="form-error text-center">En alvorlig feil oppstod under lasting.</p>';
+        }
     });
 
 }

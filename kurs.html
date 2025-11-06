@@ -1,153 +1,165 @@
 <!DOCTYPE html>
-<html lang="no" class="scroll-smooth">
+<html lang="no">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kurs - Leirefolket Keramikkverksted</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-    <!-- Felles stilark -->
     <link rel="stylesheet" href="style.css">
+    <!-- Egendefinert stil for denne siden -->
+    <style>
+        .kurs-liste-item {
+            display: grid;
+            gap: 3rem;
+            align-items: center;
+            margin-bottom: 4rem;
+        }
+        .kurs-liste-item-image {
+            width: 100%;
+            border-radius: var(--border-radius-lg);
+            box-shadow: var(--shadow-xl);
+            aspect-ratio: 16 / 9;
+            object-fit: cover;
+        }
+        
+        @media (min-width: 768px) {
+            .kurs-liste-item {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            /* Veksler bilde-rekkefølge */
+            .kurs-liste-item:nth-child(even) .kurs-liste-item-image-container {
+                order: 2;
+            }
+        }
+    </style>
 </head>
-<body class="bg-stone-50 text-stone-800">
+<body class="kurs-page">
 
-    <!-- Header & Navigasjon (Identisk med index.html) -->
-    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
-        <nav class="container mx-auto px-6 py-3">
-            <div class="flex items-center justify-between">
-                <a href="index.html#hjem" class="flex items-center space-x-3">
-                    <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/LogoPNG.png" alt="Leirefolket Logo" class="h-12 w-12 rounded-full object-cover">
-                    <span class="text-xl font-semibold text-stone-700">Leirefolket</span>
-                </a>
-                <!-- Desktop-meny -->
-                <div class="hidden md:flex items-center space-x-6">
-                    <a href="om-oss.html" class="text-stone-600 hover:text-amber-800 transition-colors">Om oss</a>
-                    <a href="kurs.html" class="text-amber-700 font-semibold hover:text-amber-800 transition-colors">Kurs</a>
-                    <a href="galleri.html" class="text-stone-600 hover:text-amber-800 transition-colors">Galleri</a>
-                    <a href="kontakt.html" class="text-stone-600 hover:text-amber-800 transition-colors">Kontakt</a>
-                    <!-- Medlemsside-lenke (skjult som standard) -->
-                    <a id="member-link" href="medlem.html" class="hidden text-amber-700 font-semibold hover:text-amber-800 transition-colors">Medlemsside</a>
-                    
-                    <!-- Innloggingsknapper (Endret til <a>-lenke) -->
-                    <a id="login-link" href="login.html" class="bg-amber-700 hover:bg-amber-800 text-white font-bold py-2 px-5 rounded-full text-sm transition-colors">
-                        Logg inn
-                    </a>
-                    <button id="logout-button" class="hidden bg-stone-500 hover:bg-stone-600 text-white font-bold py-2 px-5 rounded-full text-sm transition-colors">
-                        Logg ut
-                    </button>
-                </div>
-                <!-- Mobilmeny-knapp -->
-                <div class="md:hidden">
-                    <button id="mobile-menu-button" class="text-stone-700 focus:outline-none">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
-                    </button>
-                </div>
+    <!-- Header & Navigasjon -->
+    <header class="main-header">
+        <nav class="container main-nav">
+            <a href="index.html#hjem" class="logo-link">
+                <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/LogoPNG.png" alt="Leirefolket Logo" class="logo-img">
+                <span class="logo-text">Leirefolket</span>
+            </a>
+            
+            <!-- Desktop-meny -->
+            <div class="nav-menu-desktop">
+                <a href="om-oss.html" class="nav-link">Om oss</a>
+                <a href="kurs.html" class="nav-link-active">Kurs</a>
+                <a href="galleri.html" class="nav-link">Galleri</a>
+                <a href="kontakt.html" class="nav-link">Kontakt</a>
+                <a id="member-link" href="medlem.html" class="nav-link-active hidden">Medlemsside</a>
+                <a id="login-link" href="login.html" class="button button-primary">Logg inn</a>
+                <button id="logout-button" class="button button-secondary hidden">Logg ut</button>
             </div>
+            
+            <!-- Mobilmeny-knapp -->
+            <button id="mobile-menu-button" class="mobile-menu-button" aria-label="Åpne meny">
+                <svg class="mobile-menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+            </button>
+            
             <!-- Mobilmeny -->
-            <div id="mobile-menu" class="hidden md:hidden mt-4 space-y-2">
-                <a href="om-oss.html" class="block py-2 text-stone-600 hover:text-amber-800">Om oss</a>
-                <a href="kurs.html" class="block py-2 text-amber-700 font-semibold hover:text-amber-800">Kurs</a>
-                <a href="galleri.html" class="block py-2 text-stone-600 hover:text-amber-800">Galleri</a>
-                <a href="kontakt.html" class="block py-2 text-stone-600 hover:text-amber-800">Kontakt</a>
-                <!-- Mobilmeny-lenker for medlem og innlogging -->
-                <a id="mobile-member-link" href="medlem.html" class="hidden block py-2 text-amber-700 font-semibold hover:text-amber-800">Medlemsside</a>
-                <a id="mobile-login-link" href="login.html" class="w-full text-left block py-2 text-stone-600 hover:text-amber-800">
-                    Logg inn
-                </a>
-                <button id="mobile-logout-button" class="hidden w-full text-left block py-2 text-stone-600 hover:text-amber-800">
-                    Logg ut
-                </button>
+            <div id="mobile-menu" class="nav-menu-mobile hidden">
+                <a href="om-oss.html" class="nav-link">Om oss</a>
+                <a href="kurs.html" class="nav-link-active">Kurs</a>
+                <a href="galleri.html" class="nav-link">Galleri</a>
+                <a href="kontakt.html" class="nav-link">Kontakt</a>
+                <a id="mobile-member-link" href="medlem.html" class="nav-link-active hidden">Medlemsside</a>
+                <a id="mobile-login-link" href="login.html" class="nav-link">Logg inn</a>
+                <button id="mobile-logout-button" class="button button-secondary hidden">Logg ut</button>
             </div>
         </nav>
     </header>
 
     <main>
         <!-- Kurs-seksjon -->
-        <section id="kurs-liste" class="py-20 bg-white">
-            <div class="container mx-auto px-6">
-                <div class="text-center mb-16">
-                    <h1 class="font-display text-5xl font-bold text-stone-800 mb-4">Våre kurs</h1>
-                    <p class="max-w-2xl mx-auto text-lg text-stone-600">Her finner du en oversikt over alle kursene vi tilbyr. Ta kontakt for påmelding eller mer informasjon.</p>
+        <section id="kurs-liste" class="section section-bg-white">
+            <div class="container">
+                <div class="text-center" style="max-width: 600px; margin: 0 auto 4rem auto;">
+                    <h1>Våre kurs</h1>
+                    <p class="text-lg">Her finner du en oversikt over alle kursene vi tilbyr. Ta kontakt for påmelding eller mer informasjon.</p>
                 </div>
                 
-                <div class="space-y-16">
+                <div class="kurs-liste-container">
                     
                     <!-- Kurs 1: Nybegynnerkurs -->
-                    <div class="grid md:grid-cols-2 gap-12 items-center">
-                        <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_258281110_180526547542649_6024565395089707715_n.jpg" alt="Nybegynnerkurs" class="rounded-lg shadow-xl w-full h-auto object-cover aspect-video">
-                        <div class="text-center md:text-left">
-                            <h2 class="font-display text-3xl font-bold text-amber-900 mb-4">Nybegynnerkurs i keramikk</h2>
-                            <p class="text-lg text-stone-600 mb-4">Lær de grunnleggende teknikkene innen håndbygging (klype, pølse, plate) og få en introduksjon til glasering. Dette kurset er perfekt for deg som aldri har jobbet med leire før og ønsker å utforske din kreative side.</p>
-                            <ul class="list-disc list-inside text-stone-600 mb-6 text-left max-w-md mx-auto md:mx-0">
+                    <article class="kurs-liste-item">
+                        <div class="kurs-liste-item-image-container">
+                            <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_258281110_180526547542649_6024565395089707715_n.jpg" alt="Nybegynnerkurs" class="kurs-liste-item-image">
+                        </div>
+                        <div class="kurs-liste-item-text">
+                            <h2>Nybegynnerkurs i keramikk</h2>
+                            <p class="text-lg">Lær de grunnleggende teknikkene innen håndbygging (klype, pølse, plate) og få en introduksjon til glasering. Dette kurset er perfekt for deg som aldri har jobbet med leire før og ønsker å utforske din kreative side.</p>
+                            <ul>
                                 <li>Varighet: 6 uker (1 kveld per uke)</li>
                                 <li>Pris: 2800,- (inkl. materialer og brenning)</li>
                                 <li>Neste kursstart: Se info på Instagram</li>
                             </ul>
-                            <a href="index.html#kontakt" class="inline-block bg-stone-700 hover:bg-stone-800 text-white font-semibold py-3 px-8 rounded-md transition-colors text-lg">Meld interesse</a>
+                            <a href="kontakt.html" class="button button-secondary" style="margin-top: 1.5rem;">Meld interesse</a>
                         </div>
-                    </div>
+                    </article>
 
                     <!-- Kurs 2: Dreiekurs -->
-                    <div class="grid md:grid-cols-2 gap-12 items-center">
-                         <div class="text-center md:text-left md:order-last">
-                            <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_262242048_630444778308539_7692234263631637540_n.jpg" alt="Dreiekurs" class="rounded-lg shadow-xl w-full h-auto object-cover aspect-video">
+                    <article class="kurs-liste-item">
+                        <div class="kurs-liste-item-image-container">
+                            <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_262242048_630444778308539_7692234263631637540_n.jpg" alt="Dreiekurs" class="kurs-liste-item-image">
                         </div>
-                        <div class="text-center md:text-left">
-                            <h2 class="font-display text-3xl font-bold text-amber-900 mb-4">Dreiekurs</h2>
-                            <p class="text-lg text-stone-600 mb-4">Opplev magien ved dreieskiven! På dette kurset går vi gjennom elting, sentrering, trekking og forming av leire på skiven. Målet er at du skal kunne dreie dine egne kopper og små skåler.</p>
-                             <ul class="list-disc list-inside text-stone-600 mb-6 text-left max-w-md mx-auto md:mx-0">
+                        <div class="kurs-liste-item-text">
+                            <h2>Dreiekurs</h2>
+                            <p class="text-lg">Opplev magien ved dreieskiven! På dette kurset går vi gjennom elting, sentrering, trekking og forming av leire på skiven. Målet er at du skal kunne dreie dine egne kopper og små skåler.</p>
+                            <ul>
                                 <li>Varighet: 4 uker (1 kveld per uke)</li>
                                 <li>Pris: 3200,- (inkl. materialer og brenning)</li>
                                 <li>Neste kursstart: Fullt (venteliste)</li>
                             </ul>
-                            <a href="index.html#kontakt" class="inline-block bg-stone-700 hover:bg-stone-800 text-white font-semibold py-3 px-8 rounded-md transition-colors text-lg">Sett meg på venteliste</a>
+                            <a href="kontakt.html" class="button button-secondary" style="margin-top: 1.5rem;">Sett meg på venteliste</a>
                         </div>
-                    </div>
+                    </article>
 
                     <!-- Kurs 3: Glasurkurs -->
-                    <div class="grid md:grid-cols-2 gap-12 items-center">
-                        <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_401584051_1350049882271258_1228726600424652269_n.jpg" alt="Glasurkurs" class="rounded-lg shadow-xl w-full h-auto object-cover aspect-video">
-                         <div class="text-center md:text-left">
-                            <h2 class="font-display text-3xl font-bold text-amber-900 mb-4">Glasurkurs</h2>
-                            <p class="text-lg text-stone-600 mb-4">Utforsk den fargerike og kjemiske verdenen av glasurer. Lær ulike påføringsteknikker, som dypping, helling og maling. Vi eksperimenterer også med voks, oksider og underglasur for å skape unike uttrykk.</p>
-                             <ul class="list-disc list-inside text-stone-600 mb-6 text-left max-w-md mx-auto md:mx-0">
+                    <article class="kurs-liste-item">
+                        <div class="kurs-liste-item-image-container">
+                            <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_401584051_1350049882271258_1228726600424652269_n.jpg" alt="Glasurkurs" class="kurs-liste-item-image">
+                        </div>
+                        <div class="kurs-liste-item-text">
+                            <h2>Glasurkurs</h2>
+                            <p class="text-lg">Utforsk den fargerike og kjemiske verdenen av glasurer. Lær ulike påføringsteknikker, som dypping, helling og maling. Vi eksperimenterer også med voks, oksider og underglasur for å skape unike uttrykk.</p>
+                            <ul>
                                 <li>Varighet: Helgekurs (Lørdag + Søndag)</li>
                                 <li>Pris: 2200,- (inkl. materialer)</li>
                                 <li>Neste kursstart: Våren 2026</li>
                             </ul>
-                            <a href="index.html#kontakt" class="inline-block bg-stone-700 hover:bg-stone-800 text-white font-semibold py-3 px-8 rounded-md transition-colors text-lg">Meld interesse</a>
+                            <a href="kontakt.html" class="button button-secondary" style="margin-top: 1.5rem;">Meld interesse</a>
                         </div>
-                    </div>
+                    </article>
                     
                 </div>
             </div>
         </section>
         
         <!-- Kontakt-seksjon (lik som på forsiden) -->
-        <section id="kontakt" class="py-20 bg-stone-100">
-            <div class="container mx-auto px-6">
-                 <div class="text-center mb-12">
-                    <h2 class="font-display text-4xl font-bold text-stone-800 mb-4">Har du spørsmål?</h2>
-                    <p class="max-w-2xl mx-auto text-lg text-stone-600">Ta kontakt med oss for påmelding, venteliste eller andre henvendelser.</p>
+        <section id="kontakt" class="section section-bg-medium">
+            <div class="container">
+                 <div class="text-center" style="max-width: 600px; margin: 0 auto 3rem auto;">
+                    <h2>Har du spørsmål?</h2>
+                    <p class="text-lg">Ta kontakt med oss for påmelding, venteliste eller andre henvendelser.</p>
                 </div>
-                <div class="max-w-xl mx-auto bg-white p-8 rounded-lg shadow-md">
+                <div class="form-container">
                     <form>
-                        <div class="mb-4">
-                            <label for="name" class="block text-stone-700 font-semibold mb-2">Navn</label>
-                            <input type="text" id="name" name="name" class="w-full px-4 py-2 border border-stone-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-600">
+                        <div class="form-group">
+                            <label for="name" class="form-label">Navn</label>
+                            <input type="text" id="name" name="name" class="form-input">
                         </div>
-                        <div class="mb-4">
-                            <label for="email" class="block text-stone-700 font-semibold mb-2">E-post</label>
-                            <input type="email" id="email" name="email" class="w-full px-4 py-2 border border-stone-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-600">
+                        <div class="form-group">
+                            <label for="email" class="form-label">E-post</label>
+                            <input type="email" id="email" name="email" class="form-input">
                         </div>
-                        <div class="mb-6">
-                             <label for="message" class="block text-stone-700 font-semibold mb-2">Melding</label>
-                             <textarea id="message" name="message" rows="5" class="w-full px-4 py-2 border border-stone-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-600" placeholder="Jeg lurer på..."></textarea>
+                        <div class="form-group">
+                             <label for="message" class="form-label">Melding</label>
+                             <textarea id="message" name="message" class="form-textarea" placeholder="Jeg lurer på..."></textarea>
                         </div>
                         <div class="text-center">
-                            <button type="submit" class="bg-amber-700 hover:bg-amber-800 text-white font-bold py-3 px-8 rounded-full text-lg transition-colors">Send Melding</button>
+                            <button type="submit" class="button button-primary button-lg">Send Melding</button>
                         </div>
                     </form>
                 </div>
@@ -156,37 +168,32 @@
 
     </main>
 
-    <!-- Footer (Identisk med index.html) -->
-    <footer class="bg-stone-800 text-stone-300 py-10">
-        <div class="container mx-auto px-6 text-center">
-            <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/LogoPNGwhite.png" alt="Leirefolket Logo" class="h-16 w-16 mx-auto mb-4 rounded-full object-cover">
-            <p class="mb-4 font-semibold text-lg">Leirefolket Keramikkverksted</p>
-            <p class="mb-4">Nye Teglverks vei 23, 4614 Kristiansand</p>
-            <div class="flex justify-center space-x-6 mb-4">
-                <!-- Sosiale medier-ikoner -->
-                <a href="https://www.instagram.com/leirefolket_keramikkverksted/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" class="hover:text-white transition-colors">
-                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Footer -->
+    <footer class="main-footer">
+        <div class="container">
+            <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/LogoPNGwhite.png" alt="Leirefolket Logo" class="footer-logo">
+            <p class="footer-title">Leirefolket Keramikkverksted</p>
+            <p class="footer-address">Nye Teglverks vei 23, 4614 Kristiansand</p>
+            <div class="social-links">
+                <a href="https://www.instagram.com/leirefolket_keramikkverksted/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" class="social-link">
+                    <svg class="social-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
                         <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
                         <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
                     </svg>
                 </a>
-                <a href="https://www.facebook.com/leirefolketkeramikkverksted/?locale=nb_NO" target="_blank" rel="noopener noreferrer" aria-label="Facebook" class="hover:text-white transition-colors">
-                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                <a href="https://www.facebook.com/leirefolketkeramikkverksted/?locale=nb_NO" target="_blank" rel="noopener noreferrer" aria-label="Facebook" class="social-link">
+                    <svg class="social-icon" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path fill-rule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clip-rule="evenodd" />
                     </svg>
                 </a>
             </div>
-            <p class="text-sm text-stone-400">&copy; 2025 Leirefolket Keramikkverksted. Alle rettigheter forbeholdt.</p>
+            <p class="footer-copyright">&copy; 2025 Leirefolket Keramikkverksted. Alle rettigheter forbeholdt.</p>
         </div>
     </footer>
-
-    <!-- Login Modal (FJERNET) -->
     
     <!-- Firebase og hoved-script -->
     <script type="module" src="firebase.js"></script>
     <script type="module" src="script.js"></script>
 </body>
 </html>
-
-
