@@ -34,7 +34,7 @@ const mobileMenuButton = document.getElementById('mobile-menu-button');
 const mobileMenu = document.getElementById('mobile-menu');
 
 
-// --- KJERNEFUNKSJONER ---
+// --- KJERNEFUNKSJONER (Defineres FØR de brukes) ---
 
 /**
  * Henter brukerens rolle fra Firestore.
@@ -130,7 +130,7 @@ function protectLoginPage() {
  * Håndterer innlogging via skjemaet (kun på login.html).
  */
 async function handleLogin(e) {
-    e.preventDefault();
+    e.preventDefault(); // <--- VIKTIGST!
     // Hent elementer her, siden de kun finnes på login.html
     const loginError = document.getElementById('login-error');
     const email = document.getElementById('login-email').value;
@@ -172,7 +172,7 @@ async function handleLogout() {
     }
 }
 
-// --- EVENT LISTENERS ---
+// --- EVENT LISTENERS (Kjører umiddelbart) ---
 
 // Mobilmeny
 if (mobileMenuButton && mobileMenu) {
@@ -198,8 +198,20 @@ if (mobileMenu) {
     if (btn) btn.addEventListener('click', handleLogout);
 });
 
+// --- NY STruktur: Fest lytter til login-skjema UMIDDELBART ---
+// Koble kun til innloggingsskjemaet hvis vi er på login.html
+if (window.location.pathname.endsWith('/login.html')) {
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+        console.log("Login form listener attached.");
+    } else {
+        console.error("Login form not found!");
+    }
+}
 
-// --- HOVED-AUTENTISERINGSLYTTER ---
+
+// --- HOVED-AUTENTISERINGSLYTTER (Kjører når Firebase er klar) ---
 
 /**
  * Dette er hjertet i autentiseringen.
@@ -231,13 +243,7 @@ authReady.then(async (initialUser) => {
     protectLoginPage();
 
     // --- SIDE-SPESIFIKK EVENT LISTENER (LOGIN-SKJEMA) ---
-    // Koble kun til innloggingsskjemaet hvis vi er på login.html
-    if (window.location.pathname.endsWith('/login.html')) {
-        const loginForm = document.getElementById('login-form');
-        if (loginForm) {
-            loginForm.addEventListener('submit', handleLogin);
-        }
-    }
+    // DENNE ER NÅ FLYTTET UT FOR Å KJØRE UMIDDELBART
 
     // Start den permanente lytteren for ENDRINGER
     onAuthStateChanged(auth, async (user) => {
@@ -269,4 +275,14 @@ authReady.then(async (initialUser) => {
         protectMemberPage();
         protectLoginPage();
     });
+}).catch(error => {
+    // Håndter feil hvis authReady-promiset avvises (f.eks. anonym innlogging feilet)
+    console.error("AuthReady Promise rejected. App might not function correctly.", error);
+    // Selv om auth feiler, må vi kanskje vise en feilmelding på login-siden
+    if (window.location.pathname.endsWith('/login.html')) {
+        const loginError = document.getElementById('login-error');
+        if (loginError) {
+            loginError.textContent = 'Klarte ikke koble til autentisering. Sjekk internett.';
+        }
+    }
 });
