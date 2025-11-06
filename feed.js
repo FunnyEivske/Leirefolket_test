@@ -1,5 +1,5 @@
 // Importer nødvendige funksjoner
-import { db, appId, authReady } from './firebase.js';
+import { db, authReady } from './firebase.js'; // <-- FJERNET appId-import
 import { authState } from './script.js'; // Importer den delte authState
 import { 
     collection, 
@@ -9,6 +9,9 @@ import {
     query,
     orderBy // Importer orderBy
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+// --- FIKS: Definer appId med riktig global variabel ---
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // --- UI-ELEMENTER ---
 const newPostContainer = document.getElementById('new-post-container');

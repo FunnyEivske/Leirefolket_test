@@ -24,6 +24,9 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// Hent ut appId for eksport
+const appId = firebaseConfig.appId;
+
 // Slå på debug-logging for Firestore (valgfritt, men nyttig)
 setLogLevel('debug');
 
@@ -47,5 +50,5 @@ const authReady = new Promise((resolve) => {
 
 
 // Eksporter de initialiserte Firebase-tjenestene
-export { app, auth, db, authReady };
-
+// FIKS: Lagt til appId i eksporten
+export { app, auth, db, authReady, appId };

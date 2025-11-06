@@ -1,5 +1,5 @@
 // Importer Firebase-ting og authReady-promiset
-import { app, auth, db, appId, authReady } from './firebase.js';
+import { app, auth, db, authReady } from './firebase.js'; // <-- FJERNET appId-import
 import { 
     signInWithEmailAndPassword, 
     signOut, 
@@ -7,8 +7,12 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { 
     doc, 
-    getDoc 
+    getDoc,
+    setDoc // <-- NY IMPORT: For å kunne skrive til databasen
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+// --- FIKS: Definer appId med riktig global variabel ---
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // --- GLOBAL STATE ---
 /**
@@ -52,8 +56,9 @@ async function fetchUserRole(uid) {
             const data = docSnap.data();
             return data.role || null; // Returnerer rollen, f.eks. 'admin'
         } else {
-            console.warn(`User role document not found for UID: ${uid} at path: ${roleDocPath}`);
-            return null; // Fant ikke noe rolle-dokument
+            // Endret: Returnerer null, men logger ikke lenger en advarsel
+            // console.warn(`User role document not found for UID: ${uid} at path: ${roleDocPath}`);
+            return null; // Fant ikke noe rolle-dokument (dette er OK nå)
         }
     } catch (error) {
         console.error("Error fetching user role:", error);
@@ -73,9 +78,9 @@ function updateUI(user, role) {
         if (mobileLoginLink) mobileLoginLink.classList.add('hidden');
 
         if (logoutButton) logoutButton.classList.remove('hidden');
-        mobileLogoutButton.classList.remove('hidden');
-        memberLink.classList.remove('hidden');
-        mobileMemberLink.classList.remove('hidden');
+        if (mobileLogoutButton) mobileLogoutButton.classList.remove('hidden');
+        if (memberLink) memberLink.classList.remove('hidden');
+        if (mobileMemberLink) mobileMemberLink.classList.remove('hidden');
 
         // Oppdater velkomstmelding hvis vi er på medlemssiden
         const welcomeMsg = document.getElementById('welcome-message');
@@ -89,9 +94,9 @@ function updateUI(user, role) {
         if (mobileLoginLink) mobileLoginLink.classList.remove('hidden');
 
         if (logoutButton) logoutButton.classList.add('hidden');
-        mobileLogoutButton.classList.add('hidden');
-        memberLink.classList.add('hidden');
-        mobileMemberLink.classList.add('hidden');
+        if (mobileLogoutButton) mobileLogoutButton.classList.add('hidden');
+        if (memberLink) memberLink.classList.add('hidden');
+        if (mobileMemberLink) mobileMemberLink.classList.add('hidden');
     }
 }
 
@@ -126,7 +131,7 @@ function protectLoginPage() {
  * Håndterer innlogging via skjemaet (kun på login.html).
  */
 async function handleLogin(e) {
-    e.preventDefault();
+    e.preventDefault(); // <-- Denne forhindrer at siden laster på nytt med '?'
     // Hent elementer her, siden de kun finnes på login.html
     const loginError = document.getElementById('login-error');
     const email = document.getElementById('login-email').value;
@@ -172,7 +177,7 @@ async function handleLogout() {
 // Mobilmeny
 if (mobileMenuButton) {
     mobileMenuButton.addEventListener('click', () => {
-        mobileMenu.classList.toggle('hidden');
+        if (mobileMenu) mobileMenu.classList.toggle('hidden');
     });
 }
 
@@ -180,17 +185,26 @@ if (mobileMenuButton) {
 if (mobileMenu) {
     mobileMenu.querySelectorAll('a[href^="#"]').forEach(link => {
         link.addEventListener('click', () => {
-            mobileMenu.classList.add('hidden');
+            if (mobileMenu) mobileMenu.classList.add('hidden');
         });
     });
 }
-
-// Login Modal (Fjernet all modal-logikk)
 
 // Skjema- og logg-ut-knapper
 [logoutButton, mobileLogoutButton].forEach(btn => {
     if (btn) btn.addEventListener('click', handleLogout);
 });
+
+// --- FIKS: FLYTTET DENNE UT AV AUTHREADY ---
+// Koble til innloggingsskjemaet umiddelbart hvis vi er på login.html
+// Dette forhindrer en "race condition" der brukeren sender skjemaet
+// FØR authReady er fullført.
+if (window.location.pathname.endsWith('/login.html')) {
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+        loginForm.addEventListener('submit', handleLogin);
+    }
+}
 
 
 // --- HOVED-AUTENTISERINGSLYTTER ---
@@ -205,16 +219,32 @@ authReady.then(async (initialUser) => {
     console.log("Auth ready. Initial user:", initialUser ? initialUser.uid : null);
     
     if (initialUser) {
-        const role = await fetchUserRole(initialUser.uid);
+        let role = await fetchUserRole(initialUser.uid);
         if (role) {
+            // Brukeren har en rolle, fortsett som normalt
             authState.user = initialUser;
             authState.role = role;
         } else {
-            // Gyldig bruker, men mangler rolle. Logg ut.
-            console.warn("User has auth but no role. Forcing logout.");
-            await handleLogout(); // Dette vil tømme authState
+            // *** NY LOGIKK ***
+            // Brukeren finnes ikke, så vi oppretter 'member'-rolle
+            console.log(`User ${initialUser.uid} not found in roles. Creating 'member' role.`);
+            try {
+                const newRoleRef = doc(db, `/artifacts/${appId}/public/data/userRoles/${initialUser.uid}`);
+                await setDoc(newRoleRef, { role: 'member' });
+                
+                // Nå som rollen er opprettet, fortsett som 'member'
+                authState.user = initialUser;
+                authState.role = 'member';
+            } catch (error) {
+                console.error("Error creating default member role:", error);
+                // Logg ut hvis vi feilet å opprette rollen
+                authState.user = null;
+                authState.role = null;
+                await handleLogout(); // Kaller handleLogout for å rydde opp
+            }
         }
     } else {
+        // Ingen bruker logget inn
         authState.user = null;
         authState.role = null;
     }
@@ -222,16 +252,7 @@ authReady.then(async (initialUser) => {
     // Oppdater UI og sjekk side-beskyttelse etter den FØRSTE sjekken
     updateUI(authState.user, authState.role);
     protectMemberPage();
-    protectLoginPage(); // <-- Ny
-
-    // --- SIDE-SPESIFIKK EVENT LISTENER (LOGIN-SKJEMA) ---
-    // Koble kun til innloggingsskjemaet hvis vi er på login.html
-    if (window.location.pathname.endsWith('/login.html')) {
-        const loginForm = document.getElementById('login-form');
-        if (loginForm) {
-            loginForm.addEventListener('submit', handleLogin);
-        }
-    }
+    protectLoginPage();
 
     // Start den permanente lytteren for ENDRINGER
     onAuthStateChanged(auth, async (user) => {
@@ -239,15 +260,29 @@ authReady.then(async (initialUser) => {
         
         if (user) {
             // Bruker logget nettopp inn (eller er fortsatt logget inn)
-            const role = await fetchUserRole(user.uid);
+            let role = await fetchUserRole(user.uid);
             if (role) {
-                // Normal innlogging
+                // Normal innlogging, bruker har allerede en rolle
                 authState.user = user;
                 authState.role = role;
             } else {
-                // Bruker logget inn, men har ingen rolle. Logg ut.
-                console.warn("User signed in but has no role. Forcing logout.");
-                await handleLogout(); // Dette vil tømme authState og kalle onAuthStateChanged på nytt
+                // *** NY LOGIKK ***
+                // Brukeren finnes ikke (førstegangs innlogging), opprett 'member'-rolle
+                console.log(`User ${user.uid} not found in roles. Creating 'member' role.`);
+                try {
+                    const newRoleRef = doc(db, `/artifacts/${appId}/public/data/userRoles/${user.uid}`);
+                    await setDoc(newRoleRef, { role: 'member' });
+                    
+                    // Fortsett som 'member'
+                    authState.user = user;
+                    authState.role = 'member';
+                } catch (error) {
+                    console.error("Error creating default member role:", error);
+                    // Logg ut hvis vi feilet å opprette rollen
+                    authState.user = null;
+                    authState.role = null;
+                    await handleLogout(); // Kaller handleLogout for å rydde opp
+                }
             }
         } else {
             // Bruker logget ut
@@ -258,7 +293,6 @@ authReady.then(async (initialUser) => {
         // Oppdater UI og sjekk side-beskyttelse HVER GANG
         updateUI(authState.user, authState.role);
         protectMemberPage();
-        protectLoginPage(); // <-- Ny
+        protectLoginPage();
     });
 });
-
