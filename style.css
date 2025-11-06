@@ -1,5 +1,5 @@
 /* Importerer de valgte fontene */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Playfair+Display:wght@700&display=swap');
+@import url('https_fonts.googleapis.com_css2_family_Inter_wght_400_500_700_family_Playfair+Display_wght_700_display_swap.css');
 
 /* Setter Inter som standard brødtekst-font */
 body {
@@ -9,4 +9,21 @@ body {
 /* Egendefinert klasse for 'Playfair Display' */
 .font-display {
     font-family: 'Playfair Display', serif;
+}
+
+/* --- FIKS FOR FOOTER ---
+  Dette tvinger footeren til bunnen på sider med lite innhold.
+*/
+html {
+    height: 100%; /* Sørger for at HTML-elementet fyller hele høyden */
+}
+
+body {
+    min-height: 100vh; /* Sørger for at body er MINST 100% av skjermhøyden */
+    display: flex; /* Aktiverer flexbox */
+    flex-direction: column; /* Setter retningen til vertikal (stable innhold) */
+}
+
+main {
+    flex-grow: 1; /* Forteller <main>-elementet at det skal vokse og ta all tilgjengelig plass */
 }
