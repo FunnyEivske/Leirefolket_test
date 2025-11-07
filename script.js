@@ -58,40 +58,60 @@ async function fetchUserData(user) {
     const userDocRef = doc(db, userDocPath);
 
     try {
-        const roleSnap = await getDoc(roleDocRef);
-        const userSnap = await getDoc(userDocRef);
+        // Hent BEGGE dokumentene samtidig
+        const [roleSnap, userSnap] = await Promise.all([
+            getDoc(roleDocRef),
+            getDoc(userDocRef)
+        ]);
 
-        if (!roleSnap.exists()) {
-            console.warn(`User role document not found for UID: ${user.uid}`);
-            return null; // Fant ikke rolle, har ikke tilgang
+        let userRole = null;
+        let userData = null;
+
+        // 1. Sjekk om vi finner en rolle i det GAMLE dokumentet
+        if (roleSnap.exists()) {
+            userRole = roleSnap.data().role || null;
         }
         
-        const userRole = roleSnap.data().role || null;
-        if (!userRole) return null; // Ingen rolle satt
-
+        // 2. Sjekk det NYE dokumentet
         if (userSnap.exists()) {
-            // Brukerprofil finnes, returner den
-            const userData = userSnap.data();
-            // Sørg for at rollen er synkronisert
-            if (userData.role !== userRole) {
-                await setDoc(userDocRef, { role: userRole }, { merge: true });
-                userData.role = userRole;
+            userData = userSnap.data();
+            // Hvis det nye dokumentet har en rolle, overstyrer den den gamle
+            if (userData.role) {
+                userRole = userData.role; 
             }
-            return userData;
-        } else {
-            // Brukerprofil finnes IKKE. Opprett den.
-            console.log(`Oppretter ny brukerprofil for ${user.uid}...`);
+        }
+        
+        // 3. Hvis vi ikke har en rolle fra NOEN av stedene, har brukeren ikke tilgang.
+        if (!userRole) {
+             console.warn(`No role found for UID: ${user.uid} in either userRoles or users collection.`);
+            return null;
+        }
+
+        // 4. Vi har en rolle, men ikke et brukerdokument (f.eks. første gang med ny logikk)
+        if (!userSnap.exists()) {
+            console.log(`Oppretter ny brukerprofil for ${user.uid} (fant rolle '${userRole}')...`);
             const newUserData = {
                 uid: user.uid,
                 email: user.email,
                 role: userRole,
                 displayName: user.email, // Standard visningsnavn er e-post
                 profilePictureURL: null, // Standard er ingen bilde
-                createdAt: new Date() // Kjekt å ha
+                createdAt: new Date() 
             };
             await setDoc(userDocRef, newUserData);
-            return newUserData;
+            return newUserData; // Returner de nyopprettede dataene
         }
+        
+        // 5. Vi har et brukerdokument, men det mangler rolle (opprydding)
+        if (userSnap.exists() && !userData.role) {
+            console.log(`Oppdaterer manglende rolle ('${userRole}') for ${user.uid}...`);
+            await setDoc(userDocRef, { role: userRole }, { merge: true });
+            userData.role = userRole; // Oppdater lokalt objekt
+        }
+
+        // 6. Vi har brukerdata, og alt ser bra ut.
+        return userData;
+
     } catch (error) {
         console.error("Error fetching user data:", error);
         return null;
