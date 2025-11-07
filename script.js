@@ -98,8 +98,8 @@ async function fetchUserRole(uid) {
 async function fetchUserProfile(uid) {
     if (!uid) return null;
     
-    // Sti til profil-dokumentet
-    const profileDocPath = `/artifacts/${appId}/public/data/userProfiles/${uid}`;
+    // **FIKS:** Bruker den private stien for brukerdata
+    const profileDocPath = `/artifacts/${appId}/users/${uid}/profileData/main`;
     
     try {
         const docRef = doc(db, profileDocPath);
@@ -110,11 +110,10 @@ async function fetchUserProfile(uid) {
         } else {
             console.log(`User profile document not found for UID: ${uid}. Creating one.`);
             // Opprett et tomt profil-dokument hvis det ikke finnes
-            // **FIKS:** La til 'authorId: uid' for å gi eierskap og skrive-rettigheter
+            // Trenger ikke 'authorId' her, da stien i seg selv er sikker
             const defaultProfile = { 
                 displayName: null, 
-                photoURL: null, 
-                authorId: uid 
+                photoURL: null
             };
             await setDoc(docRef, defaultProfile);
             return defaultProfile;
@@ -134,7 +133,8 @@ async function fetchUserProfile(uid) {
 function setupProfileListener(uid) {
     if (!uid) return null;
     
-    const profileDocPath = `/artifacts/${appId}/public/data/userProfiles/${uid}`;
+    // **FIKS:** Bruker den private stien for brukerdata
+    const profileDocPath = `/artifacts/${appId}/users/${uid}/profileData/main`;
     const docRef = doc(db, profileDocPath);
 
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
@@ -145,11 +145,10 @@ function setupProfileListener(uid) {
             // Dette kan skje hvis dokumentet blir slettet
             console.warn(`Profile for ${uid} missing. Creating default.`);
             // Opprett et standard-dokument
-            // **FIKS:** La til 'authorId: uid' for å gi eierskap og skrive-rettigheter
+            // Trenger ikke 'authorId'
             const defaultProfile = { 
                 displayName: authState.user?.email?.split('@')[0] || 'Medlem', // Bruk e-post-prefix som standard
-                photoURL: null,
-                authorId: uid
+                photoURL: null
             };
             setDoc(docRef, defaultProfile); // Lagrer det i databasen
             authState.profile = defaultProfile; // Oppdaterer state lokalt med en gang
@@ -172,15 +171,14 @@ function setupProfileListener(uid) {
 async function saveUserProfile(uid, data) {
     if (!uid) throw new Error("Ingen bruker-ID oppgitt.");
     
-    const profileDocPath = `/artifacts/${appId}/public/data/userProfiles/${uid}`;
+    // **FIKS:** Bruker den private stien for brukerdata
+    const profileDocPath = `/artifacts/${appId}/users/${uid}/profileData/main`;
     const docRef = doc(db, profileDocPath);
     
     // Bruk setDoc med merge: true for å oppdatere eller opprette
-    // Vi legger til 'authorId' her også for sikkerhets skyld,
-    // selv om den primært trengs ved opprettelse.
+    // Trenger ikke 'authorId'
     const dataToSave = {
-        ...data,
-        authorId: uid 
+        ...data
     };
     await setDoc(docRef, dataToSave, { merge: true });
 }
