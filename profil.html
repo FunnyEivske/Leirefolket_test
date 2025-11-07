@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Medlemsside - Leirefolket</title>
+    <title>Min Profil - Leirefolket</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,7 +13,7 @@
 </head>
 <body class="bg-stone-100 text-stone-800">
 
-    <!-- Header & Navigasjon (Lignende, men tilpasset innlogget tilstand) -->
+    <!-- Header & Navigasjon (Ligner på medlem.html) -->
     <header class="bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
         <nav class="container mx-auto px-6 py-3">
             <div class="flex items-center justify-between">
@@ -27,21 +27,21 @@
                     <a href="kurs.html" class="text-stone-600 hover:text-amber-800 transition-colors">Kurs</a>
                     <a href="galleri.html" class="text-stone-600 hover:text-amber-800 transition-colors">Galleri</a>
                     <a href="kontakt.html" class="text-stone-600 hover:text-amber-800 transition-colors">Kontakt</a>
-                    <!-- Medlemsside-lenke (Aktiv) -->
-                    <a id="member-link" href="medlem.html" class="text-amber-700 font-semibold hover:text-amber-800 transition-colors">Medlemsside</a>
+                    <!-- Medlemsside-lenke (skjult som standard) -->
+                    <a id="member-link" href="medlem.html" class="hidden text-stone-600 hover:text-amber-800 transition-colors">Medlemsside</a>
                     
-                    <!-- NY PROFIL-LENKE (som du ba om, kun på denne siden) -->
-                    <a id="profile-link" href="profil.html" class="hidden h-10 w-10 rounded-full overflow-hidden transition-transform hover:scale-110" title="Min Profil">
+                    <!-- Profil-lenke (Aktiv på denne siden) -->
+                    <a id="profile-link" href="profil.html" class="hidden h-10 w-10 rounded-full overflow-hidden border-2 border-amber-700 transition-transform hover:scale-110" title="Min Profil">
                         <img id="profile-image-header" src="https://placehold.co/100x100/f7f5f2/a1a1aa?text=Profil" alt="Din profil" class="h-full w-full object-cover">
                     </a>
                     
-                    <!-- Innloggingsknapper -->
-                    <a id="login-link" href="login.html" class="hidden bg-amber-700 hover:bg-amber-800 text-white font-bold py-2 px-5 rounded-full text-sm transition-colors">
-                        Logg inn
-                    </a>
                     <button id="logout-button" class="hidden bg-stone-500 hover:bg-stone-600 text-white font-bold py-2 px-5 rounded-full text-sm transition-colors">
                         Logg ut
                     </button>
+                    <!-- Innloggingsknapp (skjult når logget inn) -->
+                     <a id="login-link" href="login.html" class="bg-amber-700 hover:bg-amber-800 text-white font-bold py-2 px-5 rounded-full text-sm transition-colors">
+                        Logg inn
+                    </a>
                 </div>
                 <!-- Mobilmeny-knapp -->
                 <div class="md:hidden">
@@ -57,12 +57,9 @@
                 <a href="galleri.html" class="block py-2 text-stone-600 hover:text-amber-800">Galleri</a>
                 <a href="kontakt.html" class="block py-2 text-stone-600 hover:text-amber-800">Kontakt</a>
                 <!-- Mobilmeny-lenker for medlem og innlogging -->
-                <a id="mobile-member-link" href="medlem.html" class="hidden block py-2 text-amber-700 font-semibold hover:text-amber-800">Medlemsside</a>
-                
-                <!-- NY MOBIL PROFIL-LENKE -->
-                <a id="mobile-profile-link" href="profil.html" class="hidden block py-2 text-stone-600 hover:text-amber-800">Min Profil</a>
-                
-                <a id="mobile-login-link" href="login.html" class="hidden w-full text-left block py-2 text-stone-600 hover:text-amber-800">
+                <a id="mobile-member-link" href="medlem.html" class="hidden block py-2 text-stone-600 hover:text-amber-800">Medlemsside</a>
+                <a id="mobile-profile-link" href="profil.html" class="hidden block py-2 text-amber-700 font-semibold hover:text-amber-800">Min Profil</a>
+                <a id="mobile-login-link" href="login.html" class="w-full text-left block py-2 text-stone-600 hover:text-amber-800">
                     Logg inn
                 </a>
                 <button id="mobile-logout-button" class="hidden w-full text-left block py-2 text-stone-600 hover:text-amber-800">
@@ -74,42 +71,43 @@
 
     <main class="container mx-auto px-6 py-12 md:py-20">
         
-        <div class="max-w-2xl mx-auto">
-            <h1 class="font-display text-4xl md:text-5xl font-bold text-stone-800 mb-6">Intern-feed</h1>
-            <!-- Velkomstmeldingen vil nå bli oppdatert av script.js -->
-            <p id="welcome-message" class="text-lg text-stone-600 mb-8">Laster inn...</p>
+        <div class="max-w-lg mx-auto bg-white p-8 rounded-lg shadow-xl">
+            <h1 class="font-display text-4xl font-bold text-stone-800 mb-8 text-center">Din Profil</h1>
 
-            <!-- Nytt Innlegg-skjema (Skjult som standard, kun for admin) -->
-            <div id="new-post-container" class="hidden bg-white p-6 rounded-lg shadow-md mb-8">
-                <h2 class="text-2xl font-bold text-amber-900 mb-4">Nytt Innlegg</h2>
-                <form id="new-post-form">
-                    <div class="mb-4">
-                        <label for="post-title" class="block text-stone-700 font-semibold mb-2">Tittel</label>
-                        <input type="text" id="post-title" required class="w-full px-4 py-2 border border-stone-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-600">
-                    </div>
-                    <div class="mb-4">
-                        <label for="post-content" class="block text-stone-700 font-semibold mb-2">Innhold</label>
-                        <textarea id="post-content" rows="5" required class="w-full px-4 py-2 border border-stone-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-600" placeholder="Skriv din oppdatering her..."></textarea>
-                    </div>
-                    <button type="submit" id="post-submit-button" class="w-full bg-amber-700 hover:bg-amber-800 text-white font-bold py-3 px-6 rounded-full text-lg transition-colors">
-                        Publiser Innlegg
-                    </button>
-                    <p id="post-error" class="text-red-600 text-sm text-center mt-4"></p>
-                </form>
+            <!-- Profilbilde-seksjon -->
+            <div class="text-center mb-8">
+                <!-- Fallback-bilde -->
+                <img id="profile-image-preview" src="https://placehold.co/150x150/f7f5f2/a1a1aa?text=Bilde" alt="Profilbilde" class="w-40 h-40 rounded-full object-cover mx-auto mb-4 bg-stone-200">
+                <input type="file" id="profile-image-upload" class="hidden" accept="image/png, image/jpeg">
+                <button id="profile-image-upload-button" class="text-sm text-amber-700 hover:text-amber-800 font-semibold">
+                    Endre profilbilde
+                </button>
+                <p id="upload-status" class="text-sm text-stone-600 mt-2"></p>
             </div>
 
-            <!-- Feed-container -->
-            <div id="feed-container" class="space-y-6">
-                <!-- Innlegg lastes her av feed.js -->
-                <div id="feed-loading" class="text-center text-stone-600 py-10">
-                    <p>Laster feed...</p>
+            <!-- Visningsnavn-seksjon -->
+            <form id="profile-form">
+                <div class="mb-4">
+                    <label for="display-name" class="block text-stone-700 font-semibold mb-2">Visningsnavn</label>
+                    <input type="text" id="display-name" required class="w-full px-4 py-2 border border-stone-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-600" placeholder="F.eks. Eivind R. Skeie">
                 </div>
-            </div>
+                
+                <div class="mb-6">
+                    <label for="profile-email" class="block text-stone-700 font-semibold mb-2">E-post (kan ikke endres)</label>
+                    <input type="email" id="profile-email" disabled class="w-full px-4 py-2 border border-stone-300 rounded-md bg-stone-100 text-stone-500">
+                </div>
+
+                <button type="submit" id="profile-save-button" class="w-full bg-amber-700 hover:bg-amber-800 text-white font-bold py-3 px-6 rounded-full text-lg transition-colors">
+                    Lagre endringer
+                </button>
+                <p id="profile-success" class="text-green-600 text-sm text-center mt-4"></p>
+                <p id="profile-error" class="text-red-600 text-sm text-center mt-4"></p>
+            </form>
 
         </div>
 
     </main>
-
+    
     <!-- Footer (Identisk med index.html) -->
     <footer class="bg-stone-800 text-stone-300 py-10 mt-20">
         <div class="container mx-auto px-6 text-center">
@@ -139,7 +137,7 @@
     <script type="module" src="firebase.js"></script>
     <!-- script.js trengs for header/logikk -->
     <script type="module" src="script.js"></script> 
-    <!-- feed.js er spesifikk for denne siden -->
-    <script type="module" src="feed.js"></script>
+    <!-- Nytt skript for denne siden -->
+    <script type="module" src="profil.js"></script>
 </body>
 </html>
