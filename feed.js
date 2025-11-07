@@ -1,5 +1,5 @@
 // Importer nødvendige funksjoner
-import { db, appId, authReady } from './firebase.js';
+import { db, appId } from './firebase.js';
 import { authState } from './script.js'; // Importer den delte authState
 import { 
     collection, 
@@ -10,30 +10,22 @@ import {
     orderBy // Importer orderBy
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// --- UI-ELEMENTER ---
-const newPostContainer = document.getElementById('new-post-container');
-const newPostForm = document.getElementById('new-post-form');
-const postError = document.getElementById('post-error');
-const postSubmitButton = document.getElementById('post-submit-button');
-const feedContainer = document.getElementById('feed-container');
-const feedLoading = document.getElementById('feed-loading');
-
 // Sti til feed-databasen
 const feedCollectionPath = `/artifacts/${appId}/public/data/feed`;
 
-// --- FUNKSJONER ---
+// --- UI-ELEMENTER (Hentes når funksjonene kalles) ---
+let newPostContainer, newPostForm, postError, postSubmitButton, feedContainer, feedLoading;
 
 /**
- * Viser eller skjuler admin-funksjoner (f.eks. "Nytt innlegg"-skjema).
+ * Henter og lagrer alle UI-elementene for feed-siden.
  */
-function toggleAdminFeatures() {
-    if (!newPostContainer) return; // Ikke på riktig side
-    
-    if (authState.role === 'admin') {
-        newPostContainer.classList.remove('hidden');
-    } else {
-        newPostContainer.classList.add('hidden');
-    }
+function initUIElements() {
+    newPostContainer = document.getElementById('new-post-container');
+    newPostForm = document.getElementById('new-post-form');
+    postError = document.getElementById('post-error');
+    postSubmitButton = document.getElementById('post-submit-button');
+    feedContainer = document.getElementById('feed-container');
+    feedLoading = document.getElementById('feed-loading');
 }
 
 /**
@@ -54,65 +46,20 @@ function formatTimestamp(timestamp) {
 }
 
 /**
- * Setter opp en sanntids-lytter for feed-samlingen.
- */
-function setupFeedListener() {
-    const feedCollectionRef = collection(db, feedCollectionPath);
-    // Sorter etter 'createdAt' i synkende rekkefølge (nyeste først)
-    const q = query(feedCollectionRef, orderBy("createdAt", "desc"));
-
-    onSnapshot(q, (snapshot) => {
-        if (feedLoading) feedLoading.classList.add('hidden');
-        if (!feedContainer) return; // Avbryt hvis containeren ikke finnes
-        
-        feedContainer.innerHTML = ''; // Tøm containeren
-
-        if (snapshot.empty) {
-            feedContainer.innerHTML = '<p class="text-lg text-center">Ingen innlegg ennå.</p>';
-            return;
-        }
-
-        snapshot.forEach(doc => {
-            const post = doc.data();
-            const postElement = document.createElement('article');
-            postElement.className = 'feed-item';
-            
-            // Gjør om \n til <br> for HTML-visning
-            const contentHtml = post.content.replace(/\n/g, '<br>');
-
-            postElement.innerHTML = `
-                <h3>${post.title}</h3>
-                <p class="feed-item-meta">
-                    Publisert av <span style="font-weight: 500;">${post.authorName || 'Admin'}</span>
-                    den ${formatTimestamp(post.createdAt)}
-                </p>
-                <div class="feed-item-content">${contentHtml}</div>
-            `;
-            feedContainer.appendChild(postElement);
-        });
-
-    }, (error) => {
-        console.error("Error fetching feed:", error);
-        if (feedLoading) feedLoading.classList.add('hidden');
-        if (feedContainer) {
-            feedContainer.innerHTML = '<p class="form-error">Kunne ikke laste feeden. Sjekk konsollen for feil.</p>';
-        }
-    });
-}
-
-/**
  * Håndterer publisering av nytt innlegg.
  */
 async function handlePostSubmit(e) {
     e.preventDefault();
     if (authState.role !== 'admin' || !authState.user) {
-        postError.textContent = 'Du har ikke tilgang til å publisere.';
+        if (postError) postError.textContent = 'Du har ikke tilgang til å publisere.';
         return;
     }
 
-    postError.textContent = '';
-    postSubmitButton.disabled = true;
-    postSubmitButton.textContent = 'Publiserer...';
+    if (postError) postError.textContent = '';
+    if (postSubmitButton) {
+        postSubmitButton.disabled = true;
+        postSubmitButton.textContent = 'Publiserer...';
+    }
 
     const title = document.getElementById('post-title').value;
     const content = document.getElementById('post-content').value;
@@ -128,49 +75,86 @@ async function handlePostSubmit(e) {
         });
 
         // Tøm skjemaet
-        newPostForm.reset();
+        if (newPostForm) newPostForm.reset();
 
     } catch (error) {
         console.error("Error creating new post:", error);
-        postError.textContent = 'En feil oppstod. Kunne ikke publisere.';
+        if (postError) postError.textContent = 'En feil oppstod. Kunne ikke publisere.';
     } finally {
-        postSubmitButton.disabled = false;
-        postSubmitButton.textContent = 'Publiser Innlegg';
+        if (postSubmitButton) {
+            postSubmitButton.disabled = false;
+            postSubmitButton.textContent = 'Publiser Innlegg';
+        }
     }
 }
 
-// --- INITIALISERING ---
+// --- EKSPORTERTE FUNKSJONER ---
 
-// Vi kjører kun feed-logikken hvis vi er på medlem.html
-if (document.getElementById('feed-container')) {
-    
-    // Vent til den første autentiseringen er fullført
-    authReady.then(() => {
-        console.log("Feed.js: Auth is ready. Current state:", authState);
+/**
+ * EKSPORTERT: Viser eller skjuler admin-funksjoner.
+ * Kalles fra script.js ETTER at rollen er bekreftet.
+ */
+export function setupAdminFeatures() {
+    if (!newPostContainer) initUIElements(); // Sørg for at UI er lastet
+
+    if (authState.role === 'admin') {
+        if (newPostContainer) newPostContainer.classList.remove('hidden');
+        if (newPostForm) {
+            // Sørg for at lytteren kun legges til én gang
+            if (!newPostForm.dataset.listenerAttached) {
+                newPostForm.addEventListener('submit', handlePostSubmit);
+                newPostForm.dataset.listenerAttached = 'true';
+            }
+        }
+    } else {
+        if (newPostContainer) newPostContainer.classList.add('hidden');
+    }
+}
+
+/**
+ * EKSPORTERT: Setter opp en sanntids-lytter for feed-samlingen.
+ * Kalles fra script.js ETTER at innlogging er bekreftet.
+ */
+export function setupFeedListener() {
+    if (!feedContainer) initUIElements(); // Sørg for at UI er lastet
+
+    const feedCollectionRef = collection(db, feedCollectionPath);
+    // Sorter etter 'createdAt' i synkende rekkefølge (nyeste først)
+    const q = query(feedCollectionRef, orderBy("createdAt", "desc"));
+
+    onSnapshot(q, (snapshot) => {
+        if (feedLoading) feedLoading.classList.add('hidden');
+        if (!feedContainer) return; // Sikkerhetssjekk
         
-        // Nå kan vi trygt sjekke authState
-        if (!authState.user || !authState.role) {
-            // Dette burde ikke skje pga. protectMemberPage(), men som en ekstra sjekk
-            console.log("Feed.js: User not authenticated. Stopping.");
+        feedContainer.innerHTML = ''; // Tøm containeren
+
+        if (snapshot.empty) {
+            feedContainer.innerHTML = '<p class="feed-empty">Ingen innlegg ennå.</p>';
             return;
         }
 
-        // Vis/skjul admin-ting
-        toggleAdminFeatures();
-        
-        // Sett opp lytter for feeden
-        setupFeedListener();
+        snapshot.forEach(doc => {
+            const post = doc.data();
+            const postElement = document.createElement('article');
+            postElement.className = 'feed-post';
+            
+            // Gjør om \n til <br> for HTML-visning
+            const contentHtml = post.content.replace(/\n/g, '<br>');
 
-        // Sett opp lytter for publiseringsskjemaet
-        if (newPostForm) {
-            newPostForm.addEventListener('submit', handlePostSubmit);
-        }
+            postElement.innerHTML = `
+                <h3 class="feed-post-title">${post.title}</h3>
+                <p class="feed-post-meta">
+                    Publisert av <span class="feed-post-author">${post.authorName || 'Admin'}</span>
+                    den ${formatTimestamp(post.createdAt)}
+                </p>
+                <div class="feed-post-content">${contentHtml}</div>
+            `;
+            feedContainer.appendChild(postElement);
+        });
 
-    }).catch(error => {
-        console.error("Feed.js: Error waiting for authReady:", error);
-        if(feedContainer) {
-            feedContainer.innerHTML = '<p class="form-error text-center">En alvorlig feil oppstod under lasting.</p>';
-        }
+    }, (error) => {
+        console.error("Error fetching feed:", error);
+        if (feedLoading) feedLoading.classList.add('hidden');
+        if (feedContainer) feedContainer.innerHTML = '<p class="feed-error">Kunne ikke laste feeden. Sjekk konsollen for feil.</p>';
     });
-
 }

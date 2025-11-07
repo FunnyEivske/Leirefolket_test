@@ -10,6 +10,9 @@ import {
     getDoc 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+// NY IMPORT: Importer funksjoner fra feed.js
+import { setupFeedListener, setupAdminFeatures } from './feed.js';
+
 // --- GLOBAL STATE ---
 /**
  * Holder den nåværende autentiseringstilstanden.
@@ -29,7 +32,6 @@ const memberLink = document.getElementById('member-link');
 const mobileLoginLink = document.getElementById('mobile-login-link');
 const mobileLogoutButton = document.getElementById('mobile-logout-button');
 const mobileMemberLink = document.getElementById('mobile-member-link');
-// Mobilmeny-kontroller
 const mobileMenuButton = document.getElementById('mobile-menu-button');
 const mobileMenu = document.getElementById('mobile-menu');
 
@@ -44,8 +46,9 @@ const mobileMenu = document.getElementById('mobile-menu');
 async function fetchUserRole(uid) {
     if (!uid) return null;
     
-    // Sti til rollen-dokumentet, som beskrevet i planen
+    // Sti til rollen-dokumentet
     const roleDocPath = `/artifacts/${appId}/public/data/userRoles/${uid}`;
+    console.log(`Fetching role from: ${roleDocPath}`); // Debugging
     
     try {
         const docRef = doc(db, roleDocPath);
@@ -53,10 +56,11 @@ async function fetchUserRole(uid) {
 
         if (docSnap.exists()) {
             const data = docSnap.data();
-            return data.role || null; // Returnerer rollen, f.eks. 'admin'
+            console.log("Fetched role:", data.role); // Debugging
+            return data.role || null;
         } else {
-            console.warn(`User role document not found for UID: ${uid} at path: ${roleDocPath}`);
-            return null; // Fant ikke noe rolle-dokument
+            console.warn(`User role document not found for UID: ${uid}`);
+            return null;
         }
     } catch (error) {
         console.error("Error fetching user role:", error);
@@ -66,49 +70,40 @@ async function fetchUserRole(uid) {
 
 /**
  * Oppdaterer UI basert på innloggingsstatus og rolle.
- * Bruker 'hidden' klassen definert i style.css
  * @param {object|null} user - Firebase user-objektet.
  * @param {string|null} role - Brukerens rolle.
  */
 function updateUI(user, role) {
-    if (user && role) {
-        // Innlogget med gyldig rolle
-        if (loginLink) loginLink.classList.add('hidden');
-        if (mobileLoginLink) mobileLoginLink.classList.add('hidden');
+    // Sjekk for desktop-elementer
+    if (loginLink) loginLink.classList.toggle('hidden', user && role);
+    if (logoutButton) logoutButton.classList.toggle('hidden', !(user && role));
+    if (memberLink) memberLink.classList.toggle('hidden', !(user && role));
 
-        if (logoutButton) logoutButton.classList.remove('hidden');
-        if (mobileLogoutButton) mobileLogoutButton.classList.remove('hidden');
-        if (memberLink) memberLink.classList.remove('hidden');
-        if (mobileMemberLink) mobileMemberLink.classList.remove('hidden');
+    // Sjekk for mobil-elementer
+    if (mobileLoginLink) mobileLoginLink.classList.toggle('hidden', user && role);
+    if (mobileLogoutButton) mobileLogoutButton.classList.toggle('hidden', !(user && role));
+    if (mobileMemberLink) mobileMemberLink.classList.toggle('hidden', !(user && role));
 
-        // Oppdater velkomstmelding hvis vi er på medlemssiden
-        const welcomeMsg = document.getElementById('welcome-message');
-        if (welcomeMsg) {
+    // Oppdater velkomstmelding hvis vi er på medlemssiden
+    const welcomeMsg = document.getElementById('welcome-message');
+    if (welcomeMsg) {
+        if (user && role) {
             welcomeMsg.textContent = `Velkommen, ${role} (${user.email}). Her ser du siste nytt.`;
+        } else {
+            welcomeMsg.textContent = 'Logger inn...'; // Eller en annen standardtekst
         }
-        
-    } else {
-        // Utlogget eller mangler rolle
-        if (loginLink) loginLink.classList.remove('hidden');
-        if (mobileLoginLink) mobileLoginLink.classList.remove('hidden');
-
-        if (logoutButton) logoutButton.classList.add('hidden');
-        if (mobileLogoutButton) mobileLogoutButton.classList.add('hidden');
-        if (memberLink) memberLink.classList.add('hidden');
-        if (mobileMemberLink) mobileMemberLink.classList.add('hidden');
     }
 }
+
 
 /**
  * Beskytter medlemssiden.
  * Kalles etter at auth-status er kjent.
  */
 function protectMemberPage() {
-    // Sjekk om vi er på medlem.html
     if (window.location.pathname.endsWith('/medlem.html')) {
         if (!authState.user || !authState.role) {
             console.log("Access denied. User not logged in or no role. Redirecting to login.html");
-            // Omdiriger til innloggingssiden
             window.location.href = 'login.html';
         }
     }
@@ -143,7 +138,6 @@ async function handleLogin(e) {
     try {
         await signInWithEmailAndPassword(auth, email, password);
         // Innlogging vellykket. onAuthStateChanged vil håndtere resten
-        // (rolle-sjekk og redirect via protectLoginPage)
     } catch (error) {
         console.error("Login failed:", error.code);
         if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
@@ -160,14 +154,12 @@ async function handleLogin(e) {
 async function handleLogout() {
     try {
         await signOut(auth);
-        // Utlogging vellykket. onAuthStateChanged vil håndtere resten.
         
         // Hvis vi er på medlemssiden, omdiriger til forsiden
         if (window.location.pathname.endsWith('/medlem.html')) {
             window.location.href = 'index.html';
         }
-    } catch (error)
-        {
+    } catch (error) {
         console.error("Logout failed:", error);
     }
 }
@@ -198,61 +190,28 @@ if (mobileMenu) {
     if (btn) btn.addEventListener('click', handleLogout);
 });
 
-// --- NY STruktur: Fest lytter til login-skjema UMIDDELBART ---
-// Koble kun til innloggingsskjemaet hvis vi er på login.html
+// Fest lytter til login-skjema UMIDDELBART
 if (window.location.pathname.endsWith('/login.html')) {
     const loginForm = document.getElementById('login-form');
     if (loginForm) {
         loginForm.addEventListener('submit', handleLogin);
         console.log("Login form listener attached.");
-    } else {
-        console.error("Login form not found!");
     }
 }
 
 
 // --- HOVED-AUTENTISERINGSLYTTER (Kjører når Firebase er klar) ---
 
-/**
- * Dette er hjertet i autentiseringen.
- * Den kjører når siden lastes (med authReady) og hver gang
- * inn/utlogging skjer.
- */
-authReady.then(async (initialUser) => {
-    // Denne kjører én gang på side-last, etter at authReady er løst.
-    console.log("Auth ready. Initial user:", initialUser ? initialUser.uid : null);
+authReady.then(initialUser => {
+    console.log("Auth ready. Initial user:", initialUser ? initialUser.uid : "null");
     
-    if (initialUser) {
-        const role = await fetchUserRole(initialUser.uid);
-        if (role) {
-            authState.user = initialUser;
-            authState.role = role;
-        } else {
-            // Gyldig bruker, men mangler rolle. Logg ut.
-            console.warn("User has auth but no role. Forcing logout.");
-            await handleLogout(); // Dette vil tømme authState
-        }
-    } else {
-        authState.user = null;
-        authState.role = null;
-    }
-    
-    // Oppdater UI og sjekk side-beskyttelse etter den FØRSTE sjekken
-    updateUI(authState.user, authState.role);
-    protectMemberPage();
-    protectLoginPage();
-
-    // --- SIDE-SPESIFIKK EVENT LISTENER (LOGIN-SKJEMA) ---
-    // DENNE ER NÅ FLYTTET UT FOR Å KJØRE UMIDDELBART
-
     // Start den permanente lytteren for ENDRINGER
     onAuthStateChanged(auth, async (user) => {
-        console.log("Auth state changed. New user:", user ? user.uid : null);
+        console.log("Auth state changed. New user:", user ? user.uid : "null");
         
         if (user) {
-            // Bruker logget nettopp inn (eller er fortsatt logget inn)
-            // Unngå å hente rolle på nytt hvis vi allerede har den
-            if (!authState.user || authState.user.uid !== user.uid) {
+            // Sjekk om dette er en ny innlogging ELLER om vi mangler rolle
+            if (!authState.user || authState.user.uid !== user.uid || !authState.role) {
                 const role = await fetchUserRole(user.uid);
                 if (role) {
                     // Normal innlogging
@@ -274,15 +233,28 @@ authReady.then(async (initialUser) => {
         updateUI(authState.user, authState.role);
         protectMemberPage();
         protectLoginPage();
-    });
-}).catch(error => {
-    // Håndter feil hvis authReady-promiset avvises (f.eks. anonym innlogging feilet)
-    console.error("AuthReady Promise rejected. App might not function correctly.", error);
-    // Selv om auth feiler, må vi kanskje vise en feilmelding på login-siden
-    if (window.location.pathname.endsWith('/login.html')) {
-        const loginError = document.getElementById('login-error');
-        if (loginError) {
-            loginError.textContent = 'Klarte ikke koble til autentisering. Sjekk internett.';
+        
+        // --- NY LOGIKK: START FEED-FUNKSJONER ---
+        // Nå som vi VET statusen, kan vi starte feed-funksjonene
+        // hvis vi er på riktig side.
+        if (window.location.pathname.endsWith('/medlem.html')) {
+            if (authState.user && authState.role) {
+                console.log("User is authenticated with a role. Starting feed listener.");
+                // KUN innloggede brukere med rolle kan se feeden
+                setupFeedListener(); 
+                
+                // KUN admin-brukere kan se admin-funksjoner
+                if (authState.role === 'admin') {
+                    console.log("User is admin. Setting up admin features.");
+                    setupAdminFeatures();
+                }
+            } else {
+                 console.log("User on medlem.html but not authenticated/role-less. Feed not started.");
+            }
         }
-    }
+    });
+
+}).catch(error => {
+    // Håndter feil hvis authReady-promiset avvises
+    console.error("AuthReady Promise rejected. App might not function correctly.", error);
 });
