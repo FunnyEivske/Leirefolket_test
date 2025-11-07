@@ -11,6 +11,12 @@ import {
     setDoc // <-- NY: Vi trenger setDoc for å opprette brukerprofiler
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+// NYTT: Promise for å signalisere at VÅR sjekk er ferdig
+let resolveAuthCheck;
+export const scriptAuthReady = new Promise((resolve) => {
+    resolveAuthCheck = resolve;
+});
+
 // --- GLOBAL STATE ---
 /**
  * Holder den nåværende autentiseringstilstanden.
@@ -304,6 +310,10 @@ authReady.then(async (initialUser) => {
         }
     }
 
+    // NY: Signaliser at den første sjekken er fullført
+    console.log("script.js: Første auth-sjekk fullført.");
+    resolveAuthCheck();
+
     // Start den permanente lytteren for ENDRINGER
     onAuthStateChanged(auth, async (user) => {
         console.log("Auth state changed. New user:", user ? user.uid : null);
@@ -334,5 +344,9 @@ authReady.then(async (initialUser) => {
         updateUI(authState.user, authState);
         protectProtectedPages();
         protectLoginPage();
+
+        // NY: Signaliser at en endringssjekk er fullført
+        console.log("script.js: Auth-endring fullført.");
+        resolveAuthCheck();
     });
 });

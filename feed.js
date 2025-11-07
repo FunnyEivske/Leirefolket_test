@@ -1,6 +1,8 @@
 // Importer nødvendige funksjoner
-import { db, appId, authReady } from './firebase.js';
-import { authState } from './script.js'; // Importer den delte authState
+// ENDRET: fjerner authReady fra firebase
+import { db, appId } from './firebase.js'; 
+// ENDRET: importerer scriptAuthReady fra script.js
+import { authState, scriptAuthReady } from './script.js'; 
 import { 
     collection, 
     addDoc, 
@@ -160,8 +162,9 @@ async function handlePostSubmit(e) {
 if (document.getElementById('feed-container')) {
     
     // Vent til den første autentiseringen er fullført
-    authReady.then(() => {
-        console.log("Feed.js: Auth is ready. Current state:", authState);
+    // ENDRET: Bytter til å vente på VÅRT signal
+    scriptAuthReady.then(() => {
+        console.log("Feed.js: scriptAuthReady er løst. Nåværende tilstand:", authState);
         
         // Nå kan vi trygt sjekke authState
         if (!authState.user || !authState.role) {
