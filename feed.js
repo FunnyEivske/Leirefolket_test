@@ -1,6 +1,7 @@
 // Importer nødvendige funksjoner
-import { db, appId, authReady } from './firebase.js';
-import { authState } from './script.js'; // Importer den delte authState
+import { db, appId } from './firebase.js'; // Fjern authReady
+// **NY:** Importer userReady (og authState for publisering)
+import { authState, userReady } from './script.js'; 
 import { 
     collection, 
     addDoc, 
@@ -26,8 +27,9 @@ const feedCollectionPath = `/artifacts/${appId}/public/data/feed`;
 /**
  * Viser eller skjuler admin-funksjoner (f.eks. "Nytt innlegg"-skjema).
  */
-function toggleAdminFeatures() {
-    if (authState.role === 'admin') {
+function toggleAdminFeatures(role) {
+    // **NY:** Bruk rollen som sendes inn
+    if (role === 'admin') {
         newPostContainer.classList.remove('hidden');
     } else {
         newPostContainer.classList.add('hidden');
@@ -170,19 +172,20 @@ async function handlePostSubmit(e) {
 // Vi kjører kun feed-logikken hvis vi er på medlem.html
 if (document.getElementById('feed-container')) {
     
-    // Vent til den første autentiseringen er fullført
-    authReady.then(() => {
-        console.log("Feed.js: Auth is ready. Current state:", authState);
+    // **NY:** Vent på at BÅDE auth og rolle er lastet
+    userReady.then((currentState) => {
+        console.log("Feed.js: User state is ready. Current state:", currentState);
         
-        // Nå kan vi trygt sjekke authState
-        if (!authState.user || !authState.role) {
-            // Dette burde ikke skje pga. protectMemberPage(), men som en ekstra sjekk
+        // Nå kan vi trygt sjekke den mottatte state
+        if (!currentState.user || !currentState.role) {
             console.log("Feed.js: User not authenticated. Stopping.");
+            if (feedLoading) feedLoading.classList.add('hidden');
+            feedContainer.innerHTML = '<p class="text-red-600 text-center">Feil: Kunne ikke verifisere brukerstatus.</p>';
             return;
         }
 
         // Vis/skjul admin-ting
-        toggleAdminFeatures();
+        toggleAdminFeatures(currentState.role); // **NY:** Send rollen inn
         
         // Sett opp lytter for feeden
         setupFeedListener();
@@ -193,7 +196,7 @@ if (document.getElementById('feed-container')) {
         }
 
     }).catch(error => {
-        console.error("Feed.js: Error waiting for authReady:", error);
+        console.error("Feed.js: Error waiting for userReady:", error);
         feedContainer.innerHTML = '<p class="text-red-600 text-center">En alvorlig feil oppstod under lasting.</p>';
     });
 
