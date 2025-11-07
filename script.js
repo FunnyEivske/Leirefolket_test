@@ -110,7 +110,12 @@ async function fetchUserProfile(uid) {
         } else {
             console.log(`User profile document not found for UID: ${uid}. Creating one.`);
             // Opprett et tomt profil-dokument hvis det ikke finnes
-            const defaultProfile = { displayName: null, photoURL: null };
+            // **FIKS:** La til 'authorId: uid' for å gi eierskap og skrive-rettigheter
+            const defaultProfile = { 
+                displayName: null, 
+                photoURL: null, 
+                authorId: uid 
+            };
             await setDoc(docRef, defaultProfile);
             return defaultProfile;
         }
@@ -140,9 +145,11 @@ function setupProfileListener(uid) {
             // Dette kan skje hvis dokumentet blir slettet
             console.warn(`Profile for ${uid} missing. Creating default.`);
             // Opprett et standard-dokument
+            // **FIKS:** La til 'authorId: uid' for å gi eierskap og skrive-rettigheter
             const defaultProfile = { 
                 displayName: authState.user?.email?.split('@')[0] || 'Medlem', // Bruk e-post-prefix som standard
-                photoURL: null 
+                photoURL: null,
+                authorId: uid
             };
             setDoc(docRef, defaultProfile); // Lagrer det i databasen
             authState.profile = defaultProfile; // Oppdaterer state lokalt med en gang
@@ -169,7 +176,13 @@ async function saveUserProfile(uid, data) {
     const docRef = doc(db, profileDocPath);
     
     // Bruk setDoc med merge: true for å oppdatere eller opprette
-    await setDoc(docRef, data, { merge: true });
+    // Vi legger til 'authorId' her også for sikkerhets skyld,
+    // selv om den primært trengs ved opprettelse.
+    const dataToSave = {
+        ...data,
+        authorId: uid 
+    };
+    await setDoc(docRef, dataToSave, { merge: true });
 }
 
 
