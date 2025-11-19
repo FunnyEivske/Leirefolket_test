@@ -1,212 +1,209 @@
 <!DOCTYPE html>
-<html lang="no" class="scroll-smooth">
+<html lang="no">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Medlemsside - Leirefolket</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
-    <!-- Felles stilark -->
+    <title>Min Side - Leirefolket</title>
     <link rel="stylesheet" href="style.css">
-    
-    <!-- Animationer for fade-in (brukes av feed.js) -->
-    <style>
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in {
-            animation: fadeIn 0.5s ease-out forwards;
-        }
-    </style>
 </head>
-<body class="bg-stone-100 text-stone-800">
 
-    <!-- Header & Navigasjon (Lignende, men tilpasset innlogget tilstand) -->
-    <header class="bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
-        <nav class="container mx-auto px-6 py-3">
-            <div class="flex items-center justify-between">
-                <a href="index.html#hjem" class="flex items-center space-x-3">
-                    <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/LogoPNG.png" alt="Leirefolket Logo" class="h-12 w-12 rounded-full object-cover">
-                    <span class="text-xl font-semibold text-stone-700">Leirefolket</span>
-                </a>
-                <!-- Desktop-meny -->
-                <div class="hidden md:flex items-center space-x-6">
-                    <a href="om-oss.html" class="text-stone-600 hover:text-amber-800 transition-colors">Om Oss</a>
-                    <a href="kurs.html" class="text-stone-600 hover:text-amber-800 transition-colors">Kurs</a>
-                    <a href="galleri.html" class="text-stone-600 hover:text-amber-800 transition-colors">Galleri</a>
-                    <a href="kontakt.html" class="text-stone-600 hover:text-amber-800 transition-colors">Kontakt</a>
-                    <!-- Medlemsside-lenke (Aktiv) -->
-                    <a id="member-link" href="medlem.html" class="text-amber-700 font-semibold hover:text-amber-800 transition-colors">Medlemsside</a>
-                    
-                    <!-- Innloggingsknapp (Skjult) -->
-                    <a id="login-link" href="login.html" class="hidden bg-amber-700 hover:bg-amber-800 text-white font-bold py-2 px-5 rounded-full text-sm transition-colors">
-                        Logg inn
-                    </a>
-                    
-                    <!-- Profil-dropdown (Erstatter Logg ut-knapp) -->
-                    <div class="relative ml-4">
-                        <button id="profile-button" class="hidden flex items-center justify-center h-10 w-10 rounded-full bg-stone-200 text-stone-600 overflow-hidden focus:outline-none focus:ring-2 focus:ring-amber-600">
-                            <!-- Standard SVG-ikon -->
-                            <svg id="profile-icon" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                            </svg>
-                            <!-- Profilbilde (skjult som standard) -->
-                            <img id="profile-img" src="" alt="Profilbilde" class="hidden h-full w-full object-cover">
-                        </button>
-                        
-                        <!-- Dropdown-meny -->
-                        <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
-                            <span id="dropdown-username" class="block px-4 py-2 text-sm text-stone-700 font-semibold truncate" title="Laster...">Laster...</span>
-                            <hr class="my-1">
-                            <a href="#" id="open-profile-modal" class="block px-4 py-2 text-sm text-stone-700 hover:bg-stone-100">Endre profil</a>
-                            <a href="#" id="dropdown-logout-button" class="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-stone-100">Logg ut</a>
-                        </div>
-                    </div>
-                    
-                    <!-- Gammel Logg ut-knapp (Nå skjult av JS) -->
-                    <button id="logout-button" class="hidden bg-stone-500 hover:bg-stone-600 text-white font-bold py-2 px-5 rounded-full text-sm transition-colors">
-                        Logg ut
-                    </button>
-                </div>
-                <!-- Mobilmeny-knapp -->
-                <div class="md:hidden">
-                    <button id="mobile-menu-button" class="text-stone-700 focus:outline-none">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
-                    </button>
-                </div>
-            </div>
-            <!-- Mobilmeny -->
-            <div id="mobile-menu" class="hidden md:hidden mt-4 space-y-2">
-                <a href="om-oss.html" class="block py-2 text-stone-600 hover:text-amber-800">Om Oss</a>
-                <a href="kurs.html" class="block py-2 text-stone-600 hover:text-amber-800">Kurs</a>
-                <a href="galleri.html" class="block py-2 text-stone-600 hover:text-amber-800">Galleri</a>
-                <a href="kontakt.html" class="block py-2 text-stone-600 hover:text-amber-800">Kontakt</a>
-                
-                <!-- Mobilmeny-lenker for medlem og innlogging -->
-                <a id="mobile-member-link" href="medlem.html" class="hidden block py-2 text-amber-700 font-semibold hover:text-amber-800">Medlemsside</a>
-                <a href="#" id="mobile-open-profile-modal" class="hidden block py-2 text-stone-600 hover:text-amber-800">Endre profil</a>
-                <a id="mobile-login-link" href="login.html" class="w-full text-left block py-2 text-stone-600 hover:text-amber-800">
-                    Logg inn
-                </a>
-                <a href="#" id="mobile-logout-button" class="hidden w-full text-left block py-2 text-red-600 hover:text-amber-800">
-                    Logg ut
-                </a>
-            </div>
-        </nav>
+<body>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="container header-inner">
+            <a href="index.html" class="logo">
+                <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/LogoPNG.png" alt="Leirefolket Logo">
+                <span>Leirefolket</span>
+            </a>
+
+            <nav class="nav-desktop">
+                <a href="om-oss.html" class="nav-link">Om Oss</a>
+                <a href="kurs.html" class="nav-link">Kurs</a>
+                <a href="galleri.html" class="nav-link">Galleri</a>
+                <a href="kontakt.html" class="nav-link">Kontakt</a>
+                <a href="medlem.html" class="nav-link active">Min Side</a>
+                <button id="dropdown-logout-button" class="btn btn-ghost text-sm">Logg ut</button>
+            </nav>
+
+            <button id="mobile-menu-button" class="mobile-toggle" aria-label="Meny">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 12h18M3 6h18M3 18h18" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Mobilmeny -->
+        <div id="mobile-menu" class="mobile-menu">
+            <a href="om-oss.html">Om Oss</a>
+            <a href="kurs.html">Kurs</a>
+            <a href="galleri.html">Galleri</a>
+            <a href="kontakt.html">Kontakt</a>
+            <a href="medlem.html" style="font-weight: 600; color: var(--color-primary);">Min Side</a>
+            <button id="mobile-logout-button" class="btn btn-ghost btn-full text-left"
+                style="justify-content: flex-start; padding-left: 0;">Logg ut</button>
+        </div>
     </header>
 
-    <main class="container mx-auto px-6 py-12 md:py-20">
-        
-        <div class="max-w-2xl mx-auto">
-            <h1 class="font-display text-4xl md:text-5xl font-bold text-stone-800 mb-6">Intern-feed</h1>
-            <p id="welcome-message" class="text-lg text-stone-600 mb-8">Velkommen, medlem. Her ser du siste nytt og oppdateringer fra verkstedet.</p>
+    <main class="container">
+        <div class="dashboard-grid">
 
-            <!-- Nytt Innlegg-skjema (Skjult som standard, kun for admin) -->
-            <div id="new-post-container" class="hidden bg-white p-6 rounded-lg shadow-md mb-8">
-                <h2 class="text-2xl font-bold text-amber-900 mb-4">Nytt Innlegg</h2>
-                <form id="new-post-form">
-                    <div class="mb-4">
-                        <label for="post-title" class="block text-stone-700 font-semibold mb-2">Tittel</label>
-                        <input type="text" id="post-title" required class="w-full px-4 py-2 border border-stone-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-600">
-                    </div>
-                    <div class="mb-4">
-                        <label for="post-content" class="block text-stone-700 font-semibold mb-2">Innhold</label>
-                        <textarea id="post-content" rows="5" required class="w-full px-4 py-2 border border-stone-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-600" placeholder="Skriv din oppdatering her..."></textarea>
-                    </div>
-                    <button type="submit" id="post-submit-button" class="w-full bg-amber-700 hover:bg-amber-800 text-white font-bold py-3 px-6 rounded-full text-lg transition-colors">
-                        Publiser Innlegg
-                    </button>
-                    <p id="post-error" class="text-red-600 text-sm text-center mt-4"></p>
-                </form>
-            </div>
+            <!-- Sidebar: Profil -->
+            <aside class="dashboard-sidebar">
+                <div class="card profile-card">
+                    <div class="card-body">
+                        <img id="profile-img" src="https://ui-avatars.com/api/?name=Medlem&background=random"
+                            alt="Profilbilde" class="profile-avatar">
+                        <h3 id="profile-name" class="text-lg font-semibold">Laster...</h3>
+                        <p class="text-sm text-muted">Medlem</p>
 
-            <!-- Feed-container -->
-            <div id="feed-container" class="space-y-6">
-                <!-- Innlegg lastes her av feed.js -->
-                <div id="feed-loading" class="text-center text-stone-600 py-10">
-                    <p>Laster feed...</p>
+                        <div class="profile-stats">
+                            <div class="stat-item">
+                                <span class="stat-value">0</span>
+                                <span class="stat-label">Kurs</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-value">0</span>
+                                <span class="stat-label">Verk</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <button id="open-profile-modal" class="btn btn-secondary btn-full text-sm">Rediger
+                                Profil</button>
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-        </div>
-
-    </main>
-
-    <!-- Footer (Identisk med index.html) -->
-    <footer class="bg-stone-800 text-stone-300 py-10 mt-20">
-        <div class="container mx-auto px-6 text-center">
-            <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/LogoPNGwhite.png" alt="Leirefolket Logo" class="h-16 w-16 mx-auto mb-4 rounded-full object-cover">
-            <p class="mb-4 font-semibold text-lg">Leirefolket Keramikkverksted</p>
-            <p class="mb-4">Nye Teglverks vei 23, 4614 Kristiansand</p>
-            <div class="flex justify-center space-x-6 mb-4">
-                <!-- Sosiale medier-ikoner -->
-                <a href="https://www.instagram.com/leirefolket_keramikkverksted/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" class="hover:text-white transition-colors">
-                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                        <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-                        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-                    </svg>
-                </a>
-                <a href="https://www.facebook.com/leirefolketkeramikkverksted/?locale=nb_NO" target="_blank" rel="noopener noreferrer" aria-label="Facebook" class="hover:text-white transition-colors">
-                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path fill-rule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clip-rule="evenodd" />
-                    </svg>
-                </a>
-            </div>
-            <p class="text-sm text-stone-400">&copy; 2025 Leirefolket Keramikkverksted. Alle rettigheter forbeholdt.</p>
-        </div>
-    </footer>
-    
-    <!-- Profil Endre Modal -->
-    <div id="profile-modal" class="hidden fixed inset-0 z-[100] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-        <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <!-- Bakgrunn-overlay -->
-            <div id="profile-modal-overlay" class="fixed inset-0 bg-stone-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
-
-            <!-- Modal-innhold -->
-            <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-            <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-                <form id="profile-form">
-                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                        <div class="sm:flex sm:items-start">
-                            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
-                                <h3 class="text-lg leading-6 font-medium text-stone-900" id="modal-title">Endre din profil</h3>
-                                <div class="mt-4 space-y-4">
-                                    <div>
-                                        <label for="display-name-input" class="block text-sm font-medium text-stone-700">Visningsnavn</label>
-                                        <input type="text" id="display-name-input" class="mt-1 w-full px-3 py-2 border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-amber-500 focus:border-amber-500 sm:text-sm" placeholder="Ditt visningsnavn">
-                                    </div>
-                                    <div>
-                                        <label for="profile-image-url-input" class="block text-sm font-medium text-stone-700">URL til profilbilde</label>
-                                        <input type="text" id="profile-image-url-input" class="mt-1 w-full px-3 py-2 border border-stone-300 rounded-md shadow-sm focus:outline-none focus:ring-amber-500 focus:border-amber-500 sm:text-sm" placeholder="https://...bilde.jpg">
-                                        <p class="mt-1 text-xs text-stone-500">Lim inn en lenke til et bilde. (Filopplasting støttes ikke ennå).</p>
-                                    </div>
-                                </div>
+                <!-- Info-kort -->
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="text-lg">Verkstedstatus</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-4">
+                            <p class="text-sm font-medium">Åpningstider denne uken:</p>
+                            <p class="text-sm text-muted">Man-Fre: 10-20<br>Lør-Søn: 12-18</p>
+                        </div>
+                        <div>
+                            <p class="text-sm font-medium">Ovnstatus:</p>
+                            <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
+                                <span
+                                    style="display: block; width: 8px; height: 8px; background-color: var(--color-success); border-radius: 50%;"></span>
+                                <p class="text-sm text-muted">Råbrann (Ledig)</p>
                             </div>
                         </div>
                     </div>
-                    <div class="bg-stone-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                        <button type="submit" id="save-profile-button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-amber-700 text-base font-medium text-white hover:bg-amber-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 sm:ml-3 sm:w-auto sm:text-sm">
-                            Lagre
+                </div>
+            </aside>
+
+            <!-- Hovedinnhold -->
+            <div class="dashboard-main">
+
+                <!-- Velkomst / Feed -->
+                <section>
+                    <div class="section-header">
+                        <h2>Siste Nytt</h2>
+                        <!-- Admin-knapp for nytt innlegg (skjult for vanlige medlemmer) -->
+                        <button id="new-post-btn" class="btn btn-primary text-sm hidden">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M12 5v14M5 12h14" />
+                            </svg>
+                            Nytt innlegg
                         </button>
-                        <button type="button" id="close-profile-modal" class="mt-3 w-full inline-flex justify-center rounded-md border border-stone-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-stone-700 hover:bg-stone-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
-                            Avbryt
-                        </button>
-                        <p id="profile-save-status" class="text-sm text-green-600 sm:w-auto sm:mt-2 sm:mr-3"></p>
                     </div>
-                </form>
+
+                    <!-- Skjema for nytt innlegg (Admin) -->
+                    <div id="new-post-container" class="card mb-6 hidden">
+                        <div class="card-body">
+                            <form id="new-post-form">
+                                <div class="form-group">
+                                    <label class="form-label">Tittel</label>
+                                    <input type="text" id="post-title" class="form-input" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Innhold</label>
+                                    <textarea id="post-content" class="form-input" style="min-height: 100px;"
+                                        required></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Publiser</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Feed Container -->
+                    <div id="feed-container" style="display: flex; flex-direction: column; gap: 1.5rem;">
+                        <div id="feed-loading" class="text-center py-10 text-muted">Laster oppdateringer...</div>
+                    </div>
+                </section>
+
+                <!-- Mine Kurs (Placeholder) -->
+                <section>
+                    <div class="section-header">
+                        <h3>Mine Kurs</h3>
+                        <a href="kurs.html" class="btn btn-ghost text-sm">Finn flere kurs &rarr;</a>
+                    </div>
+                    <div class="card bg-subtle" style="border-style: dashed;">
+                        <div class="card-body text-center py-10">
+                            <p class="text-muted">Du er ikke påmeldt noen kurs for øyeblikket.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Mitt Galleri (Placeholder) -->
+                <section>
+                    <div class="section-header">
+                        <h3>Mitt Galleri</h3>
+                        <button class="btn btn-secondary text-sm">Last opp bilde</button>
+                    </div>
+                    <div class="gallery-preview-grid">
+                        <!-- Placeholders -->
+                        <div class="gallery-preview-item bg-subtle"></div>
+                        <div class="gallery-preview-item bg-subtle"></div>
+                        <div class="gallery-preview-item bg-subtle"></div>
+                        <div class="gallery-preview-item bg-subtle"></div>
+                    </div>
+                </section>
+
             </div>
+        </div>
+    </main>
+
+    <!-- Profil Modal -->
+    <div id="profile-modal" class="hidden"
+        style="position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;">
+        <div id="profile-modal-overlay"
+            style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px);"></div>
+        <div class="card" style="position: relative; width: 100%; max-width: 500px; margin: 1rem; z-index: 10;">
+            <div class="card-header">
+                <h3>Rediger Profil</h3>
+            </div>
+            <form id="profile-form">
+                <div class="card-body">
+                    <div class="form-group">
+                        <label for="display-name-input" class="form-label">Visningsnavn</label>
+                        <input type="text" id="display-name-input" class="form-input" placeholder="Ditt navn">
+                    </div>
+                    <div class="form-group">
+                        <label for="profile-image-url-input" class="form-label">Profilbilde (URL)</label>
+                        <input type="text" id="profile-image-url-input" class="form-input" placeholder="https://...">
+                        <p class="text-sm text-muted mt-2">Lim inn en lenke til et bilde.</p>
+                    </div>
+                </div>
+                <div class="card-footer" style="display: flex; justify-content: flex-end; gap: 1rem;">
+                    <button type="button" id="close-profile-modal" class="btn btn-secondary">Avbryt</button>
+                    <button type="submit" id="save-profile-button" class="btn btn-primary">Lagre</button>
+                </div>
+                <p id="profile-save-status" class="text-center mb-4 text-sm"></p>
+            </form>
         </div>
     </div>
 
-    <!-- Firebase og skript -->
     <script type="module" src="firebase.js"></script>
-    <!-- script.js trengs for header/logikk -->
-    <script type="module" src="script.js"></script> 
-    <!-- feed.js er spesifikk for denne siden -->
+    <script type="module" src="script.js"></script>
     <script type="module" src="feed.js"></script>
 </body>
+
 </html>

@@ -1,11 +1,12 @@
 // Importer de nødvendige funksjonene fra Firebase SDK-ene
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 // **FIKS: Importer signInWithCustomToken, signInAnonymously**
-import { 
-    getAuth, 
-    onAuthStateChanged, 
-    signInWithCustomToken, 
-    signInAnonymously 
+import {
+    getAuth,
+    onAuthStateChanged,
+    signInWithCustomToken,
+    signInAnonymously,
+    sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -73,4 +74,4 @@ const authReady = new Promise((resolve) => {
 
 
 // **FIKS: Eksporter appId sammen med resten**
-export { app, auth, db, authReady, appId };
+export { app, auth, db, authReady, appId, sendPasswordResetEmail };
