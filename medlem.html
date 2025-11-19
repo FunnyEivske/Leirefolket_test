@@ -128,7 +128,12 @@
                                     <textarea id="post-content" class="form-input" style="min-height: 100px;"
                                         required></textarea>
                                 </div>
-                                <button type="submit" class="btn btn-primary">Publiser</button>
+
+                                <!-- VIKTIG: Lagt til ID her som feed.js trenger -->
+                                <button type="submit" id="post-submit-button" class="btn btn-primary">Publiser</button>
+
+                                <!-- VIKTIG: Lagt til dette elementet for feilmeldinger -->
+                                <p id="post-error" class="form-error"></p>
                             </form>
                         </div>
                     </div>
