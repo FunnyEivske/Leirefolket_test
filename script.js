@@ -112,264 +112,308 @@ async function fetchUserRole(uid) {
             console.warn(`User role document not found for UID: ${uid}`);
             return null;
         }
-        try {
-            const docRef = doc(db, profileDocPath);
-            const docSnap = await getDoc(docRef);
-            if (docSnap.exists()) {
-                return docSnap.data();
-            } else {
-                // Hvis dokumentet ikke finnes, returner tomt objekt (ikke lagre default her for å unngå permissions-feil ved lesing)
-                return { displayName: null, photoURL: null };
-            }
-        } catch (error) {
-            console.error("Error fetching user profile:", error);
-            return null;
-        }
+    } catch (error) {
+        console.error("Error fetching user role:", error);
+        return null;
     }
+}
+
+// **OPPDATERT STI:** Vi prøver å lagre profilinfo i SAMME dokument som rollen,
+// siden vi vet at vi har tilgang til den (i hvert fall lese).
+function getProfileDocPath(uid) {
+    return `/artifacts/${appId}/public/data/userRoles/${uid}`;
+}
+
+async function fetchUserProfile(uid) {
+    if (!uid) return null;
+    const profileDocPath = getProfileDocPath(uid);
+    try {
+        const docRef = doc(db, profileDocPath);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            return docSnap.data();
+        } else {
+            // Hvis dokumentet ikke finnes, returner tomt objekt (ikke lagre default her for å unngå permissions-feil ved lesing)
+            return { displayName: null, photoURL: null };
+        }
+    } catch (error) {
+        console.error("Error fetching user profile:", error);
+        return null;
+    }
+}
 
 function setupProfileListener(uid) {
-        if (!uid) return null;
-        const profileDocPath = getProfileDocPath(uid);
-        const docRef = doc(db, profileDocPath);
+    if (!uid) return null;
+    const profileDocPath = getProfileDocPath(uid);
+    const docRef = doc(db, profileDocPath);
 
-        const unsubscribe = onSnapshot(docRef, (docSnap) => {
-            if (docSnap.exists()) {
-                authState.profile = docSnap.data();
-            } else {
-                authState.profile = {
-                    displayName: authState.user?.email?.split('@')[0] || 'Medlem',
-                    photoURL: null
-                };
-            }
-            updateUI(authState.user, authState.profile);
-        }, (error) => {
-            console.error("Error in profile listener:", error);
-        });
-        return unsubscribe;
-    }
-
-    async function saveUserProfile(uid, data) {
-        if (!uid) throw new Error("Ingen bruker-ID oppgitt.");
-        const profileDocPath = getProfileDocPath(uid);
-        const docRef = doc(db, profileDocPath);
-        // Bruk merge: true for å ikke overskrive rollen
-        await setDoc(docRef, data, { merge: true });
-    }
-
-    // --- UI OPPDATERING ---
-
-    function updateUI(user, profile) {
-        const emailPrefix = user?.email ? user.email.split('@')[0] : 'Medlem';
-        const displayName = profile?.displayName || emailPrefix;
-        const photoURL = profile?.photoURL || `https://ui-avatars.com/api/?name=${displayName}&background=random`;
-
-        // Oppdater profilkort (medlem.html)
-        if (profileName) profileName.textContent = displayName;
-        if (profileImg) profileImg.src = photoURL;
-
-        // Vis admin-knapper hvis admin
-        if (authState.role === 'admin') {
-            if (newPostBtn) newPostBtn.classList.remove('hidden');
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+        if (docSnap.exists()) {
+            authState.profile = docSnap.data();
         } else {
-            if (newPostBtn) newPostBtn.classList.add('hidden');
+            authState.profile = {
+                displayName: authState.user?.email?.split('@')[0] || 'Medlem',
+                photoURL: null
+            };
+        }
+        updateUI(authState.user, authState.profile);
+    }, (error) => {
+        console.error("Error in profile listener:", error);
+    });
+    return unsubscribe;
+}
+
+async function saveUserProfile(uid, data) {
+    if (!uid) throw new Error("Ingen bruker-ID oppgitt.");
+    const profileDocPath = getProfileDocPath(uid);
+    const docRef = doc(db, profileDocPath);
+    // Bruk merge: true for å ikke overskrive rollen
+    await setDoc(docRef, data, { merge: true });
+}
+
+// --- UI OPPDATERING ---
+
+function updateUI(user, profile) {
+    const emailPrefix = user?.email ? user.email.split('@')[0] : 'Medlem';
+    const displayName = profile?.displayName || emailPrefix;
+    const photoURL = profile?.photoURL || `https://ui-avatars.com/api/?name=${displayName}&background=random`;
+
+    // Oppdater profilkort (medlem.html)
+    if (profileName) profileName.textContent = displayName;
+    if (profileImg) profileImg.src = photoURL;
+
+    // Vis admin-knapper hvis admin
+    if (authState.role === 'admin') {
+        if (newPostBtn) newPostBtn.classList.remove('hidden');
+    } else {
+        if (newPostBtn) newPostBtn.classList.add('hidden');
+    }
+}
+
+function protectMemberPage() {
+    if (window.location.pathname.endsWith('/medlem.html')) {
+        if (!authState.user || !authState.role) {
+            window.location.href = 'login.html';
         }
     }
+}
 
-    function protectMemberPage() {
-        if (window.location.pathname.endsWith('/medlem.html')) {
-            if (!authState.user || !authState.role) {
-                window.location.href = 'login.html';
+function protectLoginPage() {
+    if (window.location.pathname.endsWith('/login.html')) {
+        if (authState.user && authState.role) {
+            window.location.href = 'medlem.html';
+        }
+    }
+}
+
+// --- HANDLERS ---
+
+async function handleLogin(e) {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value;
+    const password = document.getElementById('login-password').value;
+
+    if (loginError) loginError.textContent = '';
+    if (loginSuccess) loginSuccess.textContent = '';
+
+    try {
+        await signInWithEmailAndPassword(auth, email, password);
+    } catch (error) {
+        console.error("Login failed:", error.code);
+        if (loginError) {
+            if (error.code === 'auth/invalid-credential') {
+                loginError.textContent = 'Feil e-post eller passord.';
+            } else {
+                loginError.textContent = 'En feil oppstod. Prøv igjen.';
             }
         }
     }
+}
 
-    function protectLoginPage() {
-        if (window.location.pathname.endsWith('/login.html')) {
-            if (authState.user && authState.role) {
-                window.location.href = 'medlem.html';
-            }
-        }
+async function handleForgotPassword() {
+    const email = document.getElementById('login-email').value;
+    if (!email) {
+        if (loginError) loginError.textContent = 'Skriv inn e-postadressen din først.';
+        return;
     }
 
-    // --- HANDLERS ---
+    if (loginError) loginError.textContent = '';
+    if (loginSuccess) loginSuccess.textContent = 'Sender e-post...';
 
-    async function handleLogin(e) {
-        e.preventDefault();
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
-
-        if (loginError) loginError.textContent = '';
+    try {
+        await sendPasswordResetEmail(auth, email);
+        if (loginSuccess) loginSuccess.textContent = 'E-post for tilbakestilling sendt! Sjekk innboksen din.';
+    } catch (error) {
+        console.error("Forgot password failed:", error);
         if (loginSuccess) loginSuccess.textContent = '';
-
-        try {
-            await signInWithEmailAndPassword(auth, email, password);
-        } catch (error) {
-            console.error("Login failed:", error.code);
-            if (loginError) {
-                if (error.code === 'auth/invalid-credential') {
-                    loginError.textContent = 'Feil e-post eller passord.';
-                } else {
-                    loginError.textContent = 'En feil oppstod. Prøv igjen.';
-                }
-            }
-        }
+        if (loginError) loginError.textContent = 'Kunne ikke sende e-post. Sjekk at adressen er riktig.';
     }
+}
 
-    async function handleForgotPassword() {
-        const email = document.getElementById('login-email').value;
-        if (!email) {
-            if (loginError) loginError.textContent = 'Skriv inn e-postadressen din først.';
-            return;
+async function handleLogout() {
+    try {
+        await signOut(auth);
+        if (window.location.pathname.endsWith('/medlem.html')) {
+            window.location.href = 'index.html'; // Eller login.html
         }
-
-        if (loginError) loginError.textContent = '';
-        if (loginSuccess) loginSuccess.textContent = 'Sender e-post...';
-
-        try {
-            await sendPasswordResetEmail(auth, email);
-            if (loginSuccess) loginSuccess.textContent = 'E-post for tilbakestilling sendt! Sjekk innboksen din.';
-        } catch (error) {
-            console.error("Forgot password failed:", error);
-            if (loginSuccess) loginSuccess.textContent = '';
-            if (loginError) loginError.textContent = 'Kunne ikke sende e-post. Sjekk at adressen er riktig.';
-        }
+    } catch (error) {
+        console.error("Logout failed:", error);
     }
+}
 
-    async function handleLogout() {
-        try {
-            await signOut(auth);
-            if (window.location.pathname.endsWith('/medlem.html')) {
-                window.location.href = 'index.html'; // Eller login.html
-            }
-        } catch (error) {
-            console.error("Logout failed:", error);
+async function handleProfileSave(e) {
+    e.preventDefault();
+    console.log("handleProfileSave called");
+
+    const saveButton = document.getElementById('save-profile-button');
+    const originalButtonText = saveButton.textContent;
+    saveButton.textContent = 'Lagrer...';
+    saveButton.disabled = true;
+
+    const statusMsg = document.getElementById('profile-save-status');
+    if (statusMsg) statusMsg.textContent = '';
+
+    const newDisplayName = displayNameInput.value.trim();
+    let newPhotoURL = profileImageUrlInput.value.trim();
+    const file = profileImageFileInput.files[0];
+
+    console.log("Values to save:", { newDisplayName, newPhotoURL, file });
+
+    try {
+        if (!authState.user) throw new Error("Ingen bruker er logget inn.");
+
+        // 1. Behandle bilde (Base64)
+        if (file) {
+            console.log("Processing file...");
+            statusMsg.textContent = 'Behandler bilde...';
+            newPhotoURL = await resizeAndConvertToBase64(file);
+            console.log("Image converted to Base64");
         }
-    }
 
-    async function handleProfileSave(e) {
-        e.preventDefault();
-        console.log("handleProfileSave called");
+        // 2. Lagre profilinfo til Firestore
+        console.log("Saving to Firestore user:", authState.user.uid);
+        statusMsg.textContent = 'Lagrer profil...';
 
-        const saveButton = document.getElementById('save-profile-button');
-        const originalButtonText = saveButton.textContent;
-        saveButton.textContent = 'Lagrer...';
-        saveButton.disabled = true;
+        await saveUserProfile(authState.user.uid, {
+            displayName: newDisplayName,
+            photoURL: newPhotoURL || null
+        });
+        console.log("Save successful!");
 
-        const statusMsg = document.getElementById('profile-save-status');
-        if (statusMsg) statusMsg.textContent = '';
+        // Oppdater lokal state
+        authState.profile.displayName = newDisplayName;
+        authState.profile.photoURL = newPhotoURL || null;
 
-        const newDisplayName = displayNameInput.value.trim();
-        let newPhotoURL = profileImageUrlInput.value.trim();
-        const file = profileImageFileInput.files[0];
+        // Oppdater UI umiddelbart
+        updateUI(authState.user, authState.profile);
 
-        console.log("Values to save:", { newDisplayName, newPhotoURL, file });
+        if (statusMsg) {
+            statusMsg.textContent = 'Profil lagret!';
+            statusMsg.style.color = 'var(--color-success)';
+        }
 
-        try {
-            if (!authState.user) throw new Error("Ingen bruker er logget inn.");
-
-            // 1. Behandle bilde (Base64)
-            if (file) {
-                console.log("Processing file...");
-                statusMsg.textContent = 'Behandler bilde...';
-                newPhotoURL = await resizeAndConvertToBase64(file);
-                console.log("Image converted to Base64");
-            }
-
-            // 2. Lagre profilinfo til Firestore
-            console.log("Saving to Firestore user:", authState.user.uid);
-            statusMsg.textContent = 'Lagrer profil...';
-
-            await saveUserProfile(authState.user.uid, {
-                displayName: newDisplayName,
-                photoURL: newPhotoURL || null
-            });
-            console.log("Save successful!");
-
-            // Oppdater lokal state
-            authState.profile.displayName = newDisplayName;
-            authState.profile.photoURL = newPhotoURL || null;
-
-            // Oppdater UI umiddelbart
-            updateUI(authState.user, authState.profile);
-
-            if (statusMsg) {
-                statusMsg.textContent = 'Profil lagret!';
-                statusMsg.style.color = 'var(--color-success)';
-            }
-
-            setTimeout(() => {
-                closeModal();
-                saveButton.textContent = originalButtonText;
-                saveButton.disabled = false;
-                if (statusMsg) statusMsg.textContent = '';
-                // Reset input
-                profileImageFileInput.value = '';
-            }, 1500);
-
-        } catch (error) {
-            console.error("Feil ved lagring av profil:", error);
-            if (statusMsg) {
-                statusMsg.textContent = 'Feil: ' + error.message;
-                statusMsg.style.color = 'var(--color-error)';
-            }
+        setTimeout(() => {
+            closeModal();
             saveButton.textContent = originalButtonText;
             saveButton.disabled = false;
+            if (statusMsg) statusMsg.textContent = '';
+            // Reset input
+            profileImageFileInput.value = '';
+        }, 1500);
+
+    } catch (error) {
+        console.error("Feil ved lagring av profil:", error);
+        if (statusMsg) {
+            statusMsg.textContent = 'Feil: ' + error.message;
+            statusMsg.style.color = 'var(--color-error)';
         }
+        saveButton.textContent = originalButtonText;
+        saveButton.disabled = false;
+    }
+}
+
+// --- EVENT LISTENERS ---
+
+// Mobilmeny
+if (mobileMenuButton) {
+    mobileMenuButton.addEventListener('click', () => {
+        mobileMenu.classList.toggle('show');
+    });
+}
+
+// Login
+if (loginForm) loginForm.addEventListener('submit', handleLogin);
+if (forgotPasswordBtn) forgotPasswordBtn.addEventListener('click', handleForgotPassword);
+
+// Logout
+if (dropdownLogoutButton) dropdownLogoutButton.addEventListener('click', handleLogout);
+if (mobileLogoutButton) mobileLogoutButton.addEventListener('click', handleLogout);
+
+// Profil Modal
+if (openProfileModal) {
+    openProfileModal.addEventListener('click', () => {
+        displayNameInput.value = authState.profile?.displayName || '';
+        profileImageUrlInput.value = authState.profile?.photoURL || '';
+        profileModal.classList.remove('hidden');
+    });
+}
+function closeModal() { if (profileModal) profileModal.classList.add('hidden'); }
+if (closeProfileModalButton) closeProfileModalButton.addEventListener('click', closeModal);
+if (profileModalOverlay) profileModalOverlay.addEventListener('click', closeModal);
+if (profileForm) profileForm.addEventListener('submit', handleProfileSave);
+
+// Admin: Nytt innlegg toggle
+if (newPostBtn) {
+    newPostBtn.addEventListener('click', () => {
+        if (newPostContainer) newPostContainer.classList.toggle('hidden');
+    });
+}
+
+
+// --- INIT ---
+
+authReady.then(async (initialUser) => {
+    if (initialUser) {
+        const [role, profileData] = await Promise.all([
+            fetchUserRole(initialUser.uid),
+            fetchUserProfile(initialUser.uid)
+        ]);
+
+        if (role) {
+            authState.user = initialUser;
+            authState.role = role;
+            authState.profile = profileData;
+            if (profileUnsubscribe) profileUnsubscribe();
+            profileUnsubscribe = setupProfileListener(initialUser.uid);
+        } else {
+            await handleLogout();
+        }
+    } else {
+        authState.user = null;
+        authState.role = null;
+        authState.profile = null;
     }
 
-    // --- EVENT LISTENERS ---
+    updateUI(authState.user, authState.profile);
+    protectMemberPage();
+    protectLoginPage();
 
-    // Mobilmeny
-    if (mobileMenuButton) {
-        mobileMenuButton.addEventListener('click', () => {
-            mobileMenu.classList.toggle('show');
-        });
-    }
+    // Signaliser at vi er ferdige med init
+    resolveUserReady(authState);
 
-    // Login
-    if (loginForm) loginForm.addEventListener('submit', handleLogin);
-    if (forgotPasswordBtn) forgotPasswordBtn.addEventListener('click', handleForgotPassword);
-
-    // Logout
-    if (dropdownLogoutButton) dropdownLogoutButton.addEventListener('click', handleLogout);
-    if (mobileLogoutButton) mobileLogoutButton.addEventListener('click', handleLogout);
-
-    // Profil Modal
-    if (openProfileModal) {
-        openProfileModal.addEventListener('click', () => {
-            displayNameInput.value = authState.profile?.displayName || '';
-            profileImageUrlInput.value = authState.profile?.photoURL || '';
-            profileModal.classList.remove('hidden');
-        });
-    }
-    function closeModal() { if (profileModal) profileModal.classList.add('hidden'); }
-    if (closeProfileModalButton) closeProfileModalButton.addEventListener('click', closeModal);
-    if (profileModalOverlay) profileModalOverlay.addEventListener('click', closeModal);
-    if (profileForm) profileForm.addEventListener('submit', handleProfileSave);
-
-    // Admin: Nytt innlegg toggle
-    if (newPostBtn) {
-        newPostBtn.addEventListener('click', () => {
-            if (newPostContainer) newPostContainer.classList.toggle('hidden');
-        });
-    }
-
-
-    // --- INIT ---
-
-    authReady.then(async (initialUser) => {
-        if (initialUser) {
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
             const [role, profileData] = await Promise.all([
-                fetchUserRole(initialUser.uid),
-                fetchUserProfile(initialUser.uid)
+                fetchUserRole(user.uid),
+                fetchUserProfile(user.uid)
             ]);
 
             if (role) {
-                authState.user = initialUser;
+                authState.user = user;
                 authState.role = role;
                 authState.profile = profileData;
                 if (profileUnsubscribe) profileUnsubscribe();
-                profileUnsubscribe = setupProfileListener(initialUser.uid);
+                profileUnsubscribe = setupProfileListener(user.uid);
             } else {
                 await handleLogout();
             }
@@ -377,39 +421,10 @@ function setupProfileListener(uid) {
             authState.user = null;
             authState.role = null;
             authState.profile = null;
+            if (profileUnsubscribe) profileUnsubscribe();
         }
-
         updateUI(authState.user, authState.profile);
         protectMemberPage();
         protectLoginPage();
-
-        // Signaliser at vi er ferdige med init
-        resolveUserReady(authState);
-
-        onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                const [role, profileData] = await Promise.all([
-                    fetchUserRole(user.uid),
-                    fetchUserProfile(user.uid)
-                ]);
-
-                if (role) {
-                    authState.user = user;
-                    authState.role = role;
-                    authState.profile = profileData;
-                    if (profileUnsubscribe) profileUnsubscribe();
-                    profileUnsubscribe = setupProfileListener(user.uid);
-                } else {
-                    await handleLogout();
-                }
-            } else {
-                authState.user = null;
-                authState.role = null;
-                authState.profile = null;
-                if (profileUnsubscribe) profileUnsubscribe();
-            }
-            updateUI(authState.user, authState.profile);
-            protectMemberPage();
-            protectLoginPage();
-        });
     });
+});
