@@ -1,4 +1,3 @@
-// Importer Firebase-ting og authReady-promiset
 import { app, auth, db, appId, authReady, sendPasswordResetEmail } from './firebase.js';
 import {
     signInWithEmailAndPassword,
@@ -219,35 +218,58 @@ async function handleLogout() {
 
 async function handleProfileSave(e) {
     e.preventDefault();
-    if (!authState.user) return;
+    console.log("handleProfileSave called");
 
-    saveProfileButton.disabled = true;
-    profileSaveStatus.textContent = 'Lagrer...';
-    profileSaveStatus.style.color = 'var(--color-primary)';
+    const saveButton = document.getElementById('save-profile-button');
+    const originalButtonText = saveButton.textContent;
+    saveButton.textContent = 'Lagrer...';
+    saveButton.disabled = true;
+
+    const statusMsg = document.getElementById('profile-save-status');
+    if (statusMsg) statusMsg.textContent = '';
 
     const newDisplayName = displayNameInput.value.trim();
     const newPhotoURL = profileImageUrlInput.value.trim();
 
+    console.log("Values to save:", { newDisplayName, newPhotoURL });
+
     try {
+        if (!authState.user) throw new Error("Ingen bruker er logget inn.");
+
+        console.log("Saving to user:", authState.user.uid);
         await saveUserProfile(authState.user.uid, {
             displayName: newDisplayName,
             photoURL: newPhotoURL || null
         });
+        console.log("Save successful!");
 
-        profileSaveStatus.textContent = 'Lagret!';
-        profileSaveStatus.style.color = 'var(--color-success)';
+        // Oppdater lokal state
+        authState.profile.displayName = newDisplayName;
+        authState.profile.photoURL = newPhotoURL || null;
+
+        // Oppdater UI umiddelbart
+        updateUI(authState.user, authState.profile);
+
+        if (statusMsg) {
+            statusMsg.textContent = 'Profil lagret!';
+            statusMsg.style.color = 'var(--color-success)';
+        }
 
         setTimeout(() => {
-            if (profileModal) profileModal.classList.add('hidden');
-            profileSaveStatus.textContent = '';
-        }, 1000);
+            closeModal();
+            saveButton.textContent = originalButtonText;
+            saveButton.disabled = false;
+            if (statusMsg) statusMsg.textContent = '';
+        }, 1500);
 
     } catch (error) {
-        console.error("Error saving profile:", error);
-        profileSaveStatus.textContent = 'Lagring feilet.';
-        profileSaveStatus.style.color = 'var(--color-error)';
-    } finally {
-        saveProfileButton.disabled = false;
+        console.error("Feil ved lagring av profil:", error);
+        if (statusMsg) {
+            statusMsg.textContent = 'Feil: ' + error.message;
+            statusMsg.style.color = 'var(--color-error)';
+        }
+        saveButton.textContent = originalButtonText;
+        saveButton.disabled = false;
     }
 }
 
