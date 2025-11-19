@@ -1,0 +1,22 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Allow users to read and write their own profile data
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Keep artifacts readable (for roles/config) but not writable by public
+    match /artifacts/{document=**} {
+      allow read: if true;
+      allow write: if false;
+    }
+    
+    // Explicitly allow reading user roles if they are stored here
+    match /userRoles/{userId} {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}
