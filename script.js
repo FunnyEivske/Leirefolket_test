@@ -62,7 +62,7 @@ const profileSaveStatus = document.getElementById('profile-save-status');
 const newPostBtn = document.getElementById('new-post-btn');
 const newPostContainer = document.getElementById('new-post-container');
 
-// --- KJERNEFUNKSJONER ---
+// --- KJERNEFUNKSJONER --- //
 
 async function fetchUserRole(uid) {
     if (!uid) return null;
