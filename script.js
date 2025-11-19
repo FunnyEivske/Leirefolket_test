@@ -12,7 +12,7 @@ import {
     onSnapshot
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// --- GLOBAL STATE ---
+// --- GLOBAL STATE --- //
 export let authState = {
     user: null,
     role: null, // 'member', 'admin', eller null
