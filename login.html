@@ -1,11 +1,13 @@
 <!DOCTYPE html>
 <html lang="no">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Logg inn - Leirefolket</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="medlem.css">
 </head>
+
 <body>
 
     <div class="login-layout">
@@ -34,17 +36,19 @@
                         <label for="login-email" class="form-label">E-postadresse</label>
                         <input type="email" id="login-email" class="form-input" placeholder="din@epost.no" required>
                     </div>
-                    
+
                     <div class="form-group">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
                             <label for="login-password" class="form-label" style="margin-bottom: 0;">Passord</label>
-                            <button type="button" id="forgot-password-btn" class="btn-ghost text-sm text-primary" style="padding: 0;">Glemt passord?</button>
+                            <button type="button" id="forgot-password-btn" class="btn-ghost text-sm text-primary"
+                                style="padding: 0;">Glemt passord?</button>
                         </div>
                         <input type="password" id="login-password" class="form-input" placeholder="••••••••" required>
                     </div>
 
                     <button type="submit" class="btn btn-primary btn-full">Logg inn</button>
-                    
+
                     <p id="login-error" class="form-error"></p>
                     <p id="login-success" class="form-error" style="color: var(--color-success);"></p>
                 </form>
@@ -60,4 +64,5 @@
     <script type="module" src="firebase.js"></script>
     <script type="module" src="script.js"></script>
 </body>
+
 </html>
