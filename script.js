@@ -1,4 +1,4 @@
-import { app, auth, db, appId, authReady, sendPasswordResetEmail } from './firebase.js';
+import { app, auth, db, storage, appId, authReady, sendPasswordResetEmail } from './firebase.js';
 import {
     signInWithEmailAndPassword,
     signOut,
@@ -10,6 +10,11 @@ import {
     setDoc,
     onSnapshot
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import {
+    ref,
+    uploadBytes,
+    getDownloadURL
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
 // --- GLOBAL STATE --- //
 export let authState = {
@@ -21,7 +26,6 @@ export let authState = {
 let profileUnsubscribe = null;
 
 // **NY:** Promise som resolver når brukerens rolle og profil er ferdig lastet
-// Dette brukes av andre script (som feed.js) for å vite at det er trygt å kjøre
 let resolveUserReady;
 export const userReady = new Promise((resolve) => {
     resolveUserReady = resolve;
@@ -50,6 +54,7 @@ const closeProfileModalButton = document.getElementById('close-profile-modal');
 const profileForm = document.getElementById('profile-form');
 const displayNameInput = document.getElementById('display-name-input');
 const profileImageUrlInput = document.getElementById('profile-image-url-input');
+const profileImageFileInput = document.getElementById('profile-image-file-input'); // NY
 const saveProfileButton = document.getElementById('save-profile-button');
 const profileSaveStatus = document.getElementById('profile-save-status');
 
@@ -77,9 +82,14 @@ async function fetchUserRole(uid) {
     }
 }
 
+// **OPPDATERT STI:** Bruker nå 'public/data/users' for å fikse tilgangsproblemer
+function getProfileDocPath(uid) {
+    return `/artifacts/${appId}/public/data/users/${uid}`;
+}
+
 async function fetchUserProfile(uid) {
     if (!uid) return null;
-    const profileDocPath = `/artifacts/${appId}/users/${uid}/profileData/main`;
+    const profileDocPath = getProfileDocPath(uid);
     try {
         const docRef = doc(db, profileDocPath);
         const docSnap = await getDoc(docRef);
@@ -87,7 +97,12 @@ async function fetchUserProfile(uid) {
             return docSnap.data();
         } else {
             const defaultProfile = { displayName: null, photoURL: null };
-            await setDoc(docRef, defaultProfile);
+            // Prøv å opprette dokumentet hvis det ikke finnes (kan feile hvis ingen skrivetilgang)
+            try {
+                await setDoc(docRef, defaultProfile);
+            } catch (e) {
+                console.warn("Kunne ikke opprette standardprofil (kanskje pga rettigheter):", e);
+            }
             return defaultProfile;
         }
     } catch (error) {
@@ -98,19 +113,18 @@ async function fetchUserProfile(uid) {
 
 function setupProfileListener(uid) {
     if (!uid) return null;
-    const profileDocPath = `/artifacts/${appId}/users/${uid}/profileData/main`;
+    const profileDocPath = getProfileDocPath(uid);
     const docRef = doc(db, profileDocPath);
 
     const unsubscribe = onSnapshot(docRef, (docSnap) => {
         if (docSnap.exists()) {
             authState.profile = docSnap.data();
         } else {
-            const defaultProfile = {
+            // Ikke overskriv lokalt hvis dokumentet mangler, bare bruk default
+            authState.profile = {
                 displayName: authState.user?.email?.split('@')[0] || 'Medlem',
                 photoURL: null
             };
-            setDoc(docRef, defaultProfile);
-            authState.profile = defaultProfile;
         }
         updateUI(authState.user, authState.profile);
     }, (error) => {
@@ -121,8 +135,9 @@ function setupProfileListener(uid) {
 
 async function saveUserProfile(uid, data) {
     if (!uid) throw new Error("Ingen bruker-ID oppgitt.");
-    const profileDocPath = `/artifacts/${appId}/users/${uid}/profileData/main`;
+    const profileDocPath = getProfileDocPath(uid);
     const docRef = doc(db, profileDocPath);
+    // Bruk merge: true for å ikke overskrive andre felt
     await setDoc(docRef, data, { merge: true });
 }
 
@@ -229,14 +244,32 @@ async function handleProfileSave(e) {
     if (statusMsg) statusMsg.textContent = '';
 
     const newDisplayName = displayNameInput.value.trim();
-    const newPhotoURL = profileImageUrlInput.value.trim();
+    let newPhotoURL = profileImageUrlInput.value.trim();
+    const file = profileImageFileInput.files[0];
 
-    console.log("Values to save:", { newDisplayName, newPhotoURL });
+    console.log("Values to save:", { newDisplayName, newPhotoURL, file });
 
     try {
         if (!authState.user) throw new Error("Ingen bruker er logget inn.");
 
-        console.log("Saving to user:", authState.user.uid);
+        // 1. Last opp bilde hvis valgt
+        if (file) {
+            console.log("Uploading file...");
+            statusMsg.textContent = 'Laster opp bilde...';
+
+            // Lag en unik sti for bildet
+            const storageRef = ref(storage, `users/${authState.user.uid}/profile_pic_${Date.now()}`);
+            const snapshot = await uploadBytes(storageRef, file);
+            console.log("Upload complete:", snapshot);
+
+            newPhotoURL = await getDownloadURL(snapshot.ref);
+            console.log("New photo URL:", newPhotoURL);
+        }
+
+        // 2. Lagre profilinfo til Firestore
+        console.log("Saving to Firestore user:", authState.user.uid);
+        statusMsg.textContent = 'Lagrer profil...';
+
         await saveUserProfile(authState.user.uid, {
             displayName: newDisplayName,
             photoURL: newPhotoURL || null
@@ -260,6 +293,8 @@ async function handleProfileSave(e) {
             saveButton.textContent = originalButtonText;
             saveButton.disabled = false;
             if (statusMsg) statusMsg.textContent = '';
+            // Reset input
+            profileImageFileInput.value = '';
         }, 1500);
 
     } catch (error) {

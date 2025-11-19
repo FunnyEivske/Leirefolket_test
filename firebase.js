@@ -9,6 +9,7 @@ import {
     sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getStorage } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
 // --- STEG 1: KOBLE TIL DITT EGET FIREBASE-PROSJEKT ---
 // Denne er allerede riktig for deg
@@ -31,6 +32,7 @@ const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 // Slå på debug-logging for Firestore (valgfritt, men nyttig)
 setLogLevel('debug');
@@ -74,4 +76,4 @@ const authReady = new Promise((resolve) => {
 
 
 // **FIKS: Eksporter appId sammen med resten**
-export { app, auth, db, authReady, appId, sendPasswordResetEmail };
+export { app, auth, db, storage, authReady, appId, sendPasswordResetEmail };

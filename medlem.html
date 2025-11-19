@@ -187,9 +187,13 @@
                         <input type="text" id="display-name-input" class="form-input" placeholder="Ditt navn">
                     </div>
                     <div class="form-group">
-                        <label for="profile-image-url-input" class="form-label">Profilbilde (URL)</label>
-                        <input type="text" id="profile-image-url-input" class="form-input" placeholder="https://...">
-                        <p class="text-sm text-muted mt-2">Lim inn en lenke til et bilde.</p>
+                        <label class="form-label">Profilbilde</label>
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <input type="file" id="profile-image-file-input" class="form-input" accept="image/*">
+                            <p class="text-sm text-muted">Eller lim inn en URL:</p>
+                            <input type="text" id="profile-image-url-input" class="form-input"
+                                placeholder="https://...">
+                        </div>
                     </div>
                 </div>
                 <div class="card-footer" style="display: flex; justify-content: flex-end; gap: 1rem;">
