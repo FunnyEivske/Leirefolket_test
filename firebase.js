@@ -1,18 +1,15 @@
 // Importer de nødvendige funksjonene fra Firebase SDK-ene
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-// **FIKS: Importer signInWithCustomToken, signInAnonymously**
 import {
     getAuth,
     onAuthStateChanged,
     signInWithCustomToken,
-    signInAnonymously,
     sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
 // --- STEG 1: KOBLE TIL DITT EGET FIREBASE-PROSJEKT ---
-// Denne er allerede riktig for deg
 const firebaseConfig = {
     apiKey: "AIzaSyDA8fQe9akDky_yYDFfNtzGH75-WYq2sF4",
     authDomain: "leirefolket.firebaseapp.com",
@@ -24,8 +21,7 @@ const firebaseConfig = {
 };
 // -------------------------------------------------------------
 
-// **FIKS: Definer appId for bruk i andre skript**
-// Denne er PÅKREVD for at database-stiene skal fungere
+// Definer appId for bruk i andre skript
 const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // Initialiser Firebase
@@ -38,42 +34,40 @@ const storage = getStorage(app);
 setLogLevel('debug');
 
 /**
- * Oppretter et "promise" som løses når Firebase Auth er initialisert
- * OG brukeren er logget inn med token.
+ * Oppretter et "promise" som løses når Firebase Auth er ferdig sjekket.
+ * Nå prøver den IKKE lenger å logge inn anonymt.
  */
 const authReady = new Promise((resolve) => {
-    // Lytt etter endringer i auth-status
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
         if (user) {
-            // Bruker er allerede logget inn (f.eks. med custom token)
+            // Bruker er allerede logget inn
             console.log("Auth-lytter: Bruker er logget inn:", user.uid);
-            unsubscribe(); // Stopp lytteren, vi er ferdige
-            resolve(user); // Send den påloggede brukeren
+            unsubscribe();
+            resolve(user);
         } else {
-            // Ingen bruker er logget inn, prøv å logge inn med token
-            console.log("Auth-lytter: Ingen bruker. Prøver token/anonym innlogging.");
-            try {
-                if (typeof __initial_auth_token !== 'undefined') {
-                    // Prøv å logge inn med gitt token
+            // Ingen bruker er logget inn.
+            // Sjekk om vi har en spesial-token (brukes kun i forhåndsvisning)
+            if (typeof __initial_auth_token !== 'undefined') {
+                console.log("Prøver å logge inn med custom token (Preview)...");
+                try {
                     await signInWithCustomToken(auth, __initial_auth_token);
-                    // onAuthStateChanged vil kjøre på nytt, og 'if (user)' vil da være sann
-                } else {
-                    // Ingen token funnet, logg inn anonymt
-                    await signInAnonymously(auth);
-                    // onAuthStateChanged vil kjøre på nytt
+                    // onAuthStateChanged vil kjøre på nytt med brukeren
+                } catch (error) {
+                    console.error("Custom token feilet:", error);
+                    unsubscribe();
+                    resolve(null);
                 }
-            } catch (error) {
-                console.error("Auth innlogging feilet:", error);
-                resolve(null); // Løs med null ved feil
+            } else {
+                // Ingen token og ingen bruker -> Vi forblir utlogget.
+                console.log("Ingen bruker logget inn. Anonym innlogging er deaktivert.");
+                unsubscribe();
+                resolve(null);
             }
         }
     }, (error) => {
-        // Håndter feil under initialisering
         console.error("Auth state error on init:", error);
-        resolve(null); // Løs med null ved feil
+        resolve(null);
     });
 });
 
-
-// **FIKS: Eksporter appId sammen med resten**
 export { app, auth, db, storage, authReady, appId, sendPasswordResetEmail };
