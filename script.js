@@ -1,4 +1,4 @@
-import { app, auth, db, storage, appId, authReady, sendPasswordResetEmail } from './firebase.js';
+import { app, auth, db, appId, authReady, sendPasswordResetEmail } from './firebase.js';
 import {
     signInWithEmailAndPassword,
     signOut,
@@ -10,11 +10,6 @@ import {
     setDoc,
     onSnapshot
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import {
-    ref,
-    uploadBytes,
-    getDownloadURL
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
 // --- GLOBAL STATE --- //
 export let authState = {
@@ -54,7 +49,7 @@ const closeProfileModalButton = document.getElementById('close-profile-modal');
 const profileForm = document.getElementById('profile-form');
 const displayNameInput = document.getElementById('display-name-input');
 const profileImageUrlInput = document.getElementById('profile-image-url-input');
-const profileImageFileInput = document.getElementById('profile-image-file-input'); // NY
+const profileImageFileInput = document.getElementById('profile-image-file-input');
 const saveProfileButton = document.getElementById('save-profile-button');
 const profileSaveStatus = document.getElementById('profile-save-status');
 
@@ -62,10 +57,52 @@ const profileSaveStatus = document.getElementById('profile-save-status');
 const newPostBtn = document.getElementById('new-post-btn');
 const newPostContainer = document.getElementById('new-post-container');
 
-// --- KJERNEFUNKSJONER --- //
+// --- HJELPEFUNKSJONER ---
+
+/**
+ * Konverterer en fil til en Base64-streng og endrer størrelsen.
+ * Dette unngår CORS-problemer med Firebase Storage ved å lagre bildet direkte i Firestore.
+ */
+function resizeAndConvertToBase64(file, maxWidth = 300) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                // Beregn ny størrelse
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth) {
+                    height *= maxWidth / width;
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                // Tegn bildet på canvas
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Konverter til Base64 (JPEG for mindre størrelse)
+                resolve(canvas.toDataURL('image/jpeg', 0.7));
+            };
+            img.onerror = (error) => reject(error);
+        };
+        reader.onerror = (error) => reject(error);
+    });
+}
+
+// --- KJERNEFUNKSJONER ---
 
 async function fetchUserRole(uid) {
     if (!uid) return null;
+    // Prøv å hente rollen fra den opprinnelige stien
     const roleDocPath = `/artifacts/${appId}/public/data/userRoles/${uid}`;
     try {
         const docRef = doc(db, roleDocPath);
@@ -82,9 +119,9 @@ async function fetchUserRole(uid) {
     }
 }
 
-// **OPPDATERT STI:** Bruker nå 'public/data/users' for å fikse tilgangsproblemer
+// **OPPDATERT STI:** Bruker 'users' rot-kolleksjon for enklere tilgang
 function getProfileDocPath(uid) {
-    return `/artifacts/${appId}/public/data/users/${uid}`;
+    return `users/${uid}`;
 }
 
 async function fetchUserProfile(uid) {
@@ -97,11 +134,10 @@ async function fetchUserProfile(uid) {
             return docSnap.data();
         } else {
             const defaultProfile = { displayName: null, photoURL: null };
-            // Prøv å opprette dokumentet hvis det ikke finnes (kan feile hvis ingen skrivetilgang)
             try {
                 await setDoc(docRef, defaultProfile);
             } catch (e) {
-                console.warn("Kunne ikke opprette standardprofil (kanskje pga rettigheter):", e);
+                console.warn("Kunne ikke opprette standardprofil:", e);
             }
             return defaultProfile;
         }
@@ -120,7 +156,6 @@ function setupProfileListener(uid) {
         if (docSnap.exists()) {
             authState.profile = docSnap.data();
         } else {
-            // Ikke overskriv lokalt hvis dokumentet mangler, bare bruk default
             authState.profile = {
                 displayName: authState.user?.email?.split('@')[0] || 'Medlem',
                 photoURL: null
@@ -137,7 +172,6 @@ async function saveUserProfile(uid, data) {
     if (!uid) throw new Error("Ingen bruker-ID oppgitt.");
     const profileDocPath = getProfileDocPath(uid);
     const docRef = doc(db, profileDocPath);
-    // Bruk merge: true for å ikke overskrive andre felt
     await setDoc(docRef, data, { merge: true });
 }
 
@@ -252,18 +286,12 @@ async function handleProfileSave(e) {
     try {
         if (!authState.user) throw new Error("Ingen bruker er logget inn.");
 
-        // 1. Last opp bilde hvis valgt
+        // 1. Behandle bilde (Base64)
         if (file) {
-            console.log("Uploading file...");
-            statusMsg.textContent = 'Laster opp bilde...';
-
-            // Lag en unik sti for bildet
-            const storageRef = ref(storage, `users/${authState.user.uid}/profile_pic_${Date.now()}`);
-            const snapshot = await uploadBytes(storageRef, file);
-            console.log("Upload complete:", snapshot);
-
-            newPhotoURL = await getDownloadURL(snapshot.ref);
-            console.log("New photo URL:", newPhotoURL);
+            console.log("Processing file...");
+            statusMsg.textContent = 'Behandler bilde...';
+            newPhotoURL = await resizeAndConvertToBase64(file);
+            console.log("Image converted to Base64");
         }
 
         // 2. Lagre profilinfo til Firestore
