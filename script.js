@@ -100,28 +100,37 @@ function resizeAndConvertToBase64(file, maxWidth = 300) {
 
 // --- KJERNEFUNKSJONER ---
 
+// **OPPDATERT:** Sjekker nå rot-samlingen 'userRoles' først, som er i tråd med reglene.
 async function fetchUserRole(uid) {
     if (!uid) return null;
-    const roleDocPath = `/artifacts/${appId}/public/data/userRoles/${uid}`;
+
+    // 1. Sjekk 'userRoles' samlingen i roten (Anbefalt)
+    const roleDocPath = `userRoles/${uid}`;
     try {
         const docRef = doc(db, roleDocPath);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
             return docSnap.data().role || null;
-        } else {
-            console.warn(`User role document not found for UID: ${uid}`);
-            return null;
         }
+
+        // 2. Fallback: Sjekk artifacts-stien hvis du har gammel data liggende der
+        // Dette er kun for lesing, skriving hit vil feile med de nye reglene.
+        const artifactPath = `/artifacts/${appId}/public/data/userRoles/${uid}`;
+        const artRef = doc(db, artifactPath);
+        const artSnap = await getDoc(artRef);
+        if (artSnap.exists()) return artSnap.data().role || null;
+
+        return null;
     } catch (error) {
         console.error("Error fetching user role:", error);
         return null;
     }
 }
 
-// **OPPDATERT STI:** Vi prøver å lagre profilinfo i SAMME dokument som rollen,
-// siden vi vet at vi har tilgang til den (i hvert fall lese).
+// **OPPDATERT:** Returnerer stien til 'users'-samlingen i roten.
+// Dette matcher regelen: match /users/{userId} { allow read, write... }
 function getProfileDocPath(uid) {
-    return `/artifacts/${appId}/public/data/userRoles/${uid}`;
+    return `users/${uid}`;
 }
 
 async function fetchUserProfile(uid) {
@@ -133,7 +142,7 @@ async function fetchUserProfile(uid) {
         if (docSnap.exists()) {
             return docSnap.data();
         } else {
-            // Hvis dokumentet ikke finnes, returner tomt objekt (ikke lagre default her for å unngå permissions-feil ved lesing)
+            // Hvis dokumentet ikke finnes, returner tomt objekt
             return { displayName: null, photoURL: null };
         }
     } catch (error) {
@@ -167,7 +176,8 @@ async function saveUserProfile(uid, data) {
     if (!uid) throw new Error("Ingen bruker-ID oppgitt.");
     const profileDocPath = getProfileDocPath(uid);
     const docRef = doc(db, profileDocPath);
-    // Bruk merge: true for å ikke overskrive rollen
+
+    // Bruk merge: true for å oppdatere eksisterende felt uten å slette andre
     await setDoc(docRef, data, { merge: true });
 }
 

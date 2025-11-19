@@ -1,20 +1,20 @@
 // Importer nødvendige funksjoner
 import { db, auth, appId, authReady } from './firebase.js';
 import { authState } from './script.js'; // Importer den delte authState
-import { 
-    doc, 
-    setDoc 
+import {
+    doc,
+    setDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { 
-    getStorage, 
-    ref, 
-    uploadBytes, 
-    getDownloadURL 
+import {
+    getStorage,
+    ref,
+    uploadBytes,
+    getDownloadURL
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
 // --- DATABANESTIER ---
-// Vi bruker 'users'-samlingen som script.js nå oppretter
-const usersCollectionPath = `/artifacts/${appId}/public/data/users`;
+// **OPPDATERT:** Bruk 'users' roten direkte, i tråd med firestore.rules
+const usersCollectionPath = `users`;
 
 // --- UI-ELEMENTER ---
 const profileForm = document.getElementById('profile-form');
@@ -41,16 +41,16 @@ function loadProfileData() {
         console.error("Ingen bruker logget inn.");
         return;
     }
-    
+
     // Bruk data fra authState som allerede er lastet inn av script.js
     // Vi fjerner e-post fra visningsnavn hvis det er standard
-    if (authState.displayName && authState.displayName !== authState.user.email) {
-        displayNameInput.value = authState.displayName;
+    if (authState.profile?.displayName && authState.profile.displayName !== authState.user.email) {
+        displayNameInput.value = authState.profile.displayName;
     }
     emailInput.value = authState.user.email || '';
-    
-    if (authState.profilePictureURL) {
-        imagePreview.src = authState.profilePictureURL;
+
+    if (authState.profile?.photoURL) {
+        imagePreview.src = authState.profile.photoURL;
     } else {
         imagePreview.src = "https://placehold.co/150x150/f7f5f2/a1a1aa?text=Bilde";
     }
@@ -78,24 +78,28 @@ async function handleProfileSave(e) {
         saveButton.textContent = 'Lagre endringer';
         return;
     }
-    
+
     const userDocRef = doc(db, usersCollectionPath, authState.user.uid);
 
     try {
         // Bruk setDoc med merge: true for å oppdatere kun dette feltet
-        await setDoc(userDocRef, { 
+        await setDoc(userDocRef, {
             displayName: newDisplayName
         }, { merge: true });
 
         // Oppdater også lokal authState for umiddelbar feedback
-        authState.displayName = newDisplayName;
-        
+        if (authState.profile) {
+            authState.profile.displayName = newDisplayName;
+        } else {
+            authState.profile = { displayName: newDisplayName, photoURL: null };
+        }
+
         successMessage.textContent = 'Visningsnavn lagret!';
         setTimeout(() => successMessage.textContent = '', 3000);
 
     } catch (error) {
         console.error("Error saving display name:", error);
-        errorMessage.textContent = 'En feil oppstod ved lagring av navn.';
+        errorMessage.textContent = 'En feil oppstod ved lagring av navn: ' + error.message;
     } finally {
         saveButton.disabled = false;
         saveButton.textContent = 'Lagre endringer';
@@ -147,18 +151,21 @@ async function uploadProfileImage(file) {
     try {
         // 1. Last opp filen
         const snapshot = await uploadBytes(fileRef, file);
-        
+
         // 2. Få nedlastings-URL
         const downloadURL = await getDownloadURL(snapshot.ref);
 
         // 3. Lagre URL i brukerens Firestore-dokument
         const userDocRef = doc(db, usersCollectionPath, authState.user.uid);
-        await setDoc(userDocRef, { 
-            profilePictureURL: downloadURL
+        await setDoc(userDocRef, {
+            photoURL: downloadURL // Endret fra profilePictureURL til photoURL for å matche script.js
         }, { merge: true });
 
         // 4. Oppdater lokal authState og header-bilde
-        authState.profilePictureURL = downloadURL;
+        if (authState.profile) {
+            authState.profile.photoURL = downloadURL;
+        }
+
         const headerImage = document.getElementById('profile-image-header');
         if (headerImage) {
             headerImage.src = downloadURL;
@@ -189,7 +196,7 @@ authReady.then(() => {
     if (profileForm) {
         profileForm.addEventListener('submit', handleProfileSave);
     }
-    
+
     if (imageUploadButton) {
         imageUploadButton.addEventListener('click', (e) => {
             e.preventDefault(); // Forhindre form submit hvis den er inni form
