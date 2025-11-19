@@ -20,7 +20,7 @@ export let authState = {
 
 let profileUnsubscribe = null;
 
-// **NY:** Promise som resolver når brukerens rolle og profil er ferdig lastet
+// Promise som resolver når brukerens rolle og profil er ferdig lastet
 let resolveUserReady;
 export const userReady = new Promise((resolve) => {
     resolveUserReady = resolve;
@@ -102,7 +102,6 @@ function resizeAndConvertToBase64(file, maxWidth = 300) {
 
 async function fetchUserRole(uid) {
     if (!uid) return null;
-    // Prøv å hente rollen fra den opprinnelige stien
     const roleDocPath = `/artifacts/${appId}/public/data/userRoles/${uid}`;
     try {
         const docRef = doc(db, roleDocPath);
@@ -119,9 +118,10 @@ async function fetchUserRole(uid) {
     }
 }
 
-// **OPPDATERT STI:** Bruker 'users' rot-kolleksjon for enklere tilgang
+// **OPPDATERT STI:** Vi prøver å lagre profilinfo i SAMME dokument som rollen,
+// siden vi vet at vi har tilgang til den (i hvert fall lese).
 function getProfileDocPath(uid) {
-    return `users/${uid}`;
+    return `/artifacts/${appId}/public/data/userRoles/${uid}`;
 }
 
 async function fetchUserProfile(uid) {
@@ -133,13 +133,8 @@ async function fetchUserProfile(uid) {
         if (docSnap.exists()) {
             return docSnap.data();
         } else {
-            const defaultProfile = { displayName: null, photoURL: null };
-            try {
-                await setDoc(docRef, defaultProfile);
-            } catch (e) {
-                console.warn("Kunne ikke opprette standardprofil:", e);
-            }
-            return defaultProfile;
+            // Hvis dokumentet ikke finnes, returner tomt objekt (ikke lagre default her for å unngå permissions-feil ved lesing)
+            return { displayName: null, photoURL: null };
         }
     } catch (error) {
         console.error("Error fetching user profile:", error);
@@ -172,6 +167,7 @@ async function saveUserProfile(uid, data) {
     if (!uid) throw new Error("Ingen bruker-ID oppgitt.");
     const profileDocPath = getProfileDocPath(uid);
     const docRef = doc(db, profileDocPath);
+    // Bruk merge: true for å ikke overskrive rollen
     await setDoc(docRef, data, { merge: true });
 }
 
@@ -402,7 +398,7 @@ authReady.then(async (initialUser) => {
     protectMemberPage();
     protectLoginPage();
 
-    // **NY:** Signaliser at vi er ferdige med init
+    // Signaliser at vi er ferdige med init
     resolveUserReady(authState);
 
     onAuthStateChanged(auth, async (user) => {
