@@ -7,8 +7,6 @@ import { getFirestore, setLogLevel } from "https://www.gstatic.com/firebasejs/11
 // --- STEG 1: BRUK GLOBALE VARIABLER ---
 // ... (resten av konfigurasjonen din er uendret) ...
 // ... (Henter __app_id og __firebase_config) ...
-// Hent app-ID, med en fallback for testing lokalt
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
 // Hent Firebase-konfigurasjon, med en fallback for testing lokalt
 const firebaseConfig = typeof __firebase_config !== 'undefined' 
@@ -21,6 +19,9 @@ const firebaseConfig = typeof __firebase_config !== 'undefined'
         messagingSenderId: "641158381331",
         appId: "1:641158381331:web:e2a5f893d7d504f2d624e6"
       };
+
+// Hent app-ID, med en fallback for testing lokalt
+const appId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.appId;
 
 // -------------------------------------------------------------
 
