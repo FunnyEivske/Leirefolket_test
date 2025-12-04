@@ -1,288 +1,440 @@
-// Importer Firebase-ting og authReady-promiset
-import { app, auth, db, appId, authReady } from './firebase.js';
-import { 
-    signInWithEmailAndPassword, 
-    signOut, 
-    onAuthStateChanged 
+import { app, auth, db, appId, authReady, sendPasswordResetEmail } from './firebase.js';
+import {
+    signInWithEmailAndPassword,
+    signOut,
+    onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { 
-    doc, 
-    getDoc 
+import {
+    doc,
+    getDoc,
+    setDoc,
+    onSnapshot
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// --- GLOBAL STATE ---
-/**
- * Holder den nåværende autentiseringstilstanden.
- * Denne blir oppdatert av onAuthStateChanged.
- */
+// --- GLOBAL STATE --- //
 export let authState = {
     user: null,
-    role: null // 'member', 'admin', eller null
+    role: null, // 'member', 'admin', eller null
+    profile: null // { displayName: '...', photoURL: '...' }
 };
 
+let profileUnsubscribe = null;
+
+// Promise som resolver når brukerens rolle og profil er ferdig lastet
+let resolveUserReady;
+export const userReady = new Promise((resolve) => {
+    resolveUserReady = resolve;
+});
+
 // --- UI-ELEMENTER ---
-// Desktop-nav
-const loginLink = document.getElementById('login-link');
-const logoutButton = document.getElementById('logout-button');
-const memberLink = document.getElementById('member-link');
-// Mobil-nav
-const mobileLoginLink = document.getElementById('mobile-login-link');
-const mobileLogoutButton = document.getElementById('mobile-logout-button');
-const mobileMemberLink = document.getElementById('mobile-member-link');
-// Mobilmeny-kontroller
+// Login side
+const loginForm = document.getElementById('login-form');
+const forgotPasswordBtn = document.getElementById('forgot-password-btn');
+const loginError = document.getElementById('login-error');
+const loginSuccess = document.getElementById('login-success');
+
+// Header / Nav
 const mobileMenuButton = document.getElementById('mobile-menu-button');
 const mobileMenu = document.getElementById('mobile-menu');
+const dropdownLogoutButton = document.getElementById('dropdown-logout-button');
+const mobileLogoutButton = document.getElementById('mobile-logout-button');
 
+// Dashboard / Profil
+const profileName = document.getElementById('profile-name');
+const profileImg = document.getElementById('profile-img');
+const openProfileModal = document.getElementById('open-profile-modal');
+const profileModal = document.getElementById('profile-modal');
+const profileModalOverlay = document.getElementById('profile-modal-overlay');
+const closeProfileModalButton = document.getElementById('close-profile-modal');
+const profileForm = document.getElementById('profile-form');
+const displayNameInput = document.getElementById('display-name-input');
+const profileImageUrlInput = document.getElementById('profile-image-url-input');
+const profileImageFileInput = document.getElementById('profile-image-file-input');
+const saveProfileButton = document.getElementById('save-profile-button');
+const profileSaveStatus = document.getElementById('profile-save-status');
 
-// --- KJERNEFUNKSJONER (Defineres FØR de brukes) ---
+// Admin
+const newPostBtn = document.getElementById('new-post-btn');
+const newPostContainer = document.getElementById('new-post-container');
+
+// --- HJELPEFUNKSJONER ---
 
 /**
- * Henter brukerens rolle fra Firestore.
- * @param {string} uid - Brukerens Firebase Auth UID.
- * @returns {Promise<string|null>} - Returnerer rollen ('admin', 'member') eller null.
+ * Konverterer en fil til en Base64-streng og endrer størrelsen.
+ * Dette unngår CORS-problemer med Firebase Storage ved å lagre bildet direkte i Firestore.
  */
+function resizeAndConvertToBase64(file, maxWidth = 300) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+
+                // Beregn ny størrelse
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth) {
+                    height *= maxWidth / width;
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                // Tegn bildet på canvas
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Konverter til Base64 (JPEG for mindre størrelse)
+                resolve(canvas.toDataURL('image/jpeg', 0.7));
+            };
+            img.onerror = (error) => reject(error);
+        };
+        reader.onerror = (error) => reject(error);
+    });
+}
+
+// --- KJERNEFUNKSJONER ---
+
+// **OPPDATERT:** Sjekker nå rot-samlingen 'userRoles' først, som er i tråd med reglene.
 async function fetchUserRole(uid) {
     if (!uid) return null;
-    
-    // Sti til rollen-dokumentet, som beskrevet i planen
-    const roleDocPath = `/artifacts/${appId}/public/data/userRoles/${uid}`;
-    
+
+    // 1. Sjekk 'userRoles' samlingen i roten (Anbefalt)
+    const roleDocPath = `userRoles/${uid}`;
     try {
         const docRef = doc(db, roleDocPath);
         const docSnap = await getDoc(docRef);
-
         if (docSnap.exists()) {
-            const data = docSnap.data();
-            return data.role || null; // Returnerer rollen, f.eks. 'admin'
-        } else {
-            console.warn(`User role document not found for UID: ${uid} at path: ${roleDocPath}`);
-            return null; // Fant ikke noe rolle-dokument
+            return docSnap.data().role || null;
         }
+
+        // 2. Fallback: Sjekk artifacts-stien hvis du har gammel data liggende der
+        // Dette er kun for lesing, skriving hit vil feile med de nye reglene.
+        const artifactPath = `/artifacts/${appId}/public/data/userRoles/${uid}`;
+        const artRef = doc(db, artifactPath);
+        const artSnap = await getDoc(artRef);
+        if (artSnap.exists()) return artSnap.data().role || null;
+
+        return null;
     } catch (error) {
         console.error("Error fetching user role:", error);
         return null;
     }
 }
 
-/**
- * Oppdaterer UI basert på innloggingsstatus og rolle.
- * Bruker 'hidden' klassen definert i style.css
- * @param {object|null} user - Firebase user-objektet.
- * @param {string|null} role - Brukerens rolle.
- */
-function updateUI(user, role) {
-    if (user && role) {
-        // Innlogget med gyldig rolle
-        if (loginLink) loginLink.classList.add('hidden');
-        if (mobileLoginLink) mobileLoginLink.classList.add('hidden');
+// **OPPDATERT:** Returnerer stien til 'users'-samlingen i roten.
+// Dette matcher regelen: match /users/{userId} { allow read, write... }
+function getProfileDocPath(uid) {
+    return `users/${uid}`;
+}
 
-        if (logoutButton) logoutButton.classList.remove('hidden');
-        if (mobileLogoutButton) mobileLogoutButton.classList.remove('hidden');
-        if (memberLink) memberLink.classList.remove('hidden');
-        if (mobileMemberLink) mobileMemberLink.classList.remove('hidden');
-
-        // Oppdater velkomstmelding hvis vi er på medlemssiden
-        const welcomeMsg = document.getElementById('welcome-message');
-        if (welcomeMsg) {
-            welcomeMsg.textContent = `Velkommen, ${role} (${user.email}). Her ser du siste nytt.`;
+async function fetchUserProfile(uid) {
+    if (!uid) return null;
+    const profileDocPath = getProfileDocPath(uid);
+    try {
+        const docRef = doc(db, profileDocPath);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+            return docSnap.data();
+        } else {
+            // Hvis dokumentet ikke finnes, returner tomt objekt
+            return { displayName: null, photoURL: null };
         }
-        
-    } else {
-        // Utlogget eller mangler rolle
-        if (loginLink) loginLink.classList.remove('hidden');
-        if (mobileLoginLink) mobileLoginLink.classList.remove('hidden');
-
-        if (logoutButton) logoutButton.classList.add('hidden');
-        if (mobileLogoutButton) mobileLogoutButton.classList.add('hidden');
-        if (memberLink) memberLink.classList.add('hidden');
-        if (mobileMemberLink) mobileMemberLink.classList.add('hidden');
+    } catch (error) {
+        console.error("Error fetching user profile:", error);
+        return null;
     }
 }
 
-/**
- * Beskytter medlemssiden.
- * Kalles etter at auth-status er kjent.
- */
+function setupProfileListener(uid) {
+    if (!uid) return null;
+    const profileDocPath = getProfileDocPath(uid);
+    const docRef = doc(db, profileDocPath);
+
+    const unsubscribe = onSnapshot(docRef, (docSnap) => {
+        if (docSnap.exists()) {
+            authState.profile = docSnap.data();
+        } else {
+            authState.profile = {
+                displayName: authState.user?.email?.split('@')[0] || 'Medlem',
+                photoURL: null
+            };
+        }
+        updateUI(authState.user, authState.profile);
+    }, (error) => {
+        console.error("Error in profile listener:", error);
+    });
+    return unsubscribe;
+}
+
+async function saveUserProfile(uid, data) {
+    if (!uid) throw new Error("Ingen bruker-ID oppgitt.");
+    const profileDocPath = getProfileDocPath(uid);
+    const docRef = doc(db, profileDocPath);
+
+    // Bruk merge: true for å oppdatere eksisterende felt uten å slette andre
+    await setDoc(docRef, data, { merge: true });
+}
+
+// --- UI OPPDATERING ---
+
+function updateUI(user, profile) {
+    const emailPrefix = user?.email ? user.email.split('@')[0] : 'Medlem';
+    const displayName = profile?.displayName || emailPrefix;
+    const photoURL = profile?.photoURL || `https://ui-avatars.com/api/?name=${displayName}&background=random`;
+
+    // Oppdater profilkort (medlem.html)
+    if (profileName) profileName.textContent = displayName;
+    if (profileImg) profileImg.src = photoURL;
+
+    // Vis admin-knapper hvis admin
+    if (authState.role === 'admin') {
+        if (newPostBtn) newPostBtn.classList.remove('hidden');
+    } else {
+        if (newPostBtn) newPostBtn.classList.add('hidden');
+    }
+}
+
 function protectMemberPage() {
-    // Sjekk om vi er på medlem.html
     if (window.location.pathname.endsWith('/medlem.html')) {
         if (!authState.user || !authState.role) {
-            console.log("Access denied. User not logged in or no role. Redirecting to login.html");
-            // Omdiriger til innloggingssiden
             window.location.href = 'login.html';
         }
     }
 }
 
-/**
- * Omdirigerer innloggede brukere bort fra innloggingssiden.
- */
 function protectLoginPage() {
     if (window.location.pathname.endsWith('/login.html')) {
         if (authState.user && authState.role) {
-            console.log("Already logged in. Redirecting to medlem.html");
             window.location.href = 'medlem.html';
         }
     }
 }
 
-/**
- * Håndterer innlogging via skjemaet (kun på login.html).
- */
+// --- HANDLERS ---
+
 async function handleLogin(e) {
-    e.preventDefault(); // <--- VIKTIGST!
-    // Hent elementer her, siden de kun finnes på login.html
-    const loginError = document.getElementById('login-error');
+    e.preventDefault();
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
 
-    if (!loginError) return; // Dobbeltsjekk
-
-    loginError.textContent = '';
+    if (loginError) loginError.textContent = '';
+    if (loginSuccess) loginSuccess.textContent = '';
 
     try {
         await signInWithEmailAndPassword(auth, email, password);
-        // Innlogging vellykket. onAuthStateChanged vil håndtere resten
-        // (rolle-sjekk og redirect via protectLoginPage)
     } catch (error) {
         console.error("Login failed:", error.code);
-        if (error.code === 'auth/invalid-credential' || error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-            loginError.textContent = 'Feil e-post eller passord.';
-        } else {
-            loginError.textContent = 'En feil oppstod. Prøv igjen.';
+        if (loginError) {
+            if (error.code === 'auth/invalid-credential') {
+                loginError.textContent = 'Feil e-post eller passord.';
+            } else {
+                loginError.textContent = 'En feil oppstod. Prøv igjen.';
+            }
         }
     }
 }
 
-/**
- * Håndterer utlogging.
- */
+async function handleForgotPassword() {
+    const email = document.getElementById('login-email').value;
+    if (!email) {
+        if (loginError) loginError.textContent = 'Skriv inn e-postadressen din først.';
+        return;
+    }
+
+    if (loginError) loginError.textContent = '';
+    if (loginSuccess) loginSuccess.textContent = 'Sender e-post...';
+
+    try {
+        await sendPasswordResetEmail(auth, email);
+        if (loginSuccess) loginSuccess.textContent = 'E-post for tilbakestilling sendt! Sjekk innboksen din.';
+    } catch (error) {
+        console.error("Forgot password failed:", error);
+        if (loginSuccess) loginSuccess.textContent = '';
+        if (loginError) loginError.textContent = 'Kunne ikke sende e-post. Sjekk at adressen er riktig.';
+    }
+}
+
 async function handleLogout() {
     try {
         await signOut(auth);
-        // Utlogging vellykket. onAuthStateChanged vil håndtere resten.
-        
-        // Hvis vi er på medlemssiden, omdiriger til forsiden
         if (window.location.pathname.endsWith('/medlem.html')) {
-            window.location.href = 'index.html';
+            window.location.href = 'index.html'; // Eller login.html
         }
-    } catch (error)
-        {
+    } catch (error) {
         console.error("Logout failed:", error);
     }
 }
 
-// --- EVENT LISTENERS (Kjører umiddelbart) ---
+async function handleProfileSave(e) {
+    e.preventDefault();
+    console.log("handleProfileSave called");
 
-// Mobilmeny
-if (mobileMenuButton && mobileMenu) {
-    mobileMenuButton.addEventListener('click', () => {
-        const isHidden = mobileMenu.classList.toggle('hidden');
-        mobileMenuButton.setAttribute('aria-expanded', !isHidden);
-    });
-}
+    const saveButton = document.getElementById('save-profile-button');
+    const originalButtonText = saveButton.textContent;
+    saveButton.textContent = 'Lagrer...';
+    saveButton.disabled = true;
 
-// Lukk mobilmeny ved klikk på lenke
-if (mobileMenu) {
-    mobileMenu.querySelectorAll('a').forEach(link => {
-        link.addEventListener('click', () => {
-            mobileMenu.classList.add('hidden');
-            mobileMenuButton.setAttribute('aria-expanded', 'false');
+    const statusMsg = document.getElementById('profile-save-status');
+    if (statusMsg) statusMsg.textContent = '';
+
+    const newDisplayName = displayNameInput.value.trim();
+    let newPhotoURL = profileImageUrlInput.value.trim();
+    const file = profileImageFileInput.files[0];
+
+    console.log("Values to save:", { newDisplayName, newPhotoURL, file });
+
+    try {
+        if (!authState.user) throw new Error("Ingen bruker er logget inn.");
+
+        // 1. Behandle bilde (Base64)
+        if (file) {
+            console.log("Processing file...");
+            statusMsg.textContent = 'Behandler bilde...';
+            newPhotoURL = await resizeAndConvertToBase64(file);
+            console.log("Image converted to Base64");
+        }
+
+        // 2. Lagre profilinfo til Firestore
+        console.log("Saving to Firestore user:", authState.user.uid);
+        statusMsg.textContent = 'Lagrer profil...';
+
+        await saveUserProfile(authState.user.uid, {
+            displayName: newDisplayName,
+            photoURL: newPhotoURL || null
         });
-    });
-}
+        console.log("Save successful!");
 
+        // Oppdater lokal state
+        authState.profile.displayName = newDisplayName;
+        authState.profile.photoURL = newPhotoURL || null;
 
-// Skjema- og logg-ut-knapper
-[logoutButton, mobileLogoutButton].forEach(btn => {
-    if (btn) btn.addEventListener('click', handleLogout);
-});
+        // Oppdater UI umiddelbart
+        updateUI(authState.user, authState.profile);
 
-// --- NY STruktur: Fest lytter til login-skjema UMIDDELBART ---
-// Koble kun til innloggingsskjemaet hvis vi er på login.html
-if (window.location.pathname.endsWith('/login.html')) {
-    const loginForm = document.getElementById('login-form');
-    if (loginForm) {
-        loginForm.addEventListener('submit', handleLogin);
-        console.log("Login form listener attached.");
-    } else {
-        console.error("Login form not found!");
+        if (statusMsg) {
+            statusMsg.textContent = 'Profil lagret!';
+            statusMsg.style.color = 'var(--color-success)';
+        }
+
+        setTimeout(() => {
+            closeModal();
+            saveButton.textContent = originalButtonText;
+            saveButton.disabled = false;
+            if (statusMsg) statusMsg.textContent = '';
+            // Reset input
+            profileImageFileInput.value = '';
+        }, 1500);
+
+    } catch (error) {
+        console.error("Feil ved lagring av profil:", error);
+        if (statusMsg) {
+            statusMsg.textContent = 'Feil: ' + error.message;
+            statusMsg.style.color = 'var(--color-error)';
+        }
+        saveButton.textContent = originalButtonText;
+        saveButton.disabled = false;
     }
 }
 
+// --- EVENT LISTENERS ---
 
-// --- HOVED-AUTENTISERINGSLYTTER (Kjører når Firebase er klar) ---
+// Mobilmeny
+if (mobileMenuButton) {
+    mobileMenuButton.addEventListener('click', () => {
+        mobileMenu.classList.toggle('show');
+    });
+}
 
-/**
- * Dette er hjertet i autentiseringen.
- * Den kjører når siden lastes (med authReady) og hver gang
- * inn/utlogging skjer.
- */
+// Login
+if (loginForm) loginForm.addEventListener('submit', handleLogin);
+if (forgotPasswordBtn) forgotPasswordBtn.addEventListener('click', handleForgotPassword);
+
+// Logout
+if (dropdownLogoutButton) dropdownLogoutButton.addEventListener('click', handleLogout);
+if (mobileLogoutButton) mobileLogoutButton.addEventListener('click', handleLogout);
+
+// Profil Modal
+if (openProfileModal) {
+    openProfileModal.addEventListener('click', () => {
+        displayNameInput.value = authState.profile?.displayName || '';
+        profileImageUrlInput.value = authState.profile?.photoURL || '';
+        profileModal.classList.remove('hidden');
+    });
+}
+function closeModal() { if (profileModal) profileModal.classList.add('hidden'); }
+if (closeProfileModalButton) closeProfileModalButton.addEventListener('click', closeModal);
+if (profileModalOverlay) profileModalOverlay.addEventListener('click', closeModal);
+if (profileForm) profileForm.addEventListener('submit', handleProfileSave);
+
+// Admin: Nytt innlegg toggle
+if (newPostBtn) {
+    newPostBtn.addEventListener('click', () => {
+        if (newPostContainer) newPostContainer.classList.toggle('hidden');
+    });
+}
+
+
+// --- INIT ---
+
 authReady.then(async (initialUser) => {
-    // Denne kjører én gang på side-last, etter at authReady er løst.
-    console.log("Auth ready. Initial user:", initialUser ? initialUser.uid : null);
-    
     if (initialUser) {
-        const role = await fetchUserRole(initialUser.uid);
+        const [role, profileData] = await Promise.all([
+            fetchUserRole(initialUser.uid),
+            fetchUserProfile(initialUser.uid)
+        ]);
+
         if (role) {
             authState.user = initialUser;
             authState.role = role;
+            authState.profile = profileData;
+            if (profileUnsubscribe) profileUnsubscribe();
+            profileUnsubscribe = setupProfileListener(initialUser.uid);
         } else {
-            // Gyldig bruker, men mangler rolle. Logg ut.
-            console.warn("User has auth but no role. Forcing logout.");
-            await handleLogout(); // Dette vil tømme authState
+            await handleLogout();
         }
     } else {
         authState.user = null;
         authState.role = null;
+        authState.profile = null;
     }
-    
-    // Oppdater UI og sjekk side-beskyttelse etter den FØRSTE sjekken
-    updateUI(authState.user, authState.role);
+
+    updateUI(authState.user, authState.profile);
     protectMemberPage();
     protectLoginPage();
 
-    // --- SIDE-SPESIFIKK EVENT LISTENER (LOGIN-SKJEMA) ---
-    // DENNE ER NÅ FLYTTET UT FOR Å KJØRE UMIDDELBART
+    // Signaliser at vi er ferdige med init
+    resolveUserReady(authState);
 
-    // Start den permanente lytteren for ENDRINGER
     onAuthStateChanged(auth, async (user) => {
-        console.log("Auth state changed. New user:", user ? user.uid : null);
-        
         if (user) {
-            // Bruker logget nettopp inn (eller er fortsatt logget inn)
-            // Unngå å hente rolle på nytt hvis vi allerede har den
-            if (!authState.user || authState.user.uid !== user.uid) {
-                const role = await fetchUserRole(user.uid);
-                if (role) {
-                    // Normal innlogging
-                    authState.user = user;
-                    authState.role = role;
-                } else {
-                    // Bruker logget inn, men har ingen rolle. Logg ut.
-                    console.warn("User signed in but has no role. Forcing logout.");
-                    await handleLogout(); // Dette vil tømme authState og kalle onAuthStateChanged på nytt
-                }
+            const [role, profileData] = await Promise.all([
+                fetchUserRole(user.uid),
+                fetchUserProfile(user.uid)
+            ]);
+
+            if (role) {
+                authState.user = user;
+                authState.role = role;
+                authState.profile = profileData;
+                if (profileUnsubscribe) profileUnsubscribe();
+                profileUnsubscribe = setupProfileListener(user.uid);
+            } else {
+                await handleLogout();
             }
         } else {
-            // Bruker logget ut
             authState.user = null;
             authState.role = null;
+            authState.profile = null;
+            if (profileUnsubscribe) profileUnsubscribe();
         }
-
-        // Oppdater UI og sjekk side-beskyttelse HVER GANG
-        updateUI(authState.user, authState.role);
+        updateUI(authState.user, authState.profile);
         protectMemberPage();
         protectLoginPage();
     });
-}).catch(error => {
-    // Håndter feil hvis authReady-promiset avvises (f.eks. anonym innlogging feilet)
-    console.error("AuthReady Promise rejected. App might not function correctly.", error);
-    // Selv om auth feiler, må vi kanskje vise en feilmelding på login-siden
-    if (window.location.pathname.endsWith('/login.html')) {
-        const loginError = document.getElementById('login-error');
-        if (loginError) {
-            loginError.textContent = 'Klarte ikke koble til autentisering. Sjekk internett.';
-        }
-    }
 });

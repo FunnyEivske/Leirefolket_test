@@ -1,95 +1,68 @@
 <!DOCTYPE html>
 <html lang="no">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Innlogging - Leirefolket Keramikkverksted</title>
-    <link rel="stylesheet" href="style.css">
+    <title>Logg inn - Leirefolket</title>
+    <link rel="stylesheet" href="medlem.css">
 </head>
-<body class="login-page">
 
-    <!-- Header & Navigasjon -->
-    <header class="main-header">
-        <nav class="container main-nav">
-            <a href="index.html#hjem" class="logo-link">
-                <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/LogoPNG.png" alt="Leirefolket Logo" class="logo-img">
-                <span class="logo-text">Leirefolket</span>
-            </a>
-            
-            <!-- Desktop-meny -->
-            <div class="nav-menu-desktop">
-                <a href="om-oss.html" class="nav-link">Om Oss</a>
-                <a href="kurs.html" class="nav-link">Kurs</a>
-                <a href="galleri.html" class="nav-link">Galleri</a>
-                <a href="kontakt.html" class="nav-link">Kontakt</a>
-                <a id="member-link" href="medlem.html" class="nav-link-active hidden">Medlemsside</a>
-                <a id="login-link" href="login.html" class="button button-primary">Logg inn</a>
-                <button id="logout-button" class="button button-secondary hidden">Logg ut</button>
-            </div>
-            
-            <!-- Mobilmeny-knapp -->
-            <button id="mobile-menu-button" class="mobile-menu-button" aria-label="Åpne meny">
-                <svg class="mobile-menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
-            </button>
-            
-            <!-- Mobilmeny -->
-            <div id="mobile-menu" class="nav-menu-mobile hidden">
-                <a href="om-oss.html" class="nav-link">Om Oss</a>
-                <a href="kurs.html" class="nav-link">Kurs</a>
-                <a href="galleri.html" class="nav-link">Galleri</a>
-                <a href="kontakt.html" class="nav-link">Kontakt</a>
-                <a id="mobile-member-link" href="medlem.html" class="nav-link-active hidden">Medlemsside</a>
-                <a id="mobile-login-link" href="login.html" class="nav-link">Logg inn</a>
-                <button id="mobile-logout-button" class="button button-secondary hidden">Logg ut</button>
-            </div>
-        </nav>
-    </header>
+<body>
 
-    <main class="login-page-main">
-        <!-- Innloggingsskjema -->
-        <div class="login-form-container">
-            <h3 class="text-center">Medlems-innlogging</h3>
-            <form id="login-form">
-                <div class="form-group">
-                    <label for="login-email" class="form-label">E-post</label>
-                    <input type="email" id="login-email" required class="form-input">
-                </div>
-                <div class="form-group">
-                    <label for="login-password" class="form-label">Passord</label>
-                    <input type="password" id="login-password" required class="form-input">
-                </div>
-                <button type="submit" class="button button-primary button-lg">Logg inn</button>
-                <p id="login-error" class="form-error"></p>
-            </form>
+    <div class="login-layout">
+        <!-- Venstre side: Bilde/Stemning -->
+        <div class="login-visual">
+            <div class="login-visual-content">
+                <h1>Skap noe varig.</h1>
+                <p class="text-lg">Velkommen til medlemssidene for Leirefolket Keramikkverksted.</p>
+            </div>
         </div>
-    </main>
 
-    <!-- Footer -->
-    <footer class="main-footer">
-        <div class="container">
-            <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/LogoPNGwhite.png" alt="Leirefolket Logo" class="footer-logo">
-            <p class="footer-title">Leirefolket Keramikkverksted</p>
-            <p class="footer-address">Nye Teglverks vei 23, 4614 Kristiansand</p>
-            <div class="social-links">
-                <a href="https://www.instagram.com/leirefolket_keramikkverksted/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" class="social-link">
-                    <svg class="social-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                        <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-                        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-                    </svg>
-                </a>
-                <a href="https://www.facebook.com/leirefolketkeramikkverksted/?locale=nb_NO" target="_blank" rel="noopener noreferrer" aria-label="Facebook" class="social-link">
-                    <svg class="social-icon" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path fill-rule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clip-rule="evenodd" />
-                    </svg>
-                </a>
+        <!-- Høyre side: Skjema -->
+        <div class="login-form-section">
+            <div class="login-wrapper">
+                <div class="mb-6 text-center">
+                    <a href="index.html" class="logo" style="justify-content: center; margin-bottom: 2rem;">
+                        <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/LogoPNG.png" alt="Leirefolket Logo">
+                        <span>Leirefolket</span>
+                    </a>
+                    <h2>Velkommen tilbake</h2>
+                    <p>Logg inn for å få tilgang til verkstedet</p>
+                </div>
+
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="login-email" class="form-label">E-postadresse</label>
+                        <input type="email" id="login-email" class="form-input" placeholder="din@epost.no" required>
+                    </div>
+
+                    <div class="form-group">
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <label for="login-password" class="form-label" style="margin-bottom: 0;">Passord</label>
+                            <button type="button" id="forgot-password-btn" class="btn-ghost text-sm text-primary"
+                                style="padding: 0;">Glemt passord?</button>
+                        </div>
+                        <input type="password" id="login-password" class="form-input" placeholder="••••••••" required>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary btn-full">Logg inn</button>
+
+                    <p id="login-error" class="form-error"></p>
+                    <p id="login-success" class="form-error" style="color: var(--color-success);"></p>
+                </form>
+
+                <div class="mt-4 text-center">
+                    <p class="text-sm">Ikke medlem ennå? <a href="kontakt.html">Kontakt oss</a></p>
+                </div>
             </div>
-            <p class="footer-copyright">&copy; 2025 Leirefolket Keramikkverksted. Alle rettigheter forbeholdt.</p>
         </div>
-    </footer>
-    
-    <!-- Firebase og hoved-script -->
+    </div>
+
+    <!-- Firebase og script -->
     <script type="module" src="firebase.js"></script>
     <script type="module" src="script.js"></script>
 </body>
+
 </html>

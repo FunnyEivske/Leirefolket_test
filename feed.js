@@ -1,13 +1,13 @@
 // Importer nødvendige funksjoner
-import { db, appId, authReady } from './firebase.js';
-import { authState } from './script.js'; // Importer den delte authState
-import { 
-    collection, 
-    addDoc, 
-    onSnapshot, 
+import { db, appId } from './firebase.js';
+import { authState, userReady } from './script.js';
+import {
+    collection,
+    addDoc,
+    onSnapshot,
     Timestamp,
     query,
-    orderBy // Importer orderBy
+    orderBy
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- UI-ELEMENTER ---
@@ -26,10 +26,8 @@ const feedCollectionPath = `/artifacts/${appId}/public/data/feed`;
 /**
  * Viser eller skjuler admin-funksjoner (f.eks. "Nytt innlegg"-skjema).
  */
-function toggleAdminFeatures() {
-    if (!newPostContainer) return; // Ikke på riktig side
-    
-    if (authState.role === 'admin') {
+function toggleAdminFeatures(role) {
+    if (role === 'admin') {
         newPostContainer.classList.remove('hidden');
     } else {
         newPostContainer.classList.add('hidden');
@@ -38,8 +36,6 @@ function toggleAdminFeatures() {
 
 /**
  * Formaterer et Firestore Timestamp-objekt til en lesbar streng.
- * @param {Timestamp} timestamp - Firestore Timestamp.
- * @returns {string} - Formattert dato (f.eks. "4. november 2025, 19:45")
  */
 function formatTimestamp(timestamp) {
     if (!timestamp) return 'Ukjent dato';
@@ -54,6 +50,15 @@ function formatTimestamp(timestamp) {
 }
 
 /**
+ * Renser HTML-strenger for å forhindre XSS.
+ */
+function sanitizeHTML(str) {
+    if (!str) return '';
+    return str.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+
+/**
  * Setter opp en sanntids-lytter for feed-samlingen.
  */
 function setupFeedListener() {
@@ -63,30 +68,44 @@ function setupFeedListener() {
 
     onSnapshot(q, (snapshot) => {
         if (feedLoading) feedLoading.classList.add('hidden');
-        if (!feedContainer) return; // Avbryt hvis containeren ikke finnes
-        
         feedContainer.innerHTML = ''; // Tøm containeren
 
         if (snapshot.empty) {
-            feedContainer.innerHTML = '<p class="text-lg text-center">Ingen innlegg ennå.</p>';
+            feedContainer.innerHTML = '<p class="text-center" style="color: var(--color-text-muted);">Ingen innlegg ennå.</p>';
             return;
         }
 
         snapshot.forEach(doc => {
             const post = doc.data();
             const postElement = document.createElement('article');
-            postElement.className = 'feed-item';
-            
-            // Gjør om \n til <br> for HTML-visning
-            const contentHtml = post.content.replace(/\n/g, '<br>');
 
+            // ENDRET: Bruker klassen 'feed-item' fra medlem.css i stedet for Tailwind-klasser
+            postElement.className = 'feed-item';
+
+            // Rens tittel og innhold før det settes inn
+            const safeTitle = sanitizeHTML(post.title);
+            const safeAuthorName = sanitizeHTML(post.authorName || 'Medlem');
+            const safeContentHtml = sanitizeHTML(post.content).replace(/\n/g, '<br>');
+            const safePhotoURL = post.authorPhotoURL ? sanitizeHTML(post.authorPhotoURL) : null;
+
+            // ENDRET: HTML-struktur med inline styles for å fikse bildestørrelse
             postElement.innerHTML = `
-                <h3>${post.title}</h3>
-                <p class="feed-item-meta">
-                    Publisert av <span style="font-weight: 500;">${post.authorName || 'Admin'}</span>
-                    den ${formatTimestamp(post.createdAt)}
-                </p>
-                <div class="feed-item-content">${contentHtml}</div>
+                <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem; border-bottom: 1px solid var(--color-border); padding-bottom: 1rem;">
+                    ${safePhotoURL
+                    ? `<img src="${safePhotoURL}" alt="${safeAuthorName}" style="width: 45px; height: 45px; border-radius: 50%; object-fit: cover; border: 2px solid var(--color-bg-medium);">`
+                    : `<div style="width: 45px; height: 45px; border-radius: 50%; background-color: var(--color-bg-medium); display: flex; align-items: center; justify-content: center; color: var(--color-text-muted);">
+                                  <svg style="width: 24px; height: 24px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                  </svg>
+                               </div>`
+                }
+                    <div>
+                        <p style="font-weight: 600; margin: 0; color: var(--color-secondary);">${safeAuthorName}</p>
+                        <p style="font-size: 0.85rem; margin: 0; color: var(--color-text-muted);">${formatTimestamp(post.createdAt)}</p>
+                    </div>
+                </div>
+                <h3>${safeTitle}</h3>
+                <div class="feed-item-content">${safeContentHtml}</div>
             `;
             feedContainer.appendChild(postElement);
         });
@@ -94,9 +113,7 @@ function setupFeedListener() {
     }, (error) => {
         console.error("Error fetching feed:", error);
         if (feedLoading) feedLoading.classList.add('hidden');
-        if (feedContainer) {
-            feedContainer.innerHTML = '<p class="form-error">Kunne ikke laste feeden. Sjekk konsollen for feil.</p>';
-        }
+        feedContainer.innerHTML = '<p style="color: var(--color-error); text-align: center;">Kunne ikke laste feeden. Sjekk konsollen for feil.</p>';
     });
 }
 
@@ -117,13 +134,19 @@ async function handlePostSubmit(e) {
     const title = document.getElementById('post-title').value;
     const content = document.getElementById('post-content').value;
 
+    // Hent oppdatert profilinfo fra authState
+    // Prioriter profil-visningsnavn, så e-postprefix, så 'Medlem'
+    const authorName = authState.profile?.displayName || (authState.user?.email ? authState.user.email.split('@')[0] : 'Medlem');
+    const authorPhotoURL = authState.profile?.photoURL || null;
+
     try {
         const feedCollectionRef = collection(db, feedCollectionPath);
         await addDoc(feedCollectionRef, {
             title: title,
             content: content,
             authorId: authState.user.uid,
-            authorName: authState.user.email, // Lagrer e-post som navn
+            authorName: authorName, // Lagrer visningsnavn
+            authorPhotoURL: authorPhotoURL, // Lagrer profilbilde-URL
             createdAt: Timestamp.now()
         });
 
@@ -141,36 +164,28 @@ async function handlePostSubmit(e) {
 
 // --- INITIALISERING ---
 
-// Vi kjører kun feed-logikken hvis vi er på medlem.html
 if (document.getElementById('feed-container')) {
-    
-    // Vent til den første autentiseringen er fullført
-    authReady.then(() => {
-        console.log("Feed.js: Auth is ready. Current state:", authState);
-        
-        // Nå kan vi trygt sjekke authState
-        if (!authState.user || !authState.role) {
-            // Dette burde ikke skje pga. protectMemberPage(), men som en ekstra sjekk
+
+    userReady.then((currentState) => {
+        console.log("Feed.js: User state is ready. Current state:", currentState);
+
+        if (!currentState.user || !currentState.role) {
             console.log("Feed.js: User not authenticated. Stopping.");
+            if (feedLoading) feedLoading.classList.add('hidden');
+            feedContainer.innerHTML = '<p style="color: var(--color-error); text-align: center;">Feil: Kunne ikke verifisere brukerstatus.</p>';
             return;
         }
 
-        // Vis/skjul admin-ting
-        toggleAdminFeatures();
-        
-        // Sett opp lytter for feeden
+        toggleAdminFeatures(currentState.role);
         setupFeedListener();
 
-        // Sett opp lytter for publiseringsskjemaet
         if (newPostForm) {
             newPostForm.addEventListener('submit', handlePostSubmit);
         }
 
     }).catch(error => {
-        console.error("Feed.js: Error waiting for authReady:", error);
-        if(feedContainer) {
-            feedContainer.innerHTML = '<p class="form-error text-center">En alvorlig feil oppstod under lasting.</p>';
-        }
+        console.error("Feed.js: Error waiting for userReady:", error);
+        feedContainer.innerHTML = '<p style="color: var(--color-error); text-align: center;">En alvorlig feil oppstod under lasting.</p>';
     });
 
 }
