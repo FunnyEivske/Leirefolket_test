@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="no">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,11 +13,13 @@
             grid-template-columns: repeat(2, 1fr);
             gap: 1rem;
         }
+
         @media (min-width: 768px) {
             .gallery-page-grid {
                 grid-template-columns: repeat(3, 1fr);
             }
         }
+
         @media (min-width: 1024px) {
             .gallery-page-grid {
                 grid-template-columns: repeat(4, 1fr);
@@ -24,16 +27,18 @@
         }
     </style>
 </head>
+
 <body class="galleri-page">
 
     <!-- Header & Navigasjon -->
     <header class="main-header">
         <nav class="container main-nav">
             <a href="index.html#hjem" class="logo-link">
-                <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/LogoPNG.png" alt="Leirefolket Logo" class="logo-img">
+                <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/LogoPNG.png" alt="Leirefolket Logo"
+                    class="logo-img">
                 <span class="logo-text">Leirefolket</span>
             </a>
-            
+
             <!-- Desktop-meny -->
             <div class="nav-menu-desktop">
                 <a href="om-oss.html" class="nav-link">Om oss</a>
@@ -44,12 +49,16 @@
                 <a id="login-link" href="login.html" class="button button-primary">Logg inn</a>
                 <button id="logout-button" class="button button-secondary hidden">Logg ut</button>
             </div>
-            
+
             <!-- Mobilmeny-knapp -->
             <button id="mobile-menu-button" class="mobile-menu-button" aria-label="Åpne meny">
-                <svg class="mobile-menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7"></path></svg>
+                <svg class="mobile-menu-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7">
+                    </path>
+                </svg>
             </button>
-            
+
             <!-- Mobilmeny -->
             <div id="mobile-menu" class="nav-menu-mobile hidden">
                 <a href="om-oss.html" class="nav-link">Om oss</a>
@@ -69,64 +78,39 @@
             <div class="container">
                 <div class="text-center" style="max-width: 600px; margin: 0 auto 3rem auto;">
                     <h1>Galleri</h1>
-                    <p class="text-lg">Se et utvalg av arbeid laget av våre medlemmer og kursdeltakere.</p>
-                </div>
-                <div class="gallery-page-grid">
-                    <div class="gallery-item">
-                        <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_285524412_1392032511223904_334964565194714511_n.jpg" alt="Tre håndlagde kopper i gresset" class="gallery-image">
-                    </div>
-                    <div class="gallery-item">
-                        <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_237550029_985634491998704_2289782621579533345_n.jpg" alt="Sosial samling utendørs" class="gallery-image">
-                    </div>
-                    <div class="gallery-item">
-                        <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_220734257_240046884432034_8044610736397101717_n.jpg" alt="Ulike keramikkprosjekter på et bord" class="gallery-image">
-                    </div>
-                    <div class="gallery-item">
-                        <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_272761735_502242294657127_7500690158820959309_n.jpg" alt="Håndlaget kopp med te i sollys" class="gallery-image">
-                    </div>
-                     <div class="gallery-item">
-                        <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_402373843_207530515718940_5720018105310533277_n.jpg" alt="Blågrå keramikkskåler" class="gallery-image">
-                    </div>
-                     <div class="gallery-item">
-                        <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_262908339_116340794204309_5975237680806499548_n.jpg" alt="Blå keramikkskål og kopp" class="gallery-image">
-                    </div>
-                     <div class="gallery-item">
-                        <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_243993330_1688809814796099_4483165310636397652_n.jpg" alt="Sosial samling rundt en pizzaovn" class="gallery-image">
-                    </div>
-                     <div class="gallery-item">
-                        <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_244211512_2590542797757596_1183204420076510305_n.jpg" alt="Kursdeltakere som sitter ute i solen" class="gallery-image">
-                    </div>
-                </div>
-            </div>
-        </section>
-    </main>
+                    <footer class="main-footer">
+                        <div class="container">
+                            <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/LogoPNGwhite.png"
+                                alt="Leirefolket Logo" class="footer-logo">
+                            <p class="footer-title">Leirefolket Keramikkverksted</p>
+                            <p class="footer-address">Nye Teglverks vei 23, 4614 Kristiansand</p>
+                            <div class="social-links">
+                                <a href="https://www.instagram.com/leirefolket_keramikkverksted/" target="_blank"
+                                    rel="noopener noreferrer" aria-label="Instagram" class="social-link">
+                                    <svg class="social-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
+                                        <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
+                                        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
+                                    </svg>
+                                </a>
+                                <a href="https://www.facebook.com/leirefolketkeramikkverksted/?locale=nb_NO"
+                                    target="_blank" rel="noopener noreferrer" aria-label="Facebook" class="social-link">
+                                    <svg class="social-icon" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path fill-rule="evenodd"
+                                            d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"
+                                            clip-rule="evenodd" />
+                                    </svg>
+                                </a>
+                            </div>
+                            <p class="footer-copyright">&copy; 2025 Leirefolket Keramikkverksted. Alle rettigheter
+                                forbeholdt.</p>
+                        </div>
+                    </footer>
 
-    <!-- Footer -->
-    <footer class="main-footer">
-        <div class="container">
-            <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/LogoPNGwhite.png" alt="Leirefolket Logo" class="footer-logo">
-            <p class="footer-title">Leirefolket Keramikkverksted</p>
-            <p class="footer-address">Nye Teglverks vei 23, 4614 Kristiansand</p>
-            <div class="social-links">
-                <a href="https://www.instagram.com/leirefolket_keramikkverksted/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" class="social-link">
-                    <svg class="social-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
-                        <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
-                        <line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line>
-                    </svg>
-                </a>
-                <a href="https://www.facebook.com/leirefolketkeramikkverksted/?locale=nb_NO" target="_blank" rel="noopener noreferrer" aria-label="Facebook" class="social-link">
-                    <svg class="social-icon" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path fill-rule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clip-rule="evenodd" />
-                    </svg>
-                </a>
-            </div>
-            <p class="footer-copyright">&copy; 2025 Leirefolket Keramikkverksted. Alle rettigheter forbeholdt.</p>
-        </div>
-    </footer>
-
-    <!-- Firebase og hoved-script -->
-    <script type="module" src="firebase.js"></script>
-    <script type="module" src="script.js"></script>
+                    <!-- Firebase og hoved-script -->
+                    <script type="module" src="firebase.js"></script>
+                    <script type="module" src="script.js"></script>
 </body>
+
 </html>
