@@ -39,6 +39,13 @@ const mobileMenu = document.getElementById('mobile-menu');
 const dropdownLogoutButton = document.getElementById('dropdown-logout-button');
 const mobileLogoutButton = document.getElementById('mobile-logout-button');
 
+// Navigation Links
+const loginLink = document.getElementById('login-link');
+const memberLink = document.getElementById('member-link');
+const logoutButton = document.getElementById('logout-button');
+const mobileLoginLink = document.getElementById('mobile-login-link');
+const mobileMemberLink = document.getElementById('mobile-member-link');
+
 // Dashboard / Profil
 const profileName = document.getElementById('profile-name');
 const profileImg = document.getElementById('profile-img');
@@ -173,6 +180,27 @@ function updateUI(user, profile) {
         if (newPostBtn) newPostBtn.classList.remove('hidden');
     } else {
         if (newPostBtn) newPostBtn.classList.add('hidden');
+    }
+
+    // Toggle navigation links based on auth state
+    if (user) {
+        // Logged in
+        if (loginLink) loginLink.classList.add('hidden');
+        if (memberLink) memberLink.classList.remove('hidden');
+        if (logoutButton) logoutButton.classList.remove('hidden');
+
+        if (mobileLoginLink) mobileLoginLink.classList.add('hidden');
+        if (mobileMemberLink) mobileMemberLink.classList.remove('hidden');
+        if (mobileLogoutButton) mobileLogoutButton.classList.remove('hidden');
+    } else {
+        // Logged out
+        if (loginLink) loginLink.classList.remove('hidden');
+        if (memberLink) memberLink.classList.add('hidden');
+        if (logoutButton) logoutButton.classList.add('hidden');
+
+        if (mobileLoginLink) mobileLoginLink.classList.remove('hidden');
+        if (mobileMemberLink) mobileMemberLink.classList.add('hidden');
+        if (mobileLogoutButton) mobileLogoutButton.classList.add('hidden');
     }
 }
 
@@ -327,6 +355,7 @@ if (forgotPasswordBtn) forgotPasswordBtn.addEventListener('click', handleForgotP
 // Logout
 if (dropdownLogoutButton) dropdownLogoutButton.addEventListener('click', handleLogout);
 if (mobileLogoutButton) mobileLogoutButton.addEventListener('click', handleLogout);
+if (logoutButton) logoutButton.addEventListener('click', handleLogout);
 
 // Profil Modal
 if (openProfileModal) {
