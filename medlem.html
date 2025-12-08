@@ -60,12 +60,12 @@
 
                         <div class="profile-stats">
                             <div class="stat-item">
-                                <span class="stat-value">0</span>
-                                <span class="stat-label">Kurs</span>
+                                <span id="member-duration-value" class="stat-value">0 mnd</span>
+                                <span class="stat-label">Medlem i</span>
                             </div>
                             <div class="stat-item">
-                                <span class="stat-value">0</span>
-                                <span class="stat-label">Verk</span>
+                                <span id="gallery-count-value" class="stat-value">0</span>
+                                <span class="stat-label">Bilder</span>
                             </div>
                         </div>
 
@@ -104,6 +104,26 @@
 
             <!-- Hovedinnhold (Midten) -->
             <div class="dashboard-main">
+
+                <!-- Mine Notater -->
+                <section class="mb-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3 class="text-lg">Mine notater</h3>
+                        </div>
+                        <div class="card-body">
+                            <form id="notes-form">
+                                <textarea id="user-notes-input" class="form-input" rows="5"
+                                    placeholder="Skriv dine personlige notater her..."></textarea>
+                                <div class="mt-4 text-right">
+                                    <button type="submit" id="save-notes-btn" class="btn btn-secondary text-sm">Lagre
+                                        notater</button>
+                                </div>
+                                <p id="notes-status" class="text-sm text-center mt-2"></p>
+                            </form>
+                        </div>
+                    </div>
+                </section>
 
                 <!-- Velkomst / Feed -->
                 <section>
@@ -157,6 +177,10 @@
                         <h4 class="text-lg" style="margin-bottom: 0;">Mitt galleri</h4>
                     </div>
                     <div class="card-body">
+                        <div id="dashboard-gallery-preview" class="gallery-preview-grid mb-4"
+                            style="grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
+                            <p class="text-muted text-sm" style="grid-column: 1/-1;">Laster...</p>
+                        </div>
                         <p class="text-sm text-muted mb-4">Administrer og last opp bilder til ditt galleri.</p>
                         <button id="upload-gallery-btn" class="btn btn-primary btn-full text-sm">Administrer
                             bilder</button>
@@ -236,7 +260,7 @@
                 <!-- Existing Gallery Section -->
                 <div>
                     <h4 class="text-sm font-semibold mb-3">Dine bilder</h4>
-                    <div id="my-gallery-container" class="gallery-preview-grid">
+                    <div id="modal-gallery-container" class="gallery-preview-grid">
                         <p class="text-muted text-sm" style="grid-column: 1/-1;">Laster ditt galleri...</p>
                     </div>
                 </div>

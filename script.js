@@ -67,6 +67,8 @@ const profileImageUrlInput = document.getElementById('profile-image-url-input');
 const profileImageFileInput = document.getElementById('profile-image-file-input');
 const saveProfileButton = document.getElementById('save-profile-button');
 const profileSaveStatus = document.getElementById('profile-save-status');
+const memberDurationValue = document.getElementById('member-duration-value');
+const galleryCountValue = document.getElementById('gallery-count-value');
 
 // Gallery Uploads (Personal)
 const uploadGalleryBtn = document.getElementById('upload-gallery-btn');
@@ -77,7 +79,14 @@ const uploadForm = document.getElementById('upload-form');
 const uploadFilesInput = document.getElementById('upload-files-input');
 const uploadDescriptionInput = document.getElementById('upload-description-input');
 const confirmUploadBtn = document.getElementById('confirm-upload-btn');
-const myGalleryContainer = document.getElementById('my-gallery-container');
+const modalGalleryContainer = document.getElementById('modal-gallery-container'); // Renamed
+const dashboardGalleryPreview = document.getElementById('dashboard-gallery-preview'); // New
+
+// Notes
+const notesForm = document.getElementById('notes-form');
+const userNotesInput = document.getElementById('user-notes-input');
+const saveNotesBtn = document.getElementById('save-notes-btn');
+const notesStatus = document.getElementById('notes-status');
 
 // Admin
 const newPostBtn = document.getElementById('new-post-btn');
@@ -244,73 +253,94 @@ function setupUserListener(uid) {
 }
 
 // Lytter til brukerens personlige galleri
+// Lytter til brukerens personlige galleri
 function setupGalleryListener(uid) {
-    if (!uid || !myGalleryContainer) return null;
+    if (!uid) return null;
 
     // Vi sorterer ikke i query (enklere uten index) - legg evt. til orderBy om nødvendig
     const galleryParams = `users/${uid}/gallery_images`;
     const galleryRef = collection(db, galleryParams);
 
-    myGalleryContainer.innerHTML = '<p class="text-muted text-sm" style="grid-column: 1/-1;">Laster...</p>';
+    // Tøm containere
+    if (modalGalleryContainer) modalGalleryContainer.innerHTML = '<p class="text-sm text-muted">Laster...</p>';
+    if (dashboardGalleryPreview) dashboardGalleryPreview.innerHTML = '<p class="text-sm text-muted" style="grid-column: 1/-1;">Henter bilder...</p>';
 
     const unsubscribe = onSnapshot(galleryRef, (snapshot) => {
-        myGalleryContainer.innerHTML = '';
-        if (snapshot.empty) {
-            myGalleryContainer.innerHTML = '<p class="text-muted text-sm" style="grid-column: 1/-1;">Du har ingen bilder ennå.</p>';
-            return;
+        const images = [];
+        snapshot.forEach((doc) => {
+            images.push({ id: doc.id, ...doc.data() });
+        });
+
+        // Sorter lokalt (nyeste først)
+        images.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+        if (galleryCountValue) galleryCountValue.textContent = images.length;
+
+        // Render to MODAL (Full List + Delete)
+        if (modalGalleryContainer) {
+            if (images.length === 0) {
+                modalGalleryContainer.innerHTML = '<p class="text-sm text-muted">Ingen bilder lastet opp enda.</p>';
+            } else {
+                modalGalleryContainer.innerHTML = '';
+                images.forEach(img => {
+                    const div = document.createElement('div');
+                    div.className = 'gallery-item';
+                    div.style.position = 'relative';
+
+                    const imageEl = document.createElement('img');
+                    imageEl.src = img.imageUrl;
+                    imageEl.alt = img.description || 'Galleribilde';
+                    imageEl.loading = 'lazy';
+
+                    div.appendChild(imageEl);
+
+                    // Slett-knapp (kun i modal)
+                    const deleteBtn = document.createElement('button');
+                    deleteBtn.className = 'gallery-delete-btn';
+                    deleteBtn.innerHTML = `
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M18 6L6 18M6 6l12 12" />
+                        </svg>
+                    `;
+                    deleteBtn.title = 'Slett bilde';
+                    deleteBtn.onclick = (e) => {
+                        e.stopPropagation(); // Hindre klikk på bildet
+                        deleteGalleryImage(uid, img.id);
+                    };
+
+                    div.appendChild(deleteBtn);
+                    modalGalleryContainer.appendChild(div);
+                });
+            }
         }
 
-        snapshot.forEach((docSnap) => {
-            const data = docSnap.data();
-            const id = docSnap.id;
+        // Render to DASHBOARD (Preview 4 items, No Delete)
+        if (dashboardGalleryPreview) {
+            if (images.length === 0) {
+                dashboardGalleryPreview.innerHTML = '<p class="text-sm text-muted" style="grid-column: 1/-1;">Ingen bilder.</p>';
+            } else {
+                dashboardGalleryPreview.innerHTML = '';
+                // Take only first 4
+                const previewImages = images.slice(0, 4);
+                previewImages.forEach(img => {
+                    const div = document.createElement('div');
+                    div.className = 'gallery-item';
 
-            const item = document.createElement('div');
-            item.className = 'gallery-preview-item bg-subtle';
-            item.style.position = 'relative'; // For delete button positioning
+                    const imageEl = document.createElement('img');
+                    imageEl.src = img.imageUrl;
+                    imageEl.alt = img.description || 'Galleribilde';
+                    imageEl.style.aspectRatio = "1/1";
+                    imageEl.style.objectFit = "cover";
 
-            // Image
-            const img = document.createElement('img');
-            img.src = data.imageUrl;
-            img.alt = data.description || 'Galleri bilde';
-            img.loading = 'lazy';
-            item.appendChild(img);
-
-            // Delete Button
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'gallery-delete-btn';
-            deleteBtn.innerHTML = '&times;';
-            deleteBtn.title = 'Slett bilde';
-
-            deleteBtn.onclick = (e) => {
-                e.preventDefault();
-                deleteGalleryImage(uid, id);
-            };
-
-            item.appendChild(deleteBtn);
-
-            // Description Tooltip/Text
-            if (data.description) {
-                const desc = document.createElement('div');
-                desc.textContent = data.description;
-                desc.style.position = 'absolute';
-                desc.style.bottom = '0';
-                desc.style.left = '0';
-                desc.style.right = '0';
-                desc.style.background = 'rgba(0,0,0,0.6)';
-                desc.style.color = '#fff';
-                desc.style.fontSize = '0.75rem';
-                desc.style.padding = '0.25rem 0.5rem';
-                desc.style.whiteSpace = 'nowrap';
-                desc.style.overflow = 'hidden';
-                desc.style.textOverflow = 'ellipsis';
-                item.appendChild(desc);
+                    div.appendChild(imageEl);
+                    dashboardGalleryPreview.appendChild(div);
+                });
             }
+        }
 
-            myGalleryContainer.appendChild(item);
-        });
     }, (error) => {
         console.error("Error fetching gallery:", error);
-        myGalleryContainer.innerHTML = '<p class="text-error text-sm" style="grid-column: 1/-1;">Feil ved lasting.</p>';
+        if (modalGalleryContainer) modalGalleryContainer.innerHTML = '<p class="text-error">Feil ved henting av bilder.</p>';
     });
 
     return unsubscribe;
@@ -405,6 +435,45 @@ function updateUI(user, profile) {
     // Oppdater profilkort (medlem.html)
     if (profileName) profileName.textContent = displayName;
     if (profileImg) profileImg.src = photoURL;
+
+    // Membership Duration
+    if (memberDurationValue && user?.metadata?.creationTime) {
+        const created = new Date(user.metadata.creationTime);
+        const now = new Date();
+        let months = (now.getFullYear() - created.getFullYear()) * 12;
+        months -= created.getMonth();
+        months += now.getMonth();
+
+        // Juster hvis vi ikke har nådd dagen i måneden enda (grober beregning er ok her, men la oss være presise)
+        if (now.getDate() < created.getDate()) {
+            months--;
+        }
+
+        // Sikre at vi ikke viser negative tall
+        if (months < 0) months = 0;
+
+        if (months < 12) {
+            memberDurationValue.textContent = `${months} mnd`;
+        } else {
+            const years = Math.floor(months / 12);
+            // Hvis bruker ber om "bikker et år så viser den år".
+            // Vi kan vise f.eks "1 år" eller "2 år".
+            memberDurationValue.textContent = `${years} år`;
+        }
+    } else if (memberDurationValue) {
+        memberDurationValue.textContent = '0 mnd';
+    }
+
+    // Populate form inputs if modal is explicitly opened (handled in click listener), 
+    // but also helpful to update if open
+
+    // Notes logic
+    if (userNotesInput) {
+        // Only update if not currently focused to avoid overwriting user input while typing
+        if (document.activeElement !== userNotesInput) {
+            userNotesInput.value = profile?.notes || '';
+        }
+    }
 
     // Vis admin-knapper hvis admin
     if (authState.role === 'admin') {
@@ -569,6 +638,42 @@ async function handleProfileSave(e) {
         }
         saveButton.textContent = originalButtonText;
         saveButton.disabled = false;
+    }
+}
+
+async function handleSaveNotes(e) {
+    e.preventDefault();
+    if (!authState.user) return;
+
+    const notes = userNotesInput.value;
+    const saveBtn = saveNotesBtn;
+    const statusMsg = notesStatus;
+
+    saveBtn.textContent = 'Lagrer...';
+    saveBtn.disabled = true;
+    if (statusMsg) statusMsg.textContent = '';
+
+    try {
+        await saveUserProfile(authState.user.uid, { notes: notes });
+
+        if (statusMsg) {
+            statusMsg.textContent = 'Notater lagret!';
+            statusMsg.style.color = 'var(--color-success)';
+        }
+        setTimeout(() => {
+            if (statusMsg) statusMsg.textContent = '';
+            saveBtn.textContent = 'Lagre notater';
+            saveBtn.disabled = false;
+        }, 2000);
+
+    } catch (error) {
+        console.error("Notes save error:", error);
+        if (statusMsg) {
+            statusMsg.textContent = 'Feil ved lagring.';
+            statusMsg.style.color = 'var(--color-error)';
+        }
+        saveBtn.textContent = 'Lagre notater';
+        saveBtn.disabled = false;
     }
 }
 
@@ -760,6 +865,9 @@ if (adminImageModalOverlay) adminImageModalOverlay.addEventListener('click', clo
 if (saveAdminSelectionBtn) {
     saveAdminSelectionBtn.addEventListener('click', saveAdminSelection);
 }
+
+// Notes
+if (notesForm) notesForm.addEventListener('submit', handleSaveNotes);
 
 
 // --- INIT ---
