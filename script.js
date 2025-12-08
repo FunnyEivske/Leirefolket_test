@@ -9,11 +9,13 @@ import {
     getDoc,
     setDoc,
     addDoc,
+    deleteDoc,
     collection,
     query,
     getDocs,
     onSnapshot,
-    serverTimestamp
+    serverTimestamp,
+    orderBy
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- GLOBAL STATE --- //
@@ -68,7 +70,13 @@ const profileSaveStatus = document.getElementById('profile-save-status');
 
 // Gallery Uploads (Personal)
 const uploadGalleryBtn = document.getElementById('upload-gallery-btn');
-const uploadGalleryInput = document.getElementById('upload-gallery-input');
+const uploadModal = document.getElementById('upload-modal');
+const uploadModalOverlay = document.getElementById('upload-modal-overlay');
+const closeUploadModalBtn = document.getElementById('close-upload-modal');
+const uploadForm = document.getElementById('upload-form');
+const uploadFilesInput = document.getElementById('upload-files-input');
+const uploadDescriptionInput = document.getElementById('upload-description-input');
+const confirmUploadBtn = document.getElementById('confirm-upload-btn');
 const myGalleryContainer = document.getElementById('my-gallery-container');
 
 // Admin
@@ -76,7 +84,7 @@ const newPostBtn = document.getElementById('new-post-btn');
 const newPostContainer = document.getElementById('new-post-container');
 const adminToolsCard = document.getElementById('admin-tools-card');
 const adminGalleryBtn = document.getElementById('admin-gallery-btn');
-const adminPromotedBtn = document.getElementById('admin-promoted-btn');
+// const adminPromotedBtn = document.getElementById('admin-promoted-btn'); // REMOVED
 const adminImageModal = document.getElementById('admin-image-modal');
 const adminImageModalOverlay = document.getElementById('admin-image-modal-overlay');
 const closeAdminModalBtn = document.getElementById('close-admin-modal');
@@ -89,9 +97,8 @@ const adminModalTitle = document.getElementById('admin-modal-title');
 
 /**
  * Konverterer en fil til en Base64-streng og endrer størrelsen.
- * Dette unngår CORS-problemer med Firebase Storage ved å lagre bildet direkte i Firestore.
  */
-function resizeAndConvertToBase64(file, maxWidth = 800) { // Økt til 800px for galleribilder
+function resizeAndConvertToBase64(file, maxWidth = 800) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
@@ -128,8 +135,6 @@ function resizeAndConvertToBase64(file, maxWidth = 800) { // Økt til 800px for 
 
 // --- KJERNEFUNKSJONER ---
 
-// **OPPDATERT:** Vi henter nå både rolle og profil fra 'users'-samlingen.
-// Dette sparer lesinger og gjør det enklere å administrere.
 async function fetchUserData(uid) {
     if (!uid) return null;
     const docPath = getProfileDocPath(uid);
@@ -146,7 +151,6 @@ async function fetchUserData(uid) {
     }
 }
 
-// **OPPDATERT:** Returnerer stien til 'users'-samlingen i roten.
 function getProfileDocPath(uid) {
     return `users/${uid}`;
 }
@@ -182,10 +186,9 @@ function setupUserListener(uid) {
 function setupGalleryListener(uid) {
     if (!uid || !myGalleryContainer) return null;
 
+    // Vi sorterer ikke i query (enklere uten index) - legg evt. til orderBy om nødvendig
     const galleryParams = `users/${uid}/gallery_images`;
     const galleryRef = collection(db, galleryParams);
-    // Querying subcollection directly might need explicit index depending on ordering
-    // But basic retrieval is fine.
 
     myGalleryContainer.innerHTML = '<p class="text-muted text-sm" style="grid-column: 1/-1;">Laster...</p>';
 
@@ -196,17 +199,52 @@ function setupGalleryListener(uid) {
             return;
         }
 
-        snapshot.forEach((doc) => {
-            const data = doc.data();
+        snapshot.forEach((docSnap) => {
+            const data = docSnap.data();
+            const id = docSnap.id;
+
             const item = document.createElement('div');
             item.className = 'gallery-preview-item bg-subtle';
+            item.style.position = 'relative'; // For delete button positioning
 
+            // Image
             const img = document.createElement('img');
             img.src = data.imageUrl;
-            img.alt = 'Galleri bilde';
+            img.alt = data.description || 'Galleri bilde';
             img.loading = 'lazy';
-
             item.appendChild(img);
+
+            // Delete Button
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'gallery-delete-btn';
+            deleteBtn.innerHTML = '&times;';
+            deleteBtn.title = 'Slett bilde';
+
+            deleteBtn.onclick = (e) => {
+                e.preventDefault();
+                deleteGalleryImage(uid, id);
+            };
+
+            item.appendChild(deleteBtn);
+
+            // Description Tooltip/Text
+            if (data.description) {
+                const desc = document.createElement('div');
+                desc.textContent = data.description;
+                desc.style.position = 'absolute';
+                desc.style.bottom = '0';
+                desc.style.left = '0';
+                desc.style.right = '0';
+                desc.style.background = 'rgba(0,0,0,0.6)';
+                desc.style.color = '#fff';
+                desc.style.fontSize = '0.75rem';
+                desc.style.padding = '0.25rem 0.5rem';
+                desc.style.whiteSpace = 'nowrap';
+                desc.style.overflow = 'hidden';
+                desc.style.textOverflow = 'ellipsis';
+                item.appendChild(desc);
+            }
+
             myGalleryContainer.appendChild(item);
         });
     }, (error) => {
@@ -226,42 +264,71 @@ async function saveUserProfile(uid, data) {
     await setDoc(docRef, data, { merge: true });
 }
 
+async function deleteGalleryImage(uid, imageId) {
+    if (!confirm('Er du sikker på at du vil slette dette bildet?')) return;
+
+    try {
+        await deleteDoc(doc(db, `users/${uid}/gallery_images`, imageId));
+    } catch (e) {
+        console.error("Delete failed:", e);
+        alert("Kunne ikke slette bilde.");
+    }
+}
+
 // --- GALLERI OPPLASTING --- 
 
-async function handleGalleryUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+function openUploadModal() {
+    if (uploadModal) uploadModal.classList.remove('hidden');
+}
+
+function closeUploadModal() {
+    if (uploadModal) uploadModal.classList.add('hidden');
+    if (uploadForm) uploadForm.reset();
+}
+
+async function handleGalleryUploadSubmit(e) {
+    e.preventDefault();
+
+    const files = uploadFilesInput.files;
+    const description = uploadDescriptionInput.value.trim();
+
+    if (!files || files.length === 0) return;
 
     if (!authState.user) {
         alert("Du må være logget inn for å laste opp.");
         return;
     }
 
-    const originalBtnText = uploadGalleryBtn.textContent;
-    uploadGalleryBtn.textContent = 'Lagrer...';
-    uploadGalleryBtn.disabled = true;
+    const originalBtnText = confirmUploadBtn.textContent;
+    confirmUploadBtn.textContent = 'Laster opp...';
+    confirmUploadBtn.disabled = true;
 
     try {
-        const base64Image = await resizeAndConvertToBase64(file, 800); // 800px max width for gallery
         const uid = authState.user.uid;
-
-        // Lagre i users/{uid}/gallery_images
         const galleryRef = collection(db, `users/${uid}/gallery_images`);
-        await addDoc(galleryRef, {
-            imageUrl: base64Image,
-            createdAt: serverTimestamp(),
-            uploadedBy: uid
-        });
 
-        alert("Bilde lastet opp!");
+        // Loop gjennom alle valgte filer
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const base64Image = await resizeAndConvertToBase64(file, 800);
+
+            await addDoc(galleryRef, {
+                imageUrl: base64Image,
+                description: description || null, // Shared description for batch
+                createdAt: serverTimestamp(),
+                uploadedBy: uid
+            });
+        }
+
+        alert("Bilder lastet opp!");
+        closeUploadModal();
 
     } catch (error) {
         console.error("Upload failed:", error);
-        alert("Kunne ikke laste opp bilde: " + error.message);
+        alert("Kunne ikke laste opp bilde(r): " + error.message);
     } finally {
-        uploadGalleryBtn.textContent = originalBtnText;
-        uploadGalleryBtn.disabled = false;
-        uploadGalleryInput.value = ''; // Reset input
+        confirmUploadBtn.textContent = originalBtnText;
+        confirmUploadBtn.disabled = false;
     }
 }
 
@@ -444,12 +511,11 @@ async function handleProfileSave(e) {
 }
 
 // --- ADMIN MODAL LOGIC ---
-let currentAdminMode = null; // 'promoted' or 'gallery'
 
-function openAdminModal(mode) {
-    currentAdminMode = mode;
+function openAdminModal() {
+    // Vi støtter nå kun "gallery" (offentlig administrasjon)
     if (adminModalTitle) {
-        adminModalTitle.textContent = mode === 'promoted' ? 'Velg Promoterte Minner' : 'Administrer Offentlig Galleri';
+        adminModalTitle.textContent = 'Administrer offentlig galleri';
     }
     if (adminImageModal) adminImageModal.classList.remove('hidden');
     loadAdminImages();
@@ -457,7 +523,6 @@ function openAdminModal(mode) {
 
 function closeAdminModal() {
     if (adminImageModal) adminImageModal.classList.add('hidden');
-    currentAdminMode = null;
 }
 
 // **OPPDATERT**: Laster faktiske brukere og deres bilder
@@ -543,15 +608,13 @@ async function loadAdminImages() {
 
 // --- ADMIN SAVE SELECTION ---
 async function saveAdminSelection() {
-    if (!currentAdminMode) return;
 
     // Finn alle valgte bilder
     const checkboxes = document.querySelectorAll('.admin-image-select:checked');
     const selectedImages = Array.from(checkboxes).map(cb => cb.value);
 
     // Lagre valget i 'site_content' samlingen
-    const docId = currentAdminMode; // 'promoted' eller 'gallery'
-    const contentRef = doc(db, 'site_content', docId);
+    const contentRef = doc(db, 'site_content', 'gallery');
 
     const btn = document.getElementById('save-admin-selection');
     const originalText = btn.textContent;
@@ -565,7 +628,7 @@ async function saveAdminSelection() {
             updatedBy: authState.user.uid
         });
 
-        alert(`Lagret ${selectedImages.length} bilder til ${currentAdminMode}!`);
+        alert(`Lagret ${selectedImages.length} bilder til offentlig galleri!`);
         closeAdminModal();
 
     } catch (error) {
@@ -609,15 +672,15 @@ if (closeProfileModalButton) closeProfileModalButton.addEventListener('click', c
 if (profileModalOverlay) profileModalOverlay.addEventListener('click', closeModal);
 if (profileForm) profileForm.addEventListener('submit', handleProfileSave);
 
-// Gallery Upload (Trigger hidden input)
+// Gallery Upload (Open Modal)
 if (uploadGalleryBtn) {
-    uploadGalleryBtn.addEventListener('click', () => {
-        uploadGalleryInput.click();
-    });
+    uploadGalleryBtn.addEventListener('click', openUploadModal);
 }
-if (uploadGalleryInput) {
-    uploadGalleryInput.addEventListener('change', handleGalleryUpload);
+if (uploadForm) {
+    uploadForm.addEventListener('submit', handleGalleryUploadSubmit);
 }
+if (closeUploadModalBtn) closeUploadModalBtn.addEventListener('click', closeUploadModal);
+if (uploadModalOverlay) uploadModalOverlay.addEventListener('click', closeUploadModal);
 
 
 // Admin: Nytt innlegg toggle
@@ -628,8 +691,7 @@ if (newPostBtn) {
 }
 
 // Admin: Modals
-if (adminGalleryBtn) adminGalleryBtn.addEventListener('click', () => openAdminModal('gallery'));
-if (adminPromotedBtn) adminPromotedBtn.addEventListener('click', () => openAdminModal('promoted'));
+if (adminGalleryBtn) adminGalleryBtn.addEventListener('click', openAdminModal);
 if (closeAdminModalBtn) closeAdminModalBtn.addEventListener('click', closeAdminModal);
 if (cancelAdminModalBtn) cancelAdminModalBtn.addEventListener('click', closeAdminModal);
 if (adminImageModalOverlay) adminImageModalOverlay.addEventListener('click', closeAdminModal);

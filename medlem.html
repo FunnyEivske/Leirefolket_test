@@ -71,7 +71,7 @@
 
                         <div class="mt-4">
                             <button id="open-profile-modal" class="btn btn-secondary btn-full text-sm">Rediger
-                                Profil</button>
+                                profil</button>
                         </div>
                     </div>
                 </div>
@@ -83,10 +83,7 @@
                     </div>
                     <div class="card-body">
                         <button id="admin-gallery-btn" class="btn btn-secondary btn-full text-sm mb-2">
-                            Administrer Galleri
-                        </button>
-                        <button id="admin-promoted-btn" class="btn btn-secondary btn-full text-sm">
-                            Administrer Promoterte minner
+                            Administrer galleri
                         </button>
                     </div>
                 </div>
@@ -153,34 +150,11 @@
             <!-- Sidebar Høyre: Promotert & Galleri -->
             <aside class="dashboard-sidebar-right">
 
-                <!-- Promoterte Minner (Erstattet Kurs) -->
-                <div class="card mb-6">
-                    <div class="card-header"
-                        style="display: flex; justify-content: space-between; align-items: center;">
-                        <h4 class="text-lg" style="margin-bottom: 0;">Promoterte Minner</h4>
-                    </div>
-                    <div class="card-body">
-                        <p class="text-sm text-muted mb-4">Glimt fra din reise med Leirefolket.</p>
-                        <div class="gallery-preview-grid">
-                            <!-- Placeholders for promoted images -->
-                            <div class="gallery-preview-item bg-subtle">
-                                <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_258881171_124209833377229_1067964419050348924_n.jpg"
-                                    alt="Minne 1">
-                            </div>
-                            <div class="gallery-preview-item bg-subtle">
-                                <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_285560009_327836942844158_5508481699510217538_n.jpg"
-                                    alt="Minne 2">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Mitt Galleri (Flyttet hit) -->
                 <div class="card">
                     <div class="card-header"
                         style="display: flex; justify-content: space-between; align-items: center;">
-                        <h4 class="text-lg" style="margin-bottom: 0;">Mitt Galleri</h4>
-                        <input type="file" id="upload-gallery-input" accept="image/*" class="hidden">
+                        <h4 class="text-lg" style="margin-bottom: 0;">Mitt galleri</h4>
                         <button id="upload-gallery-btn" class="btn btn-secondary text-sm"
                             style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Last opp</button>
                     </div>
@@ -203,7 +177,7 @@
             style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px);"></div>
         <div class="card" style="position: relative; width: 100%; max-width: 500px; margin: 1rem; z-index: 10;">
             <div class="card-header">
-                <h3>Rediger Profil</h3>
+                <h3>Rediger profil</h3>
             </div>
             <form id="profile-form">
                 <div class="card-body">
@@ -230,6 +204,36 @@
         </div>
     </div>
 
+    <!-- Upload Modal -->
+    <div id="upload-modal" class="hidden"
+        style="position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;">
+        <div id="upload-modal-overlay"
+            style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px);"></div>
+        <div class="card" style="position: relative; width: 100%; max-width: 500px; margin: 1rem; z-index: 10;">
+            <div class="card-header">
+                <h3>Last opp bilder</h3>
+            </div>
+            <form id="upload-form">
+                <div class="card-body">
+                    <div class="form-group">
+                        <label class="form-label">Velg bilder</label>
+                        <input type="file" id="upload-files-input" class="form-input" accept="image/*" multiple
+                            required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Beskrivelse (valgfritt)</label>
+                        <textarea id="upload-description-input" class="form-input" rows="3"
+                            placeholder="Skriv litt om bildene..."></textarea>
+                    </div>
+                </div>
+                <div class="card-footer" style="display: flex; justify-content: flex-end; gap: 1rem;">
+                    <button type="button" id="close-upload-modal" class="btn btn-secondary">Avbryt</button>
+                    <button type="submit" id="confirm-upload-btn" class="btn btn-primary">Last opp</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Admin Image Selection Modal -->
     <div id="admin-image-modal" class="hidden"
         style="position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;">
@@ -238,7 +242,7 @@
         <div class="card"
             style="position: relative; width: 100%; max-width: 800px; height: 80vh; margin: 1rem; z-index: 10; display: flex; flex-direction: column;">
             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <h3 id="admin-modal-title">Velg Bilder</h3>
+                <h3 id="admin-modal-title">Velg bilder</h3>
                 <button id="close-admin-modal" class="btn btn-ghost" style="padding: 0.5rem;">
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M18 6L6 18M6 6l12 12" />
@@ -249,12 +253,11 @@
                 <!-- User List Container -->
                 <div id="admin-user-list" style="display: flex; flex-direction: column; gap: 1rem;">
                     <p class="text-muted text-center">Laster brukere og bilder...</p>
-                    <!-- Example User Item (Dynamic) -->
                 </div>
             </div>
             <div class="card-footer" style="display: flex; justify-content: flex-end; gap: 1rem;">
                 <button type="button" id="cancel-admin-modal" class="btn btn-secondary">Avbryt</button>
-                <button type="button" id="save-admin-selection" class="btn btn-primary">Lagre Valg</button>
+                <button type="button" id="save-admin-selection" class="btn btn-primary">Lagre valg</button>
             </div>
         </div>
     </div>
