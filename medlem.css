@@ -464,6 +464,7 @@ p {
 .login-visual {
   display: none;
   background-image: url('https://images.unsplash.com/photo-1493106641515-6b5631de4bb9?q=80&w=2838&auto=format&fit=crop');
+  /* Bytt bilde */
   /* Keramikk-bilde */
   background-size: cover;
   background-position: center;

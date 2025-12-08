@@ -259,12 +259,42 @@
                 <button type="button" id="cancel-admin-modal" class="btn btn-secondary">Avbryt</button>
                 <button type="button" id="save-admin-selection" class="btn btn-primary">Lagre valg</button>
             </div>
-        </div>
-    </div>
+            <!-- Custom Alert/Message Modal -->
+            <div id="message-modal" class="hidden"
+                style="position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center;">
+                <div id="message-modal-overlay"
+                    style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px);">
+                </div>
+                <div class="card" style="position: relative; width: 100%; max-width: 400px; margin: 1rem; z-index: 10;">
+                    <div class="card-body text-center">
+                        <p id="message-modal-text" class="mb-6 text-lg"></p>
+                        <div style="display: flex; justify-content: center;">
+                            <button id="message-modal-close" class="btn btn-primary">OK</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-    <script type="module" src="firebase.js"></script>
-    <script type="module" src="script.js"></script>
-    <script type="module" src="feed.js"></script>
+            <!-- Custom Confirm Modal -->
+            <div id="confirm-modal" class="hidden"
+                style="position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center;">
+                <div id="confirm-modal-overlay"
+                    style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px);">
+                </div>
+                <div class="card" style="position: relative; width: 100%; max-width: 400px; margin: 1rem; z-index: 10;">
+                    <div class="card-body text-center">
+                        <p id="confirm-modal-text" class="mb-6 text-lg"></p>
+                        <div style="display: flex; justify-content: center; gap: 1rem;">
+                            <button id="confirm-modal-cancel" class="btn btn-secondary">Avbryt</button>
+                            <button id="confirm-modal-ok" class="btn btn-primary">OK</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <script type="module" src="firebase.js"></script>
+            <script type="module" src="script.js"></script>
+            <script type="module" src="feed.js"></script>
 </body>
 
 </html>

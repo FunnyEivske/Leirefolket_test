@@ -93,7 +93,68 @@ const saveAdminSelectionBtn = document.getElementById('save-admin-selection');
 const adminUserList = document.getElementById('admin-user-list');
 const adminModalTitle = document.getElementById('admin-modal-title');
 
+// Custom Modals
+const messageModal = document.getElementById('message-modal');
+const messageModalText = document.getElementById('message-modal-text');
+const messageModalClose = document.getElementById('message-modal-close');
+const messageModalOverlay = document.getElementById('message-modal-overlay');
+
+const confirmModal = document.getElementById('confirm-modal');
+const confirmModalText = document.getElementById('confirm-modal-text');
+const confirmModalOk = document.getElementById('confirm-modal-ok');
+const confirmModalCancel = document.getElementById('confirm-modal-cancel');
+const confirmModalOverlay = document.getElementById('confirm-modal-overlay');
+
 // --- HJELPEFUNKSJONER ---
+
+function showCustomAlert(message) {
+    if (messageModal && messageModalText) {
+        messageModalText.textContent = message;
+        messageModal.classList.remove('hidden');
+        return new Promise(resolve => {
+            const closeHandler = () => {
+                messageModal.classList.add('hidden');
+                messageModalClose.removeEventListener('click', closeHandler);
+                messageModalOverlay.removeEventListener('click', closeHandler);
+                resolve();
+            };
+            messageModalClose.addEventListener('click', closeHandler);
+            messageModalOverlay.addEventListener('click', closeHandler);
+        });
+    } else {
+        alert(message);
+    }
+}
+
+function showCustomConfirm(message) {
+    if (confirmModal && confirmModalText) {
+        confirmModalText.textContent = message;
+        confirmModal.classList.remove('hidden');
+        return new Promise(resolve => {
+            const handleOk = () => {
+                cleanup();
+                resolve(true);
+            };
+            const handleCancel = () => {
+                cleanup();
+                resolve(false);
+            };
+            const cleanup = () => {
+                confirmModal.classList.add('hidden');
+                confirmModalOk.removeEventListener('click', handleOk);
+                confirmModalCancel.removeEventListener('click', handleCancel);
+                confirmModalOverlay.removeEventListener('click', handleCancel);
+            };
+
+            confirmModalOk.addEventListener('click', handleOk);
+            confirmModalCancel.addEventListener('click', handleCancel);
+            confirmModalOverlay.addEventListener('click', handleCancel);
+        });
+    } else {
+        return Promise.resolve(confirm(message));
+    }
+}
+
 
 /**
  * Konverterer en fil til en Base64-streng og endrer størrelsen.
@@ -265,13 +326,14 @@ async function saveUserProfile(uid, data) {
 }
 
 async function deleteGalleryImage(uid, imageId) {
-    if (!confirm('Er du sikker på at du vil slette dette bildet?')) return;
+    const confirmed = await showCustomConfirm('Er du sikker på at du vil slette dette bildet?');
+    if (!confirmed) return;
 
     try {
         await deleteDoc(doc(db, `users/${uid}/gallery_images`, imageId));
     } catch (e) {
         console.error("Delete failed:", e);
-        alert("Kunne ikke slette bilde.");
+        showCustomAlert("Kunne ikke slette bilde.");
     }
 }
 
@@ -295,7 +357,7 @@ async function handleGalleryUploadSubmit(e) {
     if (!files || files.length === 0) return;
 
     if (!authState.user) {
-        alert("Du må være logget inn for å laste opp.");
+        showCustomAlert("Du må være logget inn for å laste opp.");
         return;
     }
 
@@ -320,12 +382,12 @@ async function handleGalleryUploadSubmit(e) {
             });
         }
 
-        alert("Bilder lastet opp!");
+        showCustomAlert("Bilder lastet opp!");
         closeUploadModal();
 
     } catch (error) {
         console.error("Upload failed:", error);
-        alert("Kunne ikke laste opp bilde(r): " + error.message);
+        showCustomAlert("Kunne ikke laste opp bilde(r): " + error.message);
     } finally {
         confirmUploadBtn.textContent = originalBtnText;
         confirmUploadBtn.disabled = false;
@@ -628,12 +690,12 @@ async function saveAdminSelection() {
             updatedBy: authState.user.uid
         });
 
-        alert(`Lagret ${selectedImages.length} bilder til offentlig galleri!`);
+        showCustomAlert(`Lagret ${selectedImages.length} bilder til offentlig galleri!`);
         closeAdminModal();
 
     } catch (error) {
         console.error("Error saving selection:", error);
-        alert("Kunne ikke lagre: " + error.message);
+        showCustomAlert("Kunne ikke lagre: " + error.message);
     } finally {
         btn.textContent = originalText;
         btn.disabled = false;
