@@ -85,6 +85,8 @@
 html {
   scroll-behavior: smooth;
   font-size: 16px;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -95,6 +97,8 @@ body {
   -webkit-font-smoothing: antialiased;
   overflow-wrap: break-word;
   word-wrap: break-word;
+  width: 100%;
+  overflow-x: hidden;
 }
 
 img {
@@ -192,7 +196,9 @@ p {
   width: 100%;
   max-width: 1280px;
   margin: 0 auto;
-  padding: 0 1.5rem;
+  padding: 0 1rem;
+  overflow-x: hidden;
+  /* Safety */
 }
 
 /* Buttons */
@@ -695,4 +701,16 @@ p {
 
 .gallery-delete-btn:hover {
   background: rgba(255, 0, 0, 0.9);
+}
+
+.feed-item {
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  min-width: 0;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+  max-width: 100%;
 }
