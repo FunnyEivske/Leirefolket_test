@@ -2,53 +2,43 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Sjekk om bruker er logget inn
+    // --- Hjelpefunksjoner ---
     function isSignedIn() {
       return request.auth != null;
     }
-
-    // Sjekk om brukeren eier dokumentet (for profil)
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // --- Regler for Leirefolket Appen ---
-    // Vi matcher stien som brukes i scriptene dine: /artifacts/{appId}/public/data/...
-    match /artifacts/{appId}/public/data {
-      
-      // Feed: Alle kan lese, men man må være logget inn for å poste
-      // (Appen din sjekker også om man er 'admin' i koden, men her krever vi minst innlogging)
-      match /feed/{postId} {
-        allow read: if true;
-        allow write: if isSignedIn();
-      }
-      
-      // Brukerdata (profil.js bruker denne): Kun eier kan endre
-      match /users/{userId} {
-        allow read: if true;
-        allow write: if isOwner(userId);
-      }
+    // --- Brukere og Galleri ---
+    match /users/{userId} {
+      allow read: if true; // Alle kan lese profilinfo (navn/bilde)
+      allow write: if isOwner(userId); // Kun eier kan endre sin profil
 
-      // Roller og Profil (script.js bruker denne):
-      // Vi tillater skriving slik at "Min Side" kan oppdatere navn/bilde,
-      // men pass på at logikken i koden ikke overskriver 'role'-feltet utilsiktet.
-      match /userRoles/{userId} {
-        allow read: if true;
-        allow write: if isOwner(userId); 
+      // Personlig galleri
+      match /gallery_images/{imageId} {
+        allow read: if true; // Tillat lesing for admin-verktøy
+        allow write: if isOwner(userId); // Eier kan laste opp/slette
       }
     }
 
-    // --- Generell sikring ---
-    // Dette hindrer skriving til andre tilfeldige steder, men tillater lesing
-    match /artifacts/{document=**} {
+    // --- Innhold på siden (Promotert & Offentlig Galleri) ---
+    match /site_content/{document=**} {
+      allow read: if true; // Alle kan se innholdet på siden
+      // Tillat alle innloggede å redigere (for enkelhets skyld, eller bytt til 'if isOwner("admin_uid")')
+      allow write: if isSignedIn(); 
+    }
+
+    // --- Feed (Beholder eksisterende logikk om nødvendig) ---
+    match /artifacts/{appId}/public/data/feed/{postId} {
       allow read: if true;
-      allow write: if false;
+      allow write: if isSignedIn();
     }
     
-    // --- Legacy / Backup ---
-    // Hvis du har data liggende rett under /users fra tidligere tester
-    match /users/{userId} {
-      allow read, write: if isOwner(userId);
-    }
+    // --- Diverse sikkerhet ---
+    // Tillat lesing/skriving hvis du vil "tillate alt" for testing (IKKE ANBEFALT FOR PRODUKSJON)
+    // match /{document=**} {
+    //   allow read, write: if true;
+    // }
   }
 }

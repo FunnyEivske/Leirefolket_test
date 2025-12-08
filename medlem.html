@@ -79,11 +79,14 @@
                 <!-- Admin Tools (Hidden by default) -->
                 <div id="admin-tools-card" class="card hidden">
                     <div class="card-header">
-                        <h4 class="text-lg">Admin Verktøy</h4>
+                        <h4 class="text-lg">Admin verktøy</h4>
                     </div>
                     <div class="card-body">
                         <button id="admin-gallery-btn" class="btn btn-secondary btn-full text-sm mb-2">
                             Administrer Galleri
+                        </button>
+                        <button id="admin-promoted-btn" class="btn btn-secondary btn-full text-sm">
+                            Administrer Promoterte minner
                         </button>
                     </div>
                 </div>
@@ -108,7 +111,7 @@
                 <!-- Velkomst / Feed -->
                 <section>
                     <div class="section-header">
-                        <h2>Siste Nytt</h2>
+                        <h2>Siste nytt</h2>
                         <!-- Admin-knapp for nytt innlegg (skjult for vanlige medlemmer) -->
                         <button id="new-post-btn" class="btn btn-primary text-sm hidden">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -155,13 +158,6 @@
                     <div class="card-header"
                         style="display: flex; justify-content: space-between; align-items: center;">
                         <h4 class="text-lg" style="margin-bottom: 0;">Promoterte Minner</h4>
-                        <button id="admin-promoted-btn" class="btn btn-ghost text-sm hidden" style="padding: 0.25rem;">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                            </svg>
-                        </button>
                     </div>
                     <div class="card-body">
                         <p class="text-sm text-muted mb-4">Glimt fra din reise med Leirefolket.</p>
@@ -184,16 +180,13 @@
                     <div class="card-header"
                         style="display: flex; justify-content: space-between; align-items: center;">
                         <h4 class="text-lg" style="margin-bottom: 0;">Mitt Galleri</h4>
-                        <button class="btn btn-secondary text-sm"
+                        <input type="file" id="upload-gallery-input" accept="image/*" class="hidden">
+                        <button id="upload-gallery-btn" class="btn btn-secondary text-sm"
                             style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Last opp</button>
                     </div>
                     <div class="card-body">
-                        <div class="gallery-preview-grid">
-                            <!-- Placeholders -->
-                            <div class="gallery-preview-item bg-subtle"></div>
-                            <div class="gallery-preview-item bg-subtle"></div>
-                            <div class="gallery-preview-item bg-subtle"></div>
-                            <div class="gallery-preview-item bg-subtle"></div>
+                        <div id="my-gallery-container" class="gallery-preview-grid">
+                            <p class="text-muted text-sm" style="grid-column: 1/-1;">Laster ditt galleri...</p>
                         </div>
                     </div>
                 </div>

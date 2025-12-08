@@ -8,7 +8,12 @@ import {
     doc,
     getDoc,
     setDoc,
-    onSnapshot
+    addDoc,
+    collection,
+    query,
+    getDocs,
+    onSnapshot,
+    serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- GLOBAL STATE --- //
@@ -19,6 +24,7 @@ export let authState = {
 };
 
 let profileUnsubscribe = null;
+let galleryUnsubscribe = null; // Listener for user's own gallery
 
 // Promise som resolver når brukerens rolle og profil er ferdig lastet
 let resolveUserReady;
@@ -60,6 +66,11 @@ const profileImageFileInput = document.getElementById('profile-image-file-input'
 const saveProfileButton = document.getElementById('save-profile-button');
 const profileSaveStatus = document.getElementById('profile-save-status');
 
+// Gallery Uploads (Personal)
+const uploadGalleryBtn = document.getElementById('upload-gallery-btn');
+const uploadGalleryInput = document.getElementById('upload-gallery-input');
+const myGalleryContainer = document.getElementById('my-gallery-container');
+
 // Admin
 const newPostBtn = document.getElementById('new-post-btn');
 const newPostContainer = document.getElementById('new-post-container');
@@ -80,7 +91,7 @@ const adminModalTitle = document.getElementById('admin-modal-title');
  * Konverterer en fil til en Base64-streng og endrer størrelsen.
  * Dette unngår CORS-problemer med Firebase Storage ved å lagre bildet direkte i Firestore.
  */
-function resizeAndConvertToBase64(file, maxWidth = 300) {
+function resizeAndConvertToBase64(file, maxWidth = 800) { // Økt til 800px for galleribilder
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
@@ -107,7 +118,7 @@ function resizeAndConvertToBase64(file, maxWidth = 300) {
                 ctx.drawImage(img, 0, 0, width, height);
 
                 // Konverter til Base64 (JPEG for mindre størrelse)
-                resolve(canvas.toDataURL('image/jpeg', 0.7));
+                resolve(canvas.toDataURL('image/jpeg', 0.8));
             };
             img.onerror = (error) => reject(error);
         };
@@ -157,11 +168,46 @@ function setupUserListener(uid) {
                 photoURL: null
             };
             authState.role = 'member';
+            // Opprett dokumentet første gang
+            saveUserProfile(uid, authState.profile);
         }
         updateUI(authState.user, authState.profile);
     }, (error) => {
         console.error("Error in user listener:", error);
     });
+    return unsubscribe;
+}
+
+// Lytter til brukerens personlige galleri
+function setupGalleryListener(uid) {
+    if (!uid || !myGalleryContainer) return null;
+
+    const galleryParams = `users/${uid}/gallery_images`;
+    const galleryRef = collection(db, galleryParams);
+    // Querying subcollection directly might need explicit index depending on ordering
+    // But basic retrieval is fine.
+
+    myGalleryContainer.innerHTML = '<p class="text-muted text-sm" style="grid-column: 1/-1;">Laster...</p>';
+
+    const unsubscribe = onSnapshot(galleryRef, (snapshot) => {
+        myGalleryContainer.innerHTML = '';
+        if (snapshot.empty) {
+            myGalleryContainer.innerHTML = '<p class="text-muted text-sm" style="grid-column: 1/-1;">Du har ingen bilder ennå.</p>';
+            return;
+        }
+
+        snapshot.forEach((doc) => {
+            const data = doc.data();
+            const item = document.createElement('div');
+            item.className = 'gallery-preview-item bg-subtle';
+            item.innerHTML = `<img src="${data.imageUrl}" alt="Galleri bilde" loading="lazy">`;
+            myGalleryContainer.appendChild(item);
+        });
+    }, (error) => {
+        console.error("Error fetching gallery:", error);
+        myGalleryContainer.innerHTML = '<p class="text-error text-sm" style="grid-column: 1/-1;">Feil ved lasting.</p>';
+    });
+
     return unsubscribe;
 }
 
@@ -173,6 +219,46 @@ async function saveUserProfile(uid, data) {
     // Bruk merge: true for å oppdatere eksisterende felt uten å slette andre
     await setDoc(docRef, data, { merge: true });
 }
+
+// --- GALLERI OPPLASTING --- 
+
+async function handleGalleryUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (!authState.user) {
+        alert("Du må være logget inn for å laste opp.");
+        return;
+    }
+
+    const originalBtnText = uploadGalleryBtn.textContent;
+    uploadGalleryBtn.textContent = 'Lagrer...';
+    uploadGalleryBtn.disabled = true;
+
+    try {
+        const base64Image = await resizeAndConvertToBase64(file, 800); // 800px max width for gallery
+        const uid = authState.user.uid;
+
+        // Lagre i users/{uid}/gallery_images
+        const galleryRef = collection(db, `users/${uid}/gallery_images`);
+        await addDoc(galleryRef, {
+            imageUrl: base64Image,
+            createdAt: serverTimestamp(),
+            uploadedBy: uid
+        });
+
+        alert("Bilde lastet opp!");
+
+    } catch (error) {
+        console.error("Upload failed:", error);
+        alert("Kunne ikke laste opp bilde: " + error.message);
+    } finally {
+        uploadGalleryBtn.textContent = originalBtnText;
+        uploadGalleryBtn.disabled = false;
+        uploadGalleryInput.value = ''; // Reset input
+    }
+}
+
 
 // --- UI OPPDATERING ---
 
@@ -189,11 +275,9 @@ function updateUI(user, profile) {
     if (authState.role === 'admin') {
         if (newPostBtn) newPostBtn.classList.remove('hidden');
         if (adminToolsCard) adminToolsCard.classList.remove('hidden');
-        if (adminPromotedBtn) adminPromotedBtn.classList.remove('hidden');
     } else {
         if (newPostBtn) newPostBtn.classList.add('hidden');
         if (adminToolsCard) adminToolsCard.classList.add('hidden');
-        if (adminPromotedBtn) adminPromotedBtn.classList.add('hidden');
     }
 
     // Toggle navigation links based on auth state
@@ -370,29 +454,41 @@ function closeAdminModal() {
     currentAdminMode = null;
 }
 
-function loadAdminImages() {
+// **OPPDATERT**: Laster faktiske brukere og deres bilder
+async function loadAdminImages() {
     if (!adminUserList) return;
     adminUserList.innerHTML = '<p class="text-muted text-center">Laster brukere...</p>';
 
-    // MOCK DATA - In a real app, fetch users and their images from Firestore
-    setTimeout(() => {
-        adminUserList.innerHTML = '';
-        const mockUsers = [
-            { name: 'Ola Nordmann', images: ['https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_258881171_124209833377229_1067964419050348924_n.jpg', 'https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_285560009_327836942844158_5508481699510217538_n.jpg'] },
-            { name: 'Kari Hansen', images: ['https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_220734257_240046884432034_8044610736397101717_n.jpg'] },
-            { name: 'Per Olsen', images: [] }
-        ];
+    try {
+        // Hent alle brukere fra 'users' samlingen
+        // NB: Dette krever at reglene tillater lesing av 'users' for admin
+        const usersSnapshot = await getDocs(collection(db, 'users'));
 
-        mockUsers.forEach(user => {
+        if (usersSnapshot.empty) {
+            adminUserList.innerHTML = '<p class="text-muted text-center">Ingen brukere funnet.</p>';
+            return;
+        }
+
+        adminUserList.innerHTML = '';
+
+        // Loop gjennom hver bruker
+        for (const userDoc of usersSnapshot.docs) {
+            const userData = userDoc.data();
+            const userId = userDoc.id;
+            const displayName = userData.displayName || 'Ukjent bruker';
+
+            // Hent galleribilder for denne brukeren
+            const gallerySnapshot = await getDocs(collection(db, `users/${userId}/gallery_images`));
+
             const userGroup = document.createElement('div');
             userGroup.className = 'user-group mb-4';
 
             const header = document.createElement('h4');
             header.className = 'text-sm font-semibold mb-2';
-            header.textContent = user.name;
+            header.textContent = `${displayName} (${userId})`;
             userGroup.appendChild(header);
 
-            if (user.images.length === 0) {
+            if (gallerySnapshot.empty) {
                 const noImg = document.createElement('p');
                 noImg.className = 'text-sm text-muted';
                 noImg.textContent = 'Ingen bilder lastet opp.';
@@ -401,16 +497,21 @@ function loadAdminImages() {
                 const grid = document.createElement('div');
                 grid.className = 'gallery-preview-grid';
 
-                user.images.forEach(imgSrc => {
+                gallerySnapshot.forEach(imgDoc => {
+                    const imgData = imgDoc.data();
+
                     const item = document.createElement('div');
                     item.className = 'gallery-preview-item bg-subtle';
                     item.style.position = 'relative';
 
                     const img = document.createElement('img');
-                    img.src = imgSrc;
+                    img.src = imgData.imageUrl;
 
                     const checkbox = document.createElement('input');
                     checkbox.type = 'checkbox';
+                    checkbox.className = 'admin-image-select';
+                    checkbox.value = imgData.imageUrl; // Vi lagrer URL-en
+                    checkbox.dataset.userId = userId;
                     checkbox.style.position = 'absolute';
                     checkbox.style.top = '0.5rem';
                     checkbox.style.right = '0.5rem';
@@ -425,8 +526,49 @@ function loadAdminImages() {
                 userGroup.appendChild(grid);
             }
             adminUserList.appendChild(userGroup);
+        }
+
+    } catch (error) {
+        console.error("Error loading admin images:", error);
+        adminUserList.innerHTML = `<p class="text-error text-center">Feil: ${error.message}</p>`;
+    }
+}
+
+
+// --- ADMIN SAVE SELECTION ---
+async function saveAdminSelection() {
+    if (!currentAdminMode) return;
+
+    // Finn alle valgte bilder
+    const checkboxes = document.querySelectorAll('.admin-image-select:checked');
+    const selectedImages = Array.from(checkboxes).map(cb => cb.value);
+
+    // Lagre valget i 'site_content' samlingen
+    const docId = currentAdminMode; // 'promoted' eller 'gallery'
+    const contentRef = doc(db, 'site_content', docId);
+
+    const btn = document.getElementById('save-admin-selection');
+    const originalText = btn.textContent;
+    btn.textContent = 'Lagrer...';
+    btn.disabled = true;
+
+    try {
+        await setDoc(contentRef, {
+            images: selectedImages,
+            updatedAt: serverTimestamp(),
+            updatedBy: authState.user.uid
         });
-    }, 500);
+
+        alert(`Lagret ${selectedImages.length} bilder til ${currentAdminMode}!`);
+        closeAdminModal();
+
+    } catch (error) {
+        console.error("Error saving selection:", error);
+        alert("Kunne ikke lagre: " + error.message);
+    } finally {
+        btn.textContent = originalText;
+        btn.disabled = false;
+    }
 }
 
 
@@ -461,6 +603,17 @@ if (closeProfileModalButton) closeProfileModalButton.addEventListener('click', c
 if (profileModalOverlay) profileModalOverlay.addEventListener('click', closeModal);
 if (profileForm) profileForm.addEventListener('submit', handleProfileSave);
 
+// Gallery Upload (Trigger hidden input)
+if (uploadGalleryBtn) {
+    uploadGalleryBtn.addEventListener('click', () => {
+        uploadGalleryInput.click();
+    });
+}
+if (uploadGalleryInput) {
+    uploadGalleryInput.addEventListener('change', handleGalleryUpload);
+}
+
+
 // Admin: Nytt innlegg toggle
 if (newPostBtn) {
     newPostBtn.addEventListener('click', () => {
@@ -475,10 +628,7 @@ if (closeAdminModalBtn) closeAdminModalBtn.addEventListener('click', closeAdminM
 if (cancelAdminModalBtn) cancelAdminModalBtn.addEventListener('click', closeAdminModal);
 if (adminImageModalOverlay) adminImageModalOverlay.addEventListener('click', closeAdminModal);
 if (saveAdminSelectionBtn) {
-    saveAdminSelectionBtn.addEventListener('click', () => {
-        alert('Valg lagret! (Dette er en demo)');
-        closeAdminModal();
-    });
+    saveAdminSelectionBtn.addEventListener('click', saveAdminSelection);
 }
 
 
@@ -494,6 +644,10 @@ authReady.then(async (initialUser) => {
 
         if (profileUnsubscribe) profileUnsubscribe();
         profileUnsubscribe = setupUserListener(initialUser.uid);
+
+        if (galleryUnsubscribe) galleryUnsubscribe();
+        galleryUnsubscribe = setupGalleryListener(initialUser.uid);
+
     } else {
         authState.user = null;
         authState.role = null;
@@ -517,11 +671,16 @@ authReady.then(async (initialUser) => {
 
             if (profileUnsubscribe) profileUnsubscribe();
             profileUnsubscribe = setupUserListener(user.uid);
+
+            if (galleryUnsubscribe) galleryUnsubscribe();
+            galleryUnsubscribe = setupGalleryListener(user.uid);
+
         } else {
             authState.user = null;
             authState.role = null;
             authState.profile = null;
             if (profileUnsubscribe) profileUnsubscribe();
+            if (galleryUnsubscribe) galleryUnsubscribe();
         }
         updateUI(authState.user, authState.profile);
         protectMemberPage();
