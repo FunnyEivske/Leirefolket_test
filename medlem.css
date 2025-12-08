@@ -520,22 +520,32 @@ p {
   Dashboard (Medlemsside)
 ==========================================
 */
+/*
+==========================================
+  Dashboard (Medlemsside)
+==========================================
+*/
 .dashboard-grid {
-  display: grid;
-  gap: 2rem;
-  grid-template-columns: 1fr;
-  padding: 2rem 0;
-}
-
-.dashboard-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 2rem;
+  padding: 1rem 0;
+  width: 100%;
+  max-width: 100%;
 }
 
+.dashboard-sidebar,
+.dashboard-sidebar-right,
 .dashboard-main {
   display: flex;
   flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+  min-width: 0;
+  /* Critical for flex/grid overflow */
+}
+
+.dashboard-main {
   gap: 2rem;
 }
 
