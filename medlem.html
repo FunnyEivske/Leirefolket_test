@@ -70,7 +70,7 @@
                         </div>
 
                         <div class="mt-4">
-                            <button id="open-profile-modal" class="btn btn-secondary btn-full text-sm">Rediger
+                            <button id="open-profile-modal" class="btn btn-primary btn-full text-sm">Rediger
                                 profil</button>
                         </div>
                     </div>
@@ -82,7 +82,7 @@
                         <h4 class="text-lg">Admin verktøy</h4>
                     </div>
                     <div class="card-body">
-                        <button id="admin-gallery-btn" class="btn btn-secondary btn-full text-sm mb-2">
+                        <button id="admin-gallery-btn" class="btn btn-primary btn-full text-sm mb-2">
                             Administrer galleri
                         </button>
                     </div>
@@ -155,13 +155,11 @@
                     <div class="card-header"
                         style="display: flex; justify-content: space-between; align-items: center;">
                         <h4 class="text-lg" style="margin-bottom: 0;">Mitt galleri</h4>
-                        <button id="upload-gallery-btn" class="btn btn-secondary text-sm"
-                            style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Last opp</button>
                     </div>
                     <div class="card-body">
-                        <div id="my-gallery-container" class="gallery-preview-grid">
-                            <p class="text-muted text-sm" style="grid-column: 1/-1;">Laster ditt galleri...</p>
-                        </div>
+                        <p class="text-sm text-muted mb-4">Administrer og last opp bilder til ditt galleri.</p>
+                        <button id="upload-gallery-btn" class="btn btn-primary btn-full text-sm">Administrer
+                            bilder</button>
                     </div>
                 </div>
 
@@ -204,33 +202,49 @@
         </div>
     </div>
 
-    <!-- Upload Modal -->
+    <!-- Upload/Manage Gallery Modal -->
     <div id="upload-modal" class="hidden"
         style="position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;">
         <div id="upload-modal-overlay"
             style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px);"></div>
-        <div class="card" style="position: relative; width: 100%; max-width: 500px; margin: 1rem; z-index: 10;">
+        <div class="card"
+            style="position: relative; width: 100%; max-width: 800px; height: 80vh; margin: 1rem; z-index: 10; display: flex; flex-direction: column;">
             <div class="card-header">
-                <h3>Last opp bilder</h3>
+                <h3>Administrer bilder</h3>
             </div>
-            <form id="upload-form">
-                <div class="card-body">
+
+            <div class="card-body" style="overflow-y: auto; flex: 1;">
+                <!-- Upload Section -->
+                <form id="upload-form" class="mb-6">
                     <div class="form-group">
-                        <label class="form-label">Velg bilder</label>
-                        <input type="file" id="upload-files-input" class="form-input" accept="image/*" multiple
-                            required>
+                        <label class="form-label">Last opp nye bilder</label>
+                        <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
+                            <input type="file" id="upload-files-input" class="form-input" accept="image/*" multiple
+                                required style="flex:1;">
+                            <button type="submit" id="confirm-upload-btn" class="btn btn-primary"
+                                style="white-space: nowrap;">Last opp</button>
+                        </div>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Beskrivelse (valgfritt)</label>
-                        <textarea id="upload-description-input" class="form-input" rows="3"
-                            placeholder="Skriv litt om bildene..."></textarea>
+                        <textarea id="upload-description-input" class="form-input" rows="2"
+                            placeholder="Beskrivelse (valgfritt)"></textarea>
+                    </div>
+                </form>
+
+                <hr style="border: 0; border-top: 1px solid var(--color-border); margin: 1.5rem 0;">
+
+                <!-- Existing Gallery Section -->
+                <div>
+                    <h4 class="text-sm font-semibold mb-3">Dine bilder</h4>
+                    <div id="my-gallery-container" class="gallery-preview-grid">
+                        <p class="text-muted text-sm" style="grid-column: 1/-1;">Laster ditt galleri...</p>
                     </div>
                 </div>
-                <div class="card-footer" style="display: flex; justify-content: flex-end; gap: 1rem;">
-                    <button type="button" id="close-upload-modal" class="btn btn-secondary">Avbryt</button>
-                    <button type="submit" id="confirm-upload-btn" class="btn btn-primary">Last opp</button>
-                </div>
-            </form>
+            </div>
+
+            <div class="card-footer" style="display: flex; justify-content: flex-end; gap: 1rem;">
+                <button type="button" id="close-upload-modal" class="btn btn-secondary">Lukk</button>
+            </div>
         </div>
     </div>
 
@@ -259,42 +273,45 @@
                 <button type="button" id="cancel-admin-modal" class="btn btn-secondary">Avbryt</button>
                 <button type="button" id="save-admin-selection" class="btn btn-primary">Lagre valg</button>
             </div>
-            <!-- Custom Alert/Message Modal -->
-            <div id="message-modal" class="hidden"
-                style="position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center;">
-                <div id="message-modal-overlay"
-                    style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px);">
-                </div>
-                <div class="card" style="position: relative; width: 100%; max-width: 400px; margin: 1rem; z-index: 10;">
-                    <div class="card-body text-center">
-                        <p id="message-modal-text" class="mb-6 text-lg"></p>
-                        <div style="display: flex; justify-content: center;">
-                            <button id="message-modal-close" class="btn btn-primary">OK</button>
-                        </div>
-                    </div>
+        </div>
+    </div>
+
+    <!-- Custom Alert/Message Modal -->
+    <div id="message-modal" class="hidden"
+        style="position: fixed; inset: 0; z-index: 400; display: flex; align-items: center; justify-content: center;">
+        <div id="message-modal-overlay"
+            style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px);">
+        </div>
+        <div class="card" style="position: relative; width: 100%; max-width: 400px; margin: 1rem; z-index: 10;">
+            <div class="card-body text-center">
+                <p id="message-modal-text" class="mb-6 text-lg"></p>
+                <div style="display: flex; justify-content: center;">
+                    <button id="message-modal-close" class="btn btn-primary">OK</button>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <!-- Custom Confirm Modal -->
-            <div id="confirm-modal" class="hidden"
-                style="position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center;">
-                <div id="confirm-modal-overlay"
-                    style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px);">
-                </div>
-                <div class="card" style="position: relative; width: 100%; max-width: 400px; margin: 1rem; z-index: 10;">
-                    <div class="card-body text-center">
-                        <p id="confirm-modal-text" class="mb-6 text-lg"></p>
-                        <div style="display: flex; justify-content: center; gap: 1rem;">
-                            <button id="confirm-modal-cancel" class="btn btn-secondary">Avbryt</button>
-                            <button id="confirm-modal-ok" class="btn btn-primary">OK</button>
-                        </div>
-                    </div>
+    <!-- Custom Confirm Modal -->
+    <div id="confirm-modal" class="hidden"
+        style="position: fixed; inset: 0; z-index: 400; display: flex; align-items: center; justify-content: center;">
+        <div id="confirm-modal-overlay"
+            style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px);">
+        </div>
+        <div class="card" style="position: relative; width: 100%; max-width: 400px; margin: 1rem; z-index: 10;">
+            <div class="card-body text-center">
+                <p id="confirm-modal-text" class="mb-6 text-lg"></p>
+                <div style="display: flex; justify-content: center; gap: 1rem;">
+                    <button id="confirm-modal-cancel" class="btn btn-secondary">Avbryt</button>
+                    <button id="confirm-modal-ok" class="btn btn-primary">OK</button>
                 </div>
             </div>
+        </div>
+    </div>
 
-            <script type="module" src="firebase.js"></script>
-            <script type="module" src="script.js"></script>
-            <script type="module" src="feed.js"></script>
+    <script type="module" src="firebase.js"></script>
+    <script type="module" src="script.js"></script>
+    <script type="module" src="feed.js"></script>
 </body>
 
 </html>
