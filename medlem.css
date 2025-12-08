@@ -616,6 +616,7 @@ p {
 
 @media (min-width: 1024px) {
   .dashboard-grid {
+    display: grid;
     grid-template-columns: 300px 1fr 300px;
     /* Sidebar + Main + Promoted */
   }

@@ -56,6 +56,7 @@ const mobileMemberLink = document.getElementById('mobile-member-link');
 
 // Dashboard / Profil
 const profileName = document.getElementById('profile-name');
+const profileRoleText = document.getElementById('profile-role-text');
 const profileImg = document.getElementById('profile-img');
 const openProfileModal = document.getElementById('open-profile-modal');
 const profileModal = document.getElementById('profile-modal');
@@ -435,6 +436,9 @@ function updateUI(user, profile) {
     // Oppdater profilkort (medlem.html)
     if (profileName) profileName.textContent = displayName;
     if (profileImg) profileImg.src = photoURL;
+    if (profileRoleText) {
+        profileRoleText.textContent = authState.role === 'admin' ? 'Administrator' : 'Medlem';
+    }
 
     // Membership Duration
     if (memberDurationValue && user?.metadata?.creationTime) {
