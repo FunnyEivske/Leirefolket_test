@@ -7,7 +7,8 @@ import {
     onSnapshot,
     Timestamp,
     query,
-    orderBy
+    orderBy,
+    limit
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- UI-ELEMENTER ---
@@ -17,6 +18,11 @@ const postError = document.getElementById('post-error');
 const postSubmitButton = document.getElementById('post-submit-button');
 const feedContainer = document.getElementById('feed-container');
 const feedLoading = document.getElementById('feed-loading');
+const loadMoreContainer = document.getElementById('load-more-container');
+const loadMoreBtn = document.getElementById('load-more-btn');
+
+let currentLimit = 5;
+let feedUnsubscribe = null;
 
 // Sti til feed-databasen
 const feedCollectionPath = `/artifacts/${appId}/public/data/feed`;
@@ -61,17 +67,29 @@ function sanitizeHTML(str) {
 /**
  * Setter opp en sanntids-lytter for feed-samlingen.
  */
-function setupFeedListener() {
-    const feedCollectionRef = collection(db, feedCollectionPath);
-    // Sorter etter 'createdAt' i synkende rekkefølge (nyeste først)
-    const q = query(feedCollectionRef, orderBy("createdAt", "desc"));
+function setupFeedListener(limitCount = 5) {
+    if (feedUnsubscribe) feedUnsubscribe(); // Stopp forrige lytter
 
-    onSnapshot(q, (snapshot) => {
+    const feedCollectionRef = collection(db, feedCollectionPath);
+    // Sorter etter 'createdAt' i synkende rekkefølge (nyeste først) og begrens antall
+    const q = query(feedCollectionRef, orderBy("createdAt", "desc"), limit(limitCount));
+
+    feedUnsubscribe = onSnapshot(q, (snapshot) => {
         if (feedLoading) feedLoading.classList.add('hidden');
         feedContainer.innerHTML = ''; // Tøm containeren
 
+        // Håndter "Last flere"-knapp synlighet
+        // Hvis antall dokumenter er lik limiten, antar vi at det kan finnes flere
+        // (Dette er ikke helt nøyaktig hvis totalt antall er nøyaktig delet på 5, men det er "godt nok" for enkel UI)
+        if (snapshot.size < limitCount) {
+            if (loadMoreContainer) loadMoreContainer.classList.add('hidden');
+        } else {
+            if (loadMoreContainer) loadMoreContainer.classList.remove('hidden');
+        }
+
         if (snapshot.empty) {
             feedContainer.innerHTML = '<p class="text-center" style="color: var(--color-text-muted);">Ingen innlegg ennå.</p>';
+            if (loadMoreContainer) loadMoreContainer.classList.add('hidden');
             return;
         }
 
@@ -177,7 +195,14 @@ if (document.getElementById('feed-container')) {
         }
 
         toggleAdminFeatures(currentState.role);
-        setupFeedListener();
+        setupFeedListener(currentLimit);
+
+        if (loadMoreBtn) {
+            loadMoreBtn.addEventListener('click', () => {
+                currentLimit += 5;
+                setupFeedListener(currentLimit);
+            });
+        }
 
         if (newPostForm) {
             newPostForm.addEventListener('submit', handlePostSubmit);
