@@ -93,6 +93,8 @@ body {
   background-color: var(--color-bg-body);
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
 }
 
 img {
@@ -617,7 +619,7 @@ p {
 @media (min-width: 1024px) {
   .dashboard-grid {
     display: grid;
-    grid-template-columns: 300px 1fr 300px;
+    grid-template-columns: 300px minmax(0, 1fr) 300px;
     /* Sidebar + Main + Promoted */
   }
 
