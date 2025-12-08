@@ -63,6 +63,16 @@ const profileSaveStatus = document.getElementById('profile-save-status');
 // Admin
 const newPostBtn = document.getElementById('new-post-btn');
 const newPostContainer = document.getElementById('new-post-container');
+const adminToolsCard = document.getElementById('admin-tools-card');
+const adminGalleryBtn = document.getElementById('admin-gallery-btn');
+const adminPromotedBtn = document.getElementById('admin-promoted-btn');
+const adminImageModal = document.getElementById('admin-image-modal');
+const adminImageModalOverlay = document.getElementById('admin-image-modal-overlay');
+const closeAdminModalBtn = document.getElementById('close-admin-modal');
+const cancelAdminModalBtn = document.getElementById('cancel-admin-modal');
+const saveAdminSelectionBtn = document.getElementById('save-admin-selection');
+const adminUserList = document.getElementById('admin-user-list');
+const adminModalTitle = document.getElementById('admin-modal-title');
 
 // --- HJELPEFUNKSJONER ---
 
@@ -178,8 +188,12 @@ function updateUI(user, profile) {
     // Vis admin-knapper hvis admin
     if (authState.role === 'admin') {
         if (newPostBtn) newPostBtn.classList.remove('hidden');
+        if (adminToolsCard) adminToolsCard.classList.remove('hidden');
+        if (adminPromotedBtn) adminPromotedBtn.classList.remove('hidden');
     } else {
         if (newPostBtn) newPostBtn.classList.add('hidden');
+        if (adminToolsCard) adminToolsCard.classList.add('hidden');
+        if (adminPromotedBtn) adminPromotedBtn.classList.add('hidden');
     }
 
     // Toggle navigation links based on auth state
@@ -339,6 +353,83 @@ async function handleProfileSave(e) {
     }
 }
 
+// --- ADMIN MODAL LOGIC ---
+let currentAdminMode = null; // 'promoted' or 'gallery'
+
+function openAdminModal(mode) {
+    currentAdminMode = mode;
+    if (adminModalTitle) {
+        adminModalTitle.textContent = mode === 'promoted' ? 'Velg Promoterte Minner' : 'Administrer Offentlig Galleri';
+    }
+    if (adminImageModal) adminImageModal.classList.remove('hidden');
+    loadAdminImages();
+}
+
+function closeAdminModal() {
+    if (adminImageModal) adminImageModal.classList.add('hidden');
+    currentAdminMode = null;
+}
+
+function loadAdminImages() {
+    if (!adminUserList) return;
+    adminUserList.innerHTML = '<p class="text-muted text-center">Laster brukere...</p>';
+
+    // MOCK DATA - In a real app, fetch users and their images from Firestore
+    setTimeout(() => {
+        adminUserList.innerHTML = '';
+        const mockUsers = [
+            { name: 'Ola Nordmann', images: ['https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_258881171_124209833377229_1067964419050348924_n.jpg', 'https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_285560009_327836942844158_5508481699510217538_n.jpg'] },
+            { name: 'Kari Hansen', images: ['https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_220734257_240046884432034_8044610736397101717_n.jpg'] },
+            { name: 'Per Olsen', images: [] }
+        ];
+
+        mockUsers.forEach(user => {
+            const userGroup = document.createElement('div');
+            userGroup.className = 'user-group mb-4';
+
+            const header = document.createElement('h4');
+            header.className = 'text-sm font-semibold mb-2';
+            header.textContent = user.name;
+            userGroup.appendChild(header);
+
+            if (user.images.length === 0) {
+                const noImg = document.createElement('p');
+                noImg.className = 'text-sm text-muted';
+                noImg.textContent = 'Ingen bilder lastet opp.';
+                userGroup.appendChild(noImg);
+            } else {
+                const grid = document.createElement('div');
+                grid.className = 'gallery-preview-grid';
+
+                user.images.forEach(imgSrc => {
+                    const item = document.createElement('div');
+                    item.className = 'gallery-preview-item bg-subtle';
+                    item.style.position = 'relative';
+
+                    const img = document.createElement('img');
+                    img.src = imgSrc;
+
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.style.position = 'absolute';
+                    checkbox.style.top = '0.5rem';
+                    checkbox.style.right = '0.5rem';
+                    checkbox.style.width = '1.25rem';
+                    checkbox.style.height = '1.25rem';
+                    checkbox.style.cursor = 'pointer';
+
+                    item.appendChild(img);
+                    item.appendChild(checkbox);
+                    grid.appendChild(item);
+                });
+                userGroup.appendChild(grid);
+            }
+            adminUserList.appendChild(userGroup);
+        });
+    }, 500);
+}
+
+
 // --- EVENT LISTENERS ---
 
 // Mobilmeny
@@ -374,6 +465,19 @@ if (profileForm) profileForm.addEventListener('submit', handleProfileSave);
 if (newPostBtn) {
     newPostBtn.addEventListener('click', () => {
         if (newPostContainer) newPostContainer.classList.toggle('hidden');
+    });
+}
+
+// Admin: Modals
+if (adminGalleryBtn) adminGalleryBtn.addEventListener('click', () => openAdminModal('gallery'));
+if (adminPromotedBtn) adminPromotedBtn.addEventListener('click', () => openAdminModal('promoted'));
+if (closeAdminModalBtn) closeAdminModalBtn.addEventListener('click', closeAdminModal);
+if (cancelAdminModalBtn) cancelAdminModalBtn.addEventListener('click', closeAdminModal);
+if (adminImageModalOverlay) adminImageModalOverlay.addEventListener('click', closeAdminModal);
+if (saveAdminSelectionBtn) {
+    saveAdminSelectionBtn.addEventListener('click', () => {
+        alert('Valg lagret! (Dette er en demo)');
+        closeAdminModal();
     });
 }
 

@@ -575,13 +575,20 @@ p {
   transform: scale(1.1);
 }
 
+.dashboard-sidebar-right {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
 @media (min-width: 1024px) {
   .dashboard-grid {
-    grid-template-columns: 300px 1fr;
-    /* Sidebar + Main */
+    grid-template-columns: 300px 1fr 300px;
+    /* Sidebar + Main + Promoted */
   }
 
-  .dashboard-sidebar {
+  .dashboard-sidebar,
+  .dashboard-sidebar-right {
     position: sticky;
     top: 6rem;
     height: fit-content;

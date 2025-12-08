@@ -76,6 +76,18 @@
                     </div>
                 </div>
 
+                <!-- Admin Tools (Hidden by default) -->
+                <div id="admin-tools-card" class="card hidden">
+                    <div class="card-header">
+                        <h4 class="text-lg">Admin Verktøy</h4>
+                    </div>
+                    <div class="card-body">
+                        <button id="admin-gallery-btn" class="btn btn-secondary btn-full text-sm mb-2">
+                            Administrer Galleri
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Info-kort -->
                 <div class="card">
                     <div class="card-header">
@@ -90,7 +102,7 @@
                 </div>
             </aside>
 
-            <!-- Hovedinnhold -->
+            <!-- Hovedinnhold (Midten) -->
             <div class="dashboard-main">
 
                 <!-- Velkomst / Feed -->
@@ -121,10 +133,7 @@
                                         required></textarea>
                                 </div>
 
-                                <!-- VIKTIG: Lagt til ID her som feed.js trenger -->
                                 <button type="submit" id="post-submit-button" class="btn btn-primary">Publiser</button>
-
-                                <!-- VIKTIG: Lagt til dette elementet for feilmeldinger -->
                                 <p id="post-error" class="form-error"></p>
                             </form>
                         </div>
@@ -136,35 +145,61 @@
                     </div>
                 </section>
 
-                <!-- Mine Kurs (Placeholder) -->
-                <section>
-                    <div class="section-header">
-                        <h3>Mine Kurs</h3>
-                        <a href="kurs.html" class="btn btn-ghost text-sm">Finn flere kurs &rarr;</a>
+            </div>
+
+            <!-- Sidebar Høyre: Promotert & Galleri -->
+            <aside class="dashboard-sidebar-right">
+
+                <!-- Promoterte Minner (Erstattet Kurs) -->
+                <div class="card mb-6">
+                    <div class="card-header"
+                        style="display: flex; justify-content: space-between; align-items: center;">
+                        <h4 class="text-lg" style="margin-bottom: 0;">Promoterte Minner</h4>
+                        <button id="admin-promoted-btn" class="btn btn-ghost text-sm hidden" style="padding: 0.25rem;">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                        </button>
                     </div>
-                    <div class="card bg-subtle" style="border-style: dashed;">
-                        <div class="card-body text-center py-10">
-                            <p class="text-muted">Du er ikke påmeldt noen kurs for øyeblikket.</p>
+                    <div class="card-body">
+                        <p class="text-sm text-muted mb-4">Glimt fra din reise med Leirefolket.</p>
+                        <div class="gallery-preview-grid">
+                            <!-- Placeholders for promoted images -->
+                            <div class="gallery-preview-item bg-subtle">
+                                <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_258881171_124209833377229_1067964419050348924_n.jpg"
+                                    alt="Minne 1">
+                            </div>
+                            <div class="gallery-preview-item bg-subtle">
+                                <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_285560009_327836942844158_5508481699510217538_n.jpg"
+                                    alt="Minne 2">
+                            </div>
                         </div>
                     </div>
-                </section>
+                </div>
 
-                <!-- Mitt Galleri (Placeholder) -->
-                <section>
-                    <div class="section-header">
-                        <h3>Mitt Galleri</h3>
-                        <button class="btn btn-secondary text-sm">Last opp bilde</button>
+                <!-- Mitt Galleri (Flyttet hit) -->
+                <div class="card">
+                    <div class="card-header"
+                        style="display: flex; justify-content: space-between; align-items: center;">
+                        <h4 class="text-lg" style="margin-bottom: 0;">Mitt Galleri</h4>
+                        <button class="btn btn-secondary text-sm"
+                            style="padding: 0.25rem 0.5rem; font-size: 0.75rem;">Last opp</button>
                     </div>
-                    <div class="gallery-preview-grid">
-                        <!-- Placeholders -->
-                        <div class="gallery-preview-item bg-subtle"></div>
-                        <div class="gallery-preview-item bg-subtle"></div>
-                        <div class="gallery-preview-item bg-subtle"></div>
-                        <div class="gallery-preview-item bg-subtle"></div>
+                    <div class="card-body">
+                        <div class="gallery-preview-grid">
+                            <!-- Placeholders -->
+                            <div class="gallery-preview-item bg-subtle"></div>
+                            <div class="gallery-preview-item bg-subtle"></div>
+                            <div class="gallery-preview-item bg-subtle"></div>
+                            <div class="gallery-preview-item bg-subtle"></div>
+                        </div>
                     </div>
-                </section>
+                </div>
 
-            </div>
+            </aside>
+
         </div>
     </main>
 
@@ -199,6 +234,35 @@
                 </div>
                 <p id="profile-save-status" class="text-center mb-4 text-sm"></p>
             </form>
+        </div>
+    </div>
+
+    <!-- Admin Image Selection Modal -->
+    <div id="admin-image-modal" class="hidden"
+        style="position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;">
+        <div id="admin-image-modal-overlay"
+            style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px);"></div>
+        <div class="card"
+            style="position: relative; width: 100%; max-width: 800px; height: 80vh; margin: 1rem; z-index: 10; display: flex; flex-direction: column;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 id="admin-modal-title">Velg Bilder</h3>
+                <button id="close-admin-modal" class="btn btn-ghost" style="padding: 0.5rem;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="card-body" style="overflow-y: auto; flex: 1;">
+                <!-- User List Container -->
+                <div id="admin-user-list" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <p class="text-muted text-center">Laster brukere og bilder...</p>
+                    <!-- Example User Item (Dynamic) -->
+                </div>
+            </div>
+            <div class="card-footer" style="display: flex; justify-content: flex-end; gap: 1rem;">
+                <button type="button" id="cancel-admin-modal" class="btn btn-secondary">Avbryt</button>
+                <button type="button" id="save-admin-selection" class="btn btn-primary">Lagre Valg</button>
+            </div>
         </div>
     </div>
 
