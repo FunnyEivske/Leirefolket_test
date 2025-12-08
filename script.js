@@ -200,7 +200,13 @@ function setupGalleryListener(uid) {
             const data = doc.data();
             const item = document.createElement('div');
             item.className = 'gallery-preview-item bg-subtle';
-            item.innerHTML = `<img src="${data.imageUrl}" alt="Galleri bilde" loading="lazy">`;
+
+            const img = document.createElement('img');
+            img.src = data.imageUrl;
+            img.alt = 'Galleri bilde';
+            img.loading = 'lazy';
+
+            item.appendChild(img);
             myGalleryContainer.appendChild(item);
         });
     }, (error) => {
