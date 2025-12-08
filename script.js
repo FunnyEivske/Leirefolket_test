@@ -453,15 +453,15 @@ function updateUI(user, profile) {
         if (months < 0) months = 0;
 
         if (months < 12) {
-            memberDurationValue.textContent = `${months} mnd`;
+            memberDurationValue.textContent = `${months} Mnd`;
         } else {
             const years = Math.floor(months / 12);
             // Hvis bruker ber om "bikker et år så viser den år".
             // Vi kan vise f.eks "1 år" eller "2 år".
-            memberDurationValue.textContent = `${years} år`;
+            memberDurationValue.textContent = `${years} År`;
         }
     } else if (memberDurationValue) {
-        memberDurationValue.textContent = '0 mnd';
+        memberDurationValue.textContent = '0 Mnd';
     }
 
     // Populate form inputs if modal is explicitly opened (handled in click listener), 
