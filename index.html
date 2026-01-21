@@ -7,6 +7,8 @@
     <title>Leirefolket Keramikkverksted</title>
     <!-- Felles stilark -->
     <link rel="stylesheet" href="style.css">
+    <!-- Tema-veksler (Laster tidlig for å unngå flash) -->
+    <script src="theme-switcher.js"></script>
 </head>
 
 <body>
@@ -15,8 +17,8 @@
     <header class="main-header">
         <nav class="container main-nav">
             <a href="index.html#hjem" class="logo-link">
-                <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/LogoPNG%20smol.png" alt="Leirefolket Logo"
-                    class="logo-img">
+                <img src="Media/Logo/Sort.png" alt="Leirefolket Logo" class="logo-img logo-light-only">
+                <img src="Media/Logo/Hvit.png" alt="Leirefolket Logo" class="logo-img logo-dark-only hidden">
                 <span class="logo-text">Leirefolket</span>
             </a>
 
@@ -29,6 +31,7 @@
                 <a id="member-link" href="medlem.html" class="nav-link-active hidden">Min side</a>
                 <a id="login-link" href="login.html" class="button button-primary">Logg inn</a>
                 <button id="logout-button" class="button button-secondary hidden">Logg ut</button>
+
             </div>
 
             <!-- Mobilmeny-knapp -->
@@ -41,14 +44,15 @@
             </button>
 
             <!-- Mobilmeny -->
-            <div id="mobile-menu" class="nav-menu-mobile hidden">
+            <div id="mobile-menu" class="nav-menu-mobile">
                 <a href="om-oss.html" class="nav-link">Om oss</a>
                 <a href="kurs.html" class="nav-link">Kurs</a>
                 <a href="galleri.html" class="nav-link">Galleri</a>
                 <a href="kontakt.html" class="nav-link">Kontakt</a>
                 <a id="mobile-member-link" href="medlem.html" class="nav-link-active hidden">Min side</a>
-                <a id="mobile-login-link" href="login.html" class="nav-link">Logg inn</a>
+                <a id="mobile-login-link" href="login.html" class="button button-primary">Logg inn</a>
                 <button id="mobile-logout-button" class="button button-secondary hidden">Logg ut</button>
+
             </div>
         </nav>
     </header>
@@ -59,7 +63,6 @@
             style="background-image: url('https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_258881171_124209833377229_1067964419050348924_n.jpg');">
             <div class="hero-overlay"></div>
             <div class="hero-content">
-                <!-- Fjernet 'font-display' klasse, da den er unødvendig -->
                 <h1>Velkommen til</h1>
                 <h1>Leirefolket Keramikkverksted</h1>
                 <p class="text-lg">Ditt kreative fristed for alt innen keramikk. Form, skap og uttrykk deg med leire.
@@ -141,23 +144,8 @@
                 <div class="text-center" style="max-width: 600px; margin: 0 auto 3rem auto;">
                     <h2>Smakbit fra galleriet</h2>
                 </div>
-                <div class="gallery-grid">
-                    <a href="galleri.html" class="gallery-item">
-                        <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_285524412_1392032511223904_334964565194714511_n.jpg"
-                            alt="Tre håndlagde kopper i gresset" class="gallery-image">
-                    </a>
-                    <a href="galleri.html" class="gallery-item">
-                        <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_220734257_240046884432034_8044610736397101717_n.jpg"
-                            alt="Ulike keramikkprosjekter på et bord" class="gallery-image">
-                    </a>
-                    <a href="galleri.html" class="gallery-item">
-                        <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_272761735_502242294657127_7500690158820959309_n.jpg"
-                            alt="Håndlaget kopp med te i sollys" class="gallery-image">
-                    </a>
-                    <a href="galleri.html" class="gallery-item">
-                        <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/SnapInsta.to_402373843_207530515718940_5720018105310533277_n.jpg"
-                            alt="Blågrå keramikkskåler" class="gallery-image">
-                    </a>
+                <div id="homepage-gallery-teaser" class="gallery-grid">
+                    <p class="text-center py-10 text-muted" style="grid-column: 1/-1;">Laster smakebiter...</p>
                 </div>
                 <div class="text-center" style="margin-top: 3rem;">
                     <a href="galleri.html" class="button button-primary button-lg">Se hele galleriet</a>
@@ -181,8 +169,7 @@
     <!-- Footer -->
     <footer class="main-footer">
         <div class="container">
-            <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/LogoPNGwhite%20logo.png" alt="Leirefolket Logo"
-                class="footer-logo">
+            <img src="Media/Logo/Hvit.png" alt="Leirefolket Logo" class="footer-logo">
             <p class="footer-title">Leirefolket Keramikkverksted</p>
             <p class="footer-address">Nye Teglverks vei 23, 4614 Kristiansand</p>
             <div class="social-links">
@@ -208,10 +195,23 @@
         </div>
     </footer>
 
+    <!-- Dark Mode Floating Button -->
+    <button class="theme-toggle" aria-label="Bytt tema">
+        <svg class="moon-icon" style="width: 24px; height: 24px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+        <svg class="sun-icon hidden" style="width: 24px; height: 24px;" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+    </button>
+
     <!-- Firebase og hoved-script -->
-    <!-- Vi må koble til script.js for meny og auth -->
     <script type="module" src="firebase.js"></script>
     <script type="module" src="script.js"></script>
+    <script type="module" src="public-gallery.js"></script>
 </body>
 
 </html>

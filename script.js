@@ -28,6 +28,24 @@ export let authState = {
 let profileUnsubscribe = null;
 let galleryUnsubscribe = null; // Listener for user's own gallery
 
+// --- DARK MODE LOGIKK (Flyttet til theme-switcher.js) ---
+
+// --- CACHING HJELPEFUNKSJONER ---
+function getCachedProfile(uid) {
+    const cached = localStorage.getItem(`profile_${uid}`);
+    return cached ? JSON.parse(cached) : null;
+}
+
+function setCachedProfile(uid, data) {
+    if (uid && data) {
+        localStorage.setItem(`profile_${uid}`, JSON.stringify(data));
+    }
+}
+
+function clearCachedProfile(uid) {
+    localStorage.removeItem(`profile_${uid}`);
+}
+
 // Promise som resolver når brukerens rolle og profil er ferdig lastet
 let resolveUserReady;
 export const userReady = new Promise((resolve) => {
@@ -236,6 +254,7 @@ function setupUserListener(uid) {
             const data = docSnap.data();
             authState.profile = data;
             authState.role = data.role || 'member'; // Standard rolle er 'member'
+            setCachedProfile(uid, data);
         } else {
             // Hvis dokumentet ikke finnes (ny bruker), sett standardverdier
             authState.profile = {
@@ -245,6 +264,7 @@ function setupUserListener(uid) {
             authState.role = 'member';
             // Opprett dokumentet første gang
             saveUserProfile(uid, authState.profile);
+            setCachedProfile(uid, authState.profile);
         }
         updateUI(authState.user, authState.profile);
     }, (error) => {
@@ -572,6 +592,9 @@ async function handleForgotPassword() {
 
 async function handleLogout() {
     try {
+        if (authState.user) {
+            clearCachedProfile(authState.user.uid);
+        }
         await signOut(auth);
         if (window.location.pathname.endsWith('/medlem.html')) {
             window.location.href = 'index.html'; // Eller login.html
@@ -830,6 +853,8 @@ if (dropdownLogoutButton) dropdownLogoutButton.addEventListener('click', handleL
 if (mobileLogoutButton) mobileLogoutButton.addEventListener('click', handleLogout);
 if (logoutButton) logoutButton.addEventListener('click', handleLogout);
 
+// Theme Toggle (Håndteres nå av theme-switcher.js)
+
 // Profil Modal
 if (openProfileModal) {
     openProfileModal.addEventListener('click', () => {
@@ -873,16 +898,24 @@ if (saveAdminSelectionBtn) {
 // Notes
 if (notesForm) notesForm.addEventListener('submit', handleSaveNotes);
 
-
 // --- INIT ---
 
 authReady.then(async (initialUser) => {
     if (initialUser) {
-        const userData = await fetchUserData(initialUser.uid);
+        // Prøv å hent fra cache først for lynrask visning
+        const cached = getCachedProfile(initialUser.uid);
 
         authState.user = initialUser;
-        authState.profile = userData || { displayName: null, photoURL: null };
-        authState.role = userData?.role || 'member';
+        if (cached) {
+            console.log("Bruker cachet profil.");
+            authState.profile = cached;
+            authState.role = cached.role || 'member';
+        } else {
+            const userData = await fetchUserData(initialUser.uid);
+            authState.profile = userData || { displayName: null, photoURL: null };
+            authState.role = userData?.role || 'member';
+            if (userData) setCachedProfile(initialUser.uid, userData);
+        }
 
         if (profileUnsubscribe) profileUnsubscribe();
         profileUnsubscribe = setupUserListener(initialUser.uid);
@@ -905,11 +938,18 @@ authReady.then(async (initialUser) => {
 
     onAuthStateChanged(auth, async (user) => {
         if (user) {
-            const userData = await fetchUserData(user.uid);
+            const cached = getCachedProfile(user.uid);
 
             authState.user = user;
-            authState.profile = userData || { displayName: null, photoURL: null };
-            authState.role = userData?.role || 'member';
+            if (cached) {
+                authState.profile = cached;
+                authState.role = cached.role || 'member';
+            } else {
+                const userData = await fetchUserData(user.uid);
+                authState.profile = userData || { displayName: null, photoURL: null };
+                authState.role = userData?.role || 'member';
+                if (userData) setCachedProfile(user.uid, userData);
+            }
 
             if (profileUnsubscribe) profileUnsubscribe();
             profileUnsubscribe = setupUserListener(user.uid);
@@ -918,6 +958,7 @@ authReady.then(async (initialUser) => {
             galleryUnsubscribe = setupGalleryListener(user.uid);
 
         } else {
+            if (authState.user) clearCachedProfile(authState.user.uid);
             authState.user = null;
             authState.role = null;
             authState.profile = null;

@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Om oss - Leirefolket Keramikkverksted</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Tema-veksler (Laster tidlig for å unngå flash) -->
+    <script src="theme-switcher.js"></script>
 </head>
 
 <body class="om-oss-page">
@@ -13,9 +15,9 @@
     <!-- Header & Navigasjon -->
     <header class="main-header">
         <nav class="container main-nav">
-            <a href="index.html#hjem" class="logo-link">
-                <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/LogoPNG%20smol.png" alt="Leirefolket Logo"
-                    class="logo-img">
+            <a href="index.html" class="logo-link">
+                <img src="Media/Logo/Sort.png" alt="Leirefolket Logo" class="logo-img logo-light-only">
+                <img src="Media/Logo/Hvit.png" alt="Leirefolket Logo" class="logo-img logo-dark-only hidden">
                 <span class="logo-text">Leirefolket</span>
             </a>
 
@@ -28,6 +30,7 @@
                 <a id="member-link" href="medlem.html" class="nav-link-active hidden">Min side</a>
                 <a id="login-link" href="login.html" class="button button-primary">Logg inn</a>
                 <button id="logout-button" class="button button-secondary hidden">Logg ut</button>
+
             </div>
 
             <!-- Mobilmeny-knapp -->
@@ -40,14 +43,15 @@
             </button>
 
             <!-- Mobilmeny -->
-            <div id="mobile-menu" class="nav-menu-mobile hidden">
+            <div id="mobile-menu" class="nav-menu-mobile">
                 <a href="om-oss.html" class="nav-link-active">Om oss</a>
                 <a href="kurs.html" class="nav-link">Kurs</a>
                 <a href="galleri.html" class="nav-link">Galleri</a>
                 <a href="kontakt.html" class="nav-link">Kontakt</a>
                 <a id="mobile-member-link" href="medlem.html" class="nav-link-active hidden">Min side</a>
-                <a id="mobile-login-link" href="login.html" class="nav-link">Logg inn</a>
+                <a id="mobile-login-link" href="login.html" class="button button-primary">Logg inn</a>
                 <button id="mobile-logout-button" class="button button-secondary hidden">Logg ut</button>
+
             </div>
         </nav>
     </header>
@@ -81,8 +85,7 @@
     <!-- Footer -->
     <footer class="main-footer">
         <div class="container">
-            <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/LogoPNGwhite%20logo.png" alt="Leirefolket Logo"
-                class="footer-logo">
+            <img src="Media/Logo/Hvit.png" alt="Leirefolket Logo" class="footer-logo">
             <p class="footer-title">Leirefolket Keramikkverksted</p>
             <p class="footer-address">Nye Teglverks vei 23, 4614 Kristiansand</p>
             <div class="social-links">
@@ -107,6 +110,19 @@
             <p class="footer-copyright">&copy; 2025 Leirefolket Keramikkverksted. Alle rettigheter forbeholdt.</p>
         </div>
     </footer>
+
+    <!-- Dark Mode Floating Button -->
+    <button class="theme-toggle" aria-label="Bytt tema">
+        <svg class="moon-icon" style="width: 24px; height: 24px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+        <svg class="sun-icon hidden" style="width: 24px; height: 24px;" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+    </button>
 
     <!-- Firebase og hoved-script -->
     <script type="module" src="firebase.js"></script>

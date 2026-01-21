@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Min side - Leirefolket</title>
     <link rel="stylesheet" href="medlem.css">
+    <!-- Tema-veksler (Laster tidlig for å unngå flash) -->
+    <script src="theme-switcher.js"></script>
 </head>
 
 <body>
@@ -14,7 +16,8 @@
     <header class="header">
         <div class="container header-inner">
             <a href="index.html" class="logo">
-                <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/LogoPNG%20smol.png" alt="Leirefolket Logo">
+                <img src="Media/Logo/Sort.png" alt="Leirefolket Logo" class="logo-light-only">
+                <img src="Media/Logo/Hvit.png" alt="Leirefolket Logo" class="logo-dark-only hidden">
                 <span>Leirefolket</span>
             </a>
 
@@ -25,6 +28,7 @@
                 <a href="kontakt.html" class="nav-link">Kontakt</a>
                 <a href="medlem.html" class="nav-link active">Min side</a>
                 <button id="dropdown-logout-button" class="btn btn-ghost text-sm">Logg ut</button>
+
             </nav>
 
             <button id="mobile-menu-button" class="mobile-toggle" aria-label="Meny">
@@ -40,9 +44,10 @@
             <a href="kurs.html">Kurs</a>
             <a href="galleri.html">Galleri</a>
             <a href="kontakt.html">Kontakt</a>
-            <a href="medlem.html" style="font-weight: 600; color: var(--color-primary);">Min side</a>
-            <button id="mobile-logout-button" class="btn btn-ghost btn-full text-left"
-                style="justify-content: flex-start; padding-left: 0;">Logg ut</button>
+            <a href="medlem.html" class="active">Min side</a>
+            <button id="mobile-logout-button" class="btn btn-ghost"
+                style="width: 100%; justify-content: flex-start; padding: 0.75rem 0;">Logg ut</button>
+
         </div>
     </header>
 
@@ -338,6 +343,20 @@
         </div>
     </div>
 
+    <!-- Dark Mode Floating Button -->
+    <button class="theme-toggle" aria-label="Bytt tema">
+        <svg class="moon-icon" style="width: 24px; height: 24px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+        <svg class="sun-icon hidden" style="width: 24px; height: 24px;" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+    </button>
+
+    <!-- Firebase og hoved-script -->
     <script type="module" src="firebase.js"></script>
     <script type="module" src="script.js"></script>
     <script type="module" src="feed.js"></script>

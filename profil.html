@@ -13,18 +13,22 @@
         rel="stylesheet">
     <!-- Felles stilark -->
     <link rel="stylesheet" href="style.css">
+    <!-- Tema-veksler (Laster tidlig for å unngå flash) -->
+    <script src="theme-switcher.js"></script>
 </head>
 
-<body class="bg-stone-100 text-stone-800">
+<body style="background-color: var(--color-bg-page); color: var(--color-text-main);">
 
     <!-- Header & Navigasjon (Ligner på medlem.html) -->
     <header class="bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-sm">
         <nav class="container mx-auto px-6 py-3">
             <div class="flex items-center justify-between">
                 <a href="index.html#hjem" class="flex items-center space-x-3">
-                    <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/LogoPNG%20smol.png"
-                        alt="Leirefolket Logo" class="h-12 w-12 rounded-full object-cover">
-                    <span class="text-xl font-semibold text-stone-700">Leirefolket</span>
+                    <img src="Media/Logo/Sort.png" alt="Leirefolket Logo"
+                        class="h-12 w-12 rounded-full object-cover logo-light-only">
+                    <img src="Media/Logo/Hvit.png" alt="Leirefolket Logo"
+                        class="h-12 w-12 rounded-full object-cover logo-dark-only hidden">
+                    <span class="text-xl font-semibold logo-text">Leirefolket</span>
                 </a>
                 <!-- Desktop-meny -->
                 <div class="hidden md:flex items-center space-x-6">
@@ -53,6 +57,7 @@
                         class="bg-amber-700 hover:bg-amber-800 text-white font-bold py-2 px-5 rounded-full text-sm transition-colors">
                         Logg inn
                     </a>
+
                 </div>
                 <!-- Mobilmeny-knapp -->
                 <div class="md:hidden">
@@ -84,14 +89,16 @@
                     class="hidden w-full text-left block py-2 text-stone-600 hover:text-amber-800">
                     Logg ut
                 </button>
+
             </div>
         </nav>
     </header>
 
     <main class="container mx-auto px-6 py-12 md:py-20">
 
-        <div class="max-w-lg mx-auto bg-white p-8 rounded-lg shadow-xl">
-            <h1 class="font-display text-4xl font-bold text-stone-800 mb-8 text-center">Din Profil</h1>
+        <div class="max-w-lg mx-auto p-8 rounded-lg shadow-xl" style="background-color: var(--color-bg-card);">
+            <h1 class="font-display text-4xl font-bold mb-8 text-center" style="color: var(--color-text-main);">Din
+                Profil</h1>
 
             <!-- Profilbilde-seksjon -->
             <div class="text-center mb-8">
@@ -109,21 +116,24 @@
             <!-- Visningsnavn-seksjon -->
             <form id="profile-form">
                 <div class="mb-4">
-                    <label for="display-name" class="block text-stone-700 font-semibold mb-2">Visningsnavn</label>
+                    <label for="display-name" class="block font-semibold mb-2"
+                        style="color: var(--color-text-main);">Visningsnavn</label>
                     <input type="text" id="display-name" required
                         class="w-full px-4 py-2 border border-stone-300 rounded-md focus:outline-none focus:ring-2 focus:ring-amber-600"
                         placeholder="F.eks. Eivind R. Skeie">
                 </div>
 
                 <div class="mb-6">
-                    <label for="profile-email" class="block text-stone-700 font-semibold mb-2">E-post (kan ikke
+                    <label for="profile-email" class="block font-semibold mb-2"
+                        style="color: var(--color-text-main);">E-post (kan ikke
                         endres)</label>
                     <input type="email" id="profile-email" disabled
-                        class="w-full px-4 py-2 border border-stone-300 rounded-md bg-stone-100 text-stone-500">
+                        class="w-full px-4 py-2 border border-stone-300 rounded-md"
+                        style="background-color: var(--color-bg-section); color: var(--color-text-muted);">
                 </div>
 
-                <button type="submit" id="profile-save-button"
-                    class="w-full bg-amber-700 hover:bg-amber-800 text-white font-bold py-3 px-6 rounded-full text-lg transition-colors">
+                <button type="submit" id="profile-save-button" class="button button-primary button-lg"
+                    style="width: 100%;">
                     Lagre endringer
                 </button>
                 <p id="profile-success" class="text-green-600 text-sm text-center mt-4"></p>
@@ -134,18 +144,16 @@
 
     </main>
 
-    <!-- Footer (Identisk med index.html) -->
-    <footer class="bg-stone-800 text-stone-300 py-10 mt-20">
-        <div class="container mx-auto px-6 text-center">
-            <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/LogoPNGwhite%20logo.png" alt="Leirefolket Logo"
-                class="h-16 w-16 mx-auto mb-4 rounded-full object-cover">
-            <p class="mb-4 font-semibold text-lg">Leirefolket Keramikkverksted</p>
-            <p class="mb-4">Nye Teglverks vei 23, 4614 Kristiansand</p>
-            <div class="flex justify-center space-x-6 mb-4">
-                <!-- Sosiale medier-ikoner -->
+    <!-- Footer -->
+    <footer class="main-footer">
+        <div class="container">
+            <img src="Media/Logo/Hvit.png" alt="Leirefolket Logo" class="footer-logo">
+            <p class="footer-title">Leirefolket Keramikkverksted</p>
+            <p class="footer-address">Nye Teglverks vei 23, 4614 Kristiansand</p>
+            <div class="social-links">
                 <a href="https://www.instagram.com/leirefolket_keramikkverksted/" target="_blank"
-                    rel="noopener noreferrer" aria-label="Instagram" class="hover:text-white transition-colors">
-                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    rel="noopener noreferrer" aria-label="Instagram" class="social-link">
+                    <svg class="social-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                         stroke-linecap="round" stroke-linejoin="round">
                         <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
                         <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path>
@@ -153,17 +161,30 @@
                     </svg>
                 </a>
                 <a href="https://www.facebook.com/leirefolketkeramikkverksted/?locale=nb_NO" target="_blank"
-                    rel="noopener noreferrer" aria-label="Facebook" class="hover:text-white transition-colors">
-                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    rel="noopener noreferrer" aria-label="Facebook" class="social-link">
+                    <svg class="social-icon" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path fill-rule="evenodd"
                             d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z"
                             clip-rule="evenodd" />
                     </svg>
                 </a>
             </div>
-            <p class="text-sm text-stone-400">&copy; 2025 Leirefolket Keramikkverksted. Alle rettigheter forbeholdt.</p>
+            <p class="footer-copyright">&copy; 2025 Leirefolket Keramikkverksted. Alle rettigheter forbeholdt.</p>
         </div>
     </footer>
+
+    <!-- Dark Mode Floating Button -->
+    <button class="theme-toggle" aria-label="Bytt tema">
+        <svg class="moon-icon" style="width: 24px; height: 24px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+        <svg class="sun-icon hidden" style="width: 24px; height: 24px;" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+    </button>
 
     <!-- Firebase og skript -->
     <script type="module" src="firebase.js"></script>

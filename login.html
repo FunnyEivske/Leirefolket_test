@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Logg inn - Leirefolket</title>
     <link rel="stylesheet" href="medlem.css">
+    <!-- Tema-veksler (Laster tidlig for å unngå flash) -->
+    <script src="theme-switcher.js"></script>
 </head>
 
 <body>
@@ -20,12 +22,13 @@
         </div>
 
         <!-- Høyre side: Skjema -->
-        <div class="login-form-section">
+        <div class="login-form-section" style="position: relative;">
+
             <div class="login-wrapper">
                 <div class="mb-6 text-center">
                     <a href="index.html" class="logo" style="justify-content: center; margin-bottom: 2rem;">
-                        <img src="https://file.garden/Z-PhMwF-KmRdflZZ/Leire%20test/LogoPNG%20smol.png"
-                            alt="Leirefolket Logo">
+                        <img src="Media/Logo/Sort.png" alt="Leirefolket Logo" class="logo-light-only">
+                        <img src="Media/Logo/Hvit.png" alt="Leirefolket Logo" class="logo-dark-only hidden">
                         <span>Leirefolket</span>
                     </a>
                     <h2>Velkommen tilbake</h2>
@@ -60,6 +63,19 @@
             </div>
         </div>
     </div>
+
+    <!-- Dark Mode Floating Button -->
+    <button class="theme-toggle" aria-label="Bytt tema">
+        <svg class="moon-icon" style="width: 24px; height: 24px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+        <svg class="sun-icon hidden" style="width: 24px; height: 24px;" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+    </button>
 
     <!-- Firebase og script -->
     <script type="module" src="firebase.js"></script>
