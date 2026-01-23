@@ -259,7 +259,8 @@ function setupUserListener(uid) {
             // Hvis dokumentet ikke finnes (ny bruker), sett standardverdier
             authState.profile = {
                 displayName: authState.user?.email?.split('@')[0] || 'Medlem',
-                photoURL: null
+                photoURL: null,
+                memberSince: serverTimestamp() // Setzt startdato for nye brukere
             };
             authState.role = 'member';
             // Opprett dokumentet første gang
@@ -461,31 +462,47 @@ function updateUI(user, profile) {
     }
 
     // Membership Duration
-    if (memberDurationValue && user?.metadata?.creationTime) {
-        const created = new Date(user.metadata.creationTime);
-        const now = new Date();
-        let months = (now.getFullYear() - created.getFullYear()) * 12;
-        months -= created.getMonth();
-        months += now.getMonth();
+    if (memberDurationValue) {
+        let startDate = null;
 
-        // Juster hvis vi ikke har nådd dagen i måneden enda (grober beregning er ok her, men la oss være presise)
-        if (now.getDate() < created.getDate()) {
-            months--;
+        // 1. Prioriter manuelt satt dato i Firestore (memberSince)
+        if (profile?.memberSince) {
+            // Firestore Timestamps har .toDate()
+            startDate = profile.memberSince.toDate ? profile.memberSince.toDate() : new Date(profile.memberSince);
+        }
+        // 2. Fallback til Auth creation time
+        else if (user?.metadata?.creationTime) {
+            startDate = new Date(user.metadata.creationTime);
         }
 
-        // Sikre at vi ikke viser negative tall
-        if (months < 0) months = 0;
+        if (startDate && !isNaN(startDate.getTime())) {
+            const now = new Date();
+            let months = (now.getFullYear() - startDate.getFullYear()) * 12;
+            months -= startDate.getMonth();
+            months += now.getMonth();
 
-        if (months < 12) {
-            memberDurationValue.textContent = `${months} Mnd`;
+            if (now.getDate() < startDate.getDate()) {
+                months--;
+            }
+
+            if (months < 0) months = 0;
+
+            if (months < 12) {
+                memberDurationValue.textContent = `${months} Mnd`;
+            } else {
+                const years = Math.floor(months / 12);
+                memberDurationValue.textContent = `${years} År`;
+            }
+
+            // Sett tooltip med eksakt dato
+            const dateOptions = { year: 'numeric', month: 'long', day: 'numeric' };
+            const formattedDate = startDate.toLocaleDateString('no-NO', dateOptions);
+            memberDurationValue.title = `Medlem siden: ${formattedDate}`;
+            memberDurationValue.style.cursor = 'help';
         } else {
-            const years = Math.floor(months / 12);
-            // Hvis bruker ber om "bikker et år så viser den år".
-            // Vi kan vise f.eks "1 år" eller "2 år".
-            memberDurationValue.textContent = `${years} År`;
+            memberDurationValue.textContent = '0 Mnd';
+            memberDurationValue.removeAttribute('title');
         }
-    } else if (memberDurationValue) {
-        memberDurationValue.textContent = '0 Mnd';
     }
 
     // Populate form inputs if modal is explicitly opened (handled in click listener), 
@@ -725,8 +742,11 @@ async function loadAdminImages() {
     adminUserList.innerHTML = '<p class="text-muted text-center">Laster brukere...</p>';
 
     try {
-        // Hent alle brukere fra 'users' samlingen
-        // NB: Dette krever at reglene tillater lesing av 'users' for admin
+        // 1. Hent nåværende offentlige bilder først for å kunne vise hva som er "hukket av"
+        const publicGalleryDoc = await getDoc(doc(db, 'site_content', 'gallery'));
+        const currentPublicImages = publicGalleryDoc.exists() ? (publicGalleryDoc.data().images || []) : [];
+
+        // 2. Hent alle brukere fra 'users' samlingen
         const usersSnapshot = await getDocs(collection(db, 'users'));
 
         if (usersSnapshot.empty) {
@@ -764,6 +784,7 @@ async function loadAdminImages() {
 
                 gallerySnapshot.forEach(imgDoc => {
                     const imgData = imgDoc.data();
+                    const isSelected = currentPublicImages.includes(imgData.imageUrl);
 
                     const item = document.createElement('div');
                     item.className = 'gallery-preview-item bg-subtle';
@@ -776,6 +797,7 @@ async function loadAdminImages() {
                     checkbox.type = 'checkbox';
                     checkbox.className = 'admin-image-select';
                     checkbox.value = imgData.imageUrl; // Vi lagrer URL-en
+                    checkbox.checked = isSelected; // Hukk av hvis bilde allerede er i det offentlige galleriet
                     checkbox.dataset.userId = userId;
                     checkbox.style.position = 'absolute';
                     checkbox.style.top = '0.5rem';

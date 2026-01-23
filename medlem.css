@@ -26,6 +26,7 @@
   --color-bg-surface: #ffffff;
   --color-bg-subtle: #fafaf9;
   --color-bg-dark: var(--palette-shadow-grey);
+  --color-bg-header: rgba(255, 255, 255, 0.9);
 
   --color-text-main: #1c1917;
   --color-text-muted: #57534e;
@@ -57,7 +58,8 @@
 [data-theme="dark"] {
   --color-bg-body: var(--palette-shadow-grey);
   --color-bg-surface: var(--palette-gunmetal);
-  --color-bg-subtle: #27272a;
+  --color-bg-subtle: #1c1917;
+  /* Darker than body */
 
   --color-text-main: var(--palette-white);
   --color-text-muted: #a1a1aa;
@@ -67,10 +69,24 @@
   --color-border-dark: #71717a;
   /* zinc-500 */
 
-  --color-bg-white: var(--palette-gunmetal);
+  --color-bg-white: var(--palette-shadow-grey);
+  --color-bg-header: rgba(41, 37, 36, 0.9);
 
   --color-bg-input: #18181b;
   /* Darker background for inputs */
+}
+
+/* --- Theme Helpers --- */
+[data-theme="dark"] .logo-light-only {
+  display: none !important;
+}
+
+[data-theme="light"] .logo-dark-only {
+  display: none !important;
+}
+
+[data-theme="dark"] .logo-dark-only {
+  display: block !important;
 }
 
 /*
@@ -265,6 +281,21 @@ p {
   color: var(--color-primary);
 }
 
+#forgot-password-btn {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+#forgot-password-btn:hover {
+  color: var(--color-primary-hover);
+  transform: none;
+}
+
 /* 
 ==========================================
   Dark Mode Toggle Button (Shared)
@@ -364,6 +395,12 @@ p {
   font-size: 1rem;
   transition: var(--transition-base);
   background-color: var(--color-bg-input, var(--color-bg-surface));
+  color: var(--color-text-main);
+}
+
+.form-input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
 }
 
 .form-input:focus {
@@ -416,7 +453,7 @@ p {
 ==========================================
 */
 .header {
-  background-color: var(--color-bg-header, rgba(255, 255, 255, 0.9));
+  background-color: var(--color-bg-header);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   position: sticky;
@@ -547,7 +584,12 @@ p {
   flex-direction: column;
   justify-content: flex-end;
   padding: 4rem;
-  color: white;
+  color: #ffffff !important;
+}
+
+.login-visual-content h1,
+.login-visual-content p {
+  color: #ffffff !important;
 }
 
 .login-form-section {
@@ -572,6 +614,20 @@ p {
   .login-visual {
     display: block;
   }
+}
+
+.login-logo {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.login-logo img {
+  height: 10rem;
+  width: 10rem;
+  object-fit: contain;
+  border-radius: var(--radius-full);
 }
 
 /*

@@ -1,0 +1,26 @@
+{
+  "name": "leirefolket_test",
+  "version": "1.0.0",
+  "description": "https://funnyeivske.github.io/Leirefolket_test/",
+  "main": "feed.js",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/FunnyEivske/Leirefolket_test.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/FunnyEivske/Leirefolket_test/issues"
+  },
+  "homepage": "https://github.com/FunnyEivske/Leirefolket_test#readme",
+  "devDependencies": {
+    "vite": "^7.3.1"
+  }
+}

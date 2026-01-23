@@ -32,6 +32,7 @@ function setCachedGallery(images) {
 function createGalleryItem(url) {
     const div = document.createElement('div');
     div.className = 'gallery-item';
+    div.style.cursor = 'pointer';
 
     const img = document.createElement('img');
     img.src = url;
@@ -40,8 +41,54 @@ function createGalleryItem(url) {
     img.loading = 'lazy';
 
     div.appendChild(img);
+
+    // Legg til click-event for å åpne lightbox
+    div.addEventListener('click', () => {
+        openLightbox(url);
+    });
+
     return div;
 }
+
+// --- LIGHTBOX LOGIKK ---
+const lightbox = document.getElementById('lightbox');
+const lightboxImg = document.getElementById('lightbox-image');
+const lightboxClose = document.getElementById('lightbox-close');
+
+function openLightbox(url) {
+    if (!lightbox || !lightboxImg) return;
+    lightboxImg.src = url;
+    lightbox.classList.add('active');
+    document.body.style.overflow = 'hidden'; // Forhindre scrolling
+}
+
+function closeLightbox() {
+    if (!lightbox) return;
+    lightbox.classList.remove('active');
+    document.body.style.overflow = '';
+    setTimeout(() => {
+        if (lightboxImg) lightboxImg.src = '';
+    }, 300);
+}
+
+if (lightbox) {
+    lightbox.addEventListener('click', (e) => {
+        if (e.target === lightbox) {
+            closeLightbox();
+        }
+    });
+}
+
+if (lightboxClose) {
+    lightboxClose.addEventListener('click', closeLightbox);
+}
+
+// Lukk med escape-tast
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && lightbox && lightbox.classList.contains('active')) {
+        closeLightbox();
+    }
+});
 
 /**
  * Oppretter og returnerer et teaser-element (bilde i en lenke).

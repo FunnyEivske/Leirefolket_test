@@ -70,15 +70,17 @@
   --color-text-main: var(--palette-white);
   --color-text-muted: #a1a1aa;
   /* zinc-400 */
-  --color-text-inverse: var(--palette-shadow-grey);
+  --color-text-inverse: var(--palette-white);
 
   --color-border: #52525b;
   /* zinc-600 - Increased contrast */
-  --color-bg-white: var(--palette-gunmetal);
-  /* For elementer som eksplisitt bruker hvit */
+  --color-bg-white: var(--palette-shadow-grey);
+  /* Changed to match page bg so cards stand out */
 
   --color-bg-input: #18181b;
   /* zinc-900 - Darker background for inputs in dark mode */
+  --color-bg-footer: #171717;
+  /* Darker than page bg (#292524) */
 }
 
 /* --- Theme Helpers --- */
@@ -385,6 +387,13 @@ p {
   color: var(--color-text-main);
 }
 
+.form-input::placeholder,
+.form-textarea::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
+  /* For Firefox */
+}
+
 .form-textarea {
   resize: vertical;
   min-height: 120px;
@@ -542,6 +551,7 @@ p {
 
 .footer-address {
   margin-bottom: 1rem;
+  color: var(--palette-white);
 }
 
 .social-links {
@@ -821,5 +831,65 @@ p {
 
   .form-container {
     padding: 2.5rem;
+  }
+}
+
+/* --- Lightbox --- */
+.lightbox {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.9);
+  z-index: 2000;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  cursor: pointer;
+}
+
+.lightbox.active {
+  display: flex;
+}
+
+.lightbox-content {
+  position: relative;
+  max-width: 100%;
+  max-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lightbox-image {
+  max-width: 90vw;
+  max-height: 90vh;
+  object-fit: contain;
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-xl);
+  cursor: default;
+}
+
+.lightbox-close {
+  position: absolute;
+  top: -3rem;
+  right: 0;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 2.5rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: var(--transition-all);
+}
+
+.lightbox-close:hover {
+  transform: scale(1.1);
+  color: var(--color-primary);
+}
+
+@media (max-width: 768px) {
+  .lightbox-close {
+    top: -2.5rem;
+    right: -0.5rem;
   }
 }
