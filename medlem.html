@@ -230,7 +230,9 @@
                     <div class="form-group">
                         <label class="form-label">Profilbilde</label>
                         <div style="display: flex; flex-direction: column; gap: 0.5rem;">
-                            <input type="file" id="profile-image-file-input" class="form-input" accept="image/*">
+                            <input type="file" id="profile-image-file-input" class="form-input"
+                                accept="image/png, image/jpeg">
+                            <p class="text-xs text-muted">Støtter kun JPG og PNG.</p>
                             <p class="text-sm text-muted">Eller lim inn en URL:</p>
                             <input type="text" id="profile-image-url-input" class="form-input"
                                 placeholder="https://...">
@@ -263,11 +265,12 @@
                     <div class="form-group">
                         <label class="form-label">Last opp nye bilder</label>
                         <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
-                            <input type="file" id="upload-files-input" class="form-input" accept="image/*" multiple
-                                required style="flex:1;">
+                            <input type="file" id="upload-files-input" class="form-input" accept="image/png, image/jpeg"
+                                multiple required style="flex:1;">
                             <button type="submit" id="confirm-upload-btn" class="btn btn-primary"
                                 style="white-space: nowrap;">Last opp</button>
                         </div>
+                        <p class="text-xs text-muted mt-1">Kun JPG og PNG er tillatt. Video og RAW støttes ikke.</p>
                     </div>
                     <div class="form-group">
                         <textarea id="upload-description-input" class="form-input" rows="2"

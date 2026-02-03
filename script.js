@@ -468,8 +468,15 @@ async function handleGalleryUploadSubmit(e) {
         const galleryRef = collection(db, `users/${uid}/gallery_images`);
 
         // Loop gjennom alle valgte filer
+        const allowedTypes = ['image/jpeg', 'image/png'];
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
+
+            if (!allowedTypes.includes(file.type)) {
+                console.warn("Skipping file due to type:", file.name, file.type);
+                continue; // Hopp over filer som ikke er JPG/PNG
+            }
+
             const base64Image = await resizeAndConvertToBase64(file, 800);
 
             await addDoc(galleryRef, {
@@ -690,6 +697,10 @@ async function handleProfileSave(e) {
 
         // 1. Behandle bilde (Base64)
         if (file) {
+            const allowedTypes = ['image/jpeg', 'image/png'];
+            if (!allowedTypes.includes(file.type)) {
+                throw new Error("Kun JPG og PNG-filer er tillatt.");
+            }
             console.log("Processing file...");
             statusMsg.textContent = 'Behandler bilde...';
             newPhotoURL = await resizeAndConvertToBase64(file);
@@ -788,9 +799,9 @@ async function loadAdminImages() {
     adminUserList.innerHTML = '<p class="text-muted text-center">Laster brukere...</p>';
 
     try {
-        // 1. Hent nåværende offentlige bilder først for å kunne vise hva som er "hukket av"
-        const publicGalleryDoc = await getDoc(doc(db, 'site_content', 'gallery'));
-        const currentPublicImages = publicGalleryDoc.exists() ? (publicGalleryDoc.data().images || []) : [];
+        // 1. Hent nåværende offentlige bilder fra 'items' undersamlingen
+        const itemsSnapshot = await getDocs(collection(db, 'site_content', 'gallery', 'items'));
+        const currentPublicImages = itemsSnapshot.docs.map(doc => doc.data().imageUrl);
 
         // 2. Hent alle brukere fra 'users' samlingen
         const usersSnapshot = await getDocs(collection(db, 'users'));
@@ -884,11 +895,30 @@ async function saveAdminSelection() {
     btn.disabled = true;
 
     try {
-        await setDoc(contentRef, {
-            images: selectedImages,
-            updatedAt: serverTimestamp(),
-            updatedBy: authState.user.uid
+        // 1. Hent alle eksisterende elementer i det offentlige galleriet
+        const itemsRef = collection(db, 'site_content', 'gallery', 'items');
+        const itemsSnapshot = await getDocs(itemsRef);
+
+        // 2. Slett gamle koblinger (vi overskriver hele utvalget slik det fungerte før, men uten 1MB-grensen)
+        const deletePromises = itemsSnapshot.docs.map(doc => deleteDoc(doc.ref));
+        await Promise.all(deletePromises);
+
+        // 3. Legg til nye koblinger
+        const addPromises = selectedImages.map((url, index) => {
+            return addDoc(itemsRef, {
+                imageUrl: url,
+                order: index,
+                updatedAt: serverTimestamp(),
+                updatedBy: authState.user.uid
+            });
         });
+        await Promise.all(addPromises);
+
+        // 4. Oppdater hoved-dokumentet (valgfritt, for å logge når det sist ble endret)
+        await setDoc(doc(db, 'site_content', 'gallery'), {
+            lastUpdated: serverTimestamp(),
+            updatedBy: authState.user.uid
+        }, { merge: true });
 
         showCustomAlert(`Lagret ${selectedImages.length} bilder til offentlig galleri!`);
         closeAdminModal();
