@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="no">
+<html lang="no" style="overflow-x: hidden;">
 
 <head>
     <meta charset="UTF-8">
@@ -90,6 +90,12 @@
                         <button id="admin-gallery-btn" class="btn btn-primary btn-full text-sm mb-2">
                             Administrer galleri
                         </button>
+                        <button id="admin-status-btn" class="btn btn-primary btn-full text-sm mb-2">
+                            Administrer status & åpningstider
+                        </button>
+                        <button id="admin-add-user-btn" class="btn btn-primary btn-full text-sm">
+                            Legg til bruker
+                        </button>
                     </div>
                 </div>
 
@@ -100,8 +106,12 @@
                     </div>
                     <div class="card-body">
                         <div class="mb-4">
+                            <p id="workshop-custom-status" class="text-sm font-semibold text-primary mb-2"></p>
                             <p class="text-sm font-medium">Åpningstider denne uken:</p>
-                            <p class="text-sm text-muted">Man-Fre: 10-20<br>Lør-Søn: 12-18</p>
+                            <div id="workshop-hours-display" class="text-sm text-muted">
+                                <!-- Dynamisk innhold -->
+                                <p>Man-Fre: 10-20<br>Lør-Søn: 12-18</p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -306,6 +316,121 @@
             <div class="card-footer" style="display: flex; justify-content: flex-end; gap: 1rem;">
                 <button type="button" id="cancel-admin-modal" class="btn btn-secondary">Avbryt</button>
                 <button type="button" id="save-admin-selection" class="btn btn-primary">Lagre valg</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Status/Hours Modal -->
+    <div id="admin-status-modal" class="hidden"
+        style="position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;">
+        <div id="admin-status-modal-overlay"
+            style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px);"></div>
+        <div class="card"
+            style="position: relative; width: 100%; max-width: 600px; max-height: 90vh; margin: 1rem; z-index: 10; display: flex; flex-direction: column;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h3>Administrer status & åpningstider</h3>
+                <button id="close-status-modal" class="btn btn-ghost" style="padding: 0.5rem;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="card-body" style="overflow-y: auto; flex: 1;">
+                <form id="status-hours-form">
+                    <div class="form-group">
+                        <label class="form-label">Egendefinert status (f.eks. "Stengt pga oppussing")</label>
+                        <input type="text" id="custom-status-input" class="form-input"
+                            placeholder="La stå tom for standard">
+                    </div>
+
+                    <h4 class="text-sm font-semibold mb-3">Åpningstider</h4>
+                    <div id="opening-hours-inputs" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        <div style="display: grid; grid-template-columns: 100px 1fr; align-items: center; gap: 1rem;">
+                            <label class="text-xs font-semibold">Mandag</label>
+                            <input type="text" class="form-input text-sm opening-day-input" data-day="Mandag"
+                                placeholder="f.eks. 10-20 eller Stengt">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 100px 1fr; align-items: center; gap: 1rem;">
+                            <label class="text-xs font-semibold">Tirsdag</label>
+                            <input type="text" class="form-input text-sm opening-day-input" data-day="Tirsdag"
+                                placeholder="f.eks. 10-20 eller Stengt">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 100px 1fr; align-items: center; gap: 1rem;">
+                            <label class="text-xs font-semibold">Onsdag</label>
+                            <input type="text" class="form-input text-sm opening-day-input" data-day="Onsdag"
+                                placeholder="f.eks. 10-20 eller Stengt">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 100px 1fr; align-items: center; gap: 1rem;">
+                            <label class="text-xs font-semibold">Torsdag</label>
+                            <input type="text" class="form-input text-sm opening-day-input" data-day="Torsdag"
+                                placeholder="f.eks. 10-20 eller Stengt">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 100px 1fr; align-items: center; gap: 1rem;">
+                            <label class="text-xs font-semibold">Fredag</label>
+                            <input type="text" class="form-input text-sm opening-day-input" data-day="Fredag"
+                                placeholder="f.eks. 10-20 eller Stengt">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 100px 1fr; align-items: center; gap: 1rem;">
+                            <label class="text-xs font-semibold">Lørdag</label>
+                            <input type="text" class="form-input text-sm opening-day-input" data-day="Lørdag"
+                                placeholder="f.eks. 12-18 eller Stengt">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 100px 1fr; align-items: center; gap: 1rem;">
+                            <label class="text-xs font-semibold">Søndag</label>
+                            <input type="text" class="form-input text-sm opening-day-input" data-day="Søndag"
+                                placeholder="f.eks. 12-18 eller Stengt">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer" style="display: flex; justify-content: flex-end; gap: 1rem;">
+                <button type="button" id="cancel-status-modal" class="btn btn-secondary">Avbryt</button>
+                <button type="button" id="save-status-btn" class="btn btn-primary">Lagre endringer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Add User Modal -->
+    <div id="admin-user-modal" class="hidden"
+        style="position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center;">
+        <div id="admin-user-modal-overlay"
+            style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px);">
+        </div>
+        <div class="card"
+            style="position: relative; width: 100%; max-width: 500px; margin: 1rem; z-index: 10; max-height: 90vh; overflow-y: auto;">
+            <div class="card-header" style="position: sticky; top: 0; background: var(--color-bg-surface); z-index: 2;">
+                <h4 class="text-lg">Legg til ny bruker</h4>
+                <button id="close-user-modal" class="btn-ghost" style="padding: 0.5rem;">✕</button>
+            </div>
+            <div class="card-body">
+                <form id="admin-create-user-form">
+                    <div class="form-group">
+                        <label for="new-user-email" class="form-label">E-postadresse</label>
+                        <input type="email" id="new-user-email" class="form-input" placeholder="bruker@epost.no"
+                            required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-user-password" class="form-label">Midlertidig passord</label>
+                        <input type="text" id="new-user-password" class="form-input" placeholder="Minst 6 tegn"
+                            required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-user-name" class="form-label">Fullt navn</label>
+                        <input type="text" id="new-user-name" class="form-input" placeholder="Navn Navnesen" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="new-user-role" class="form-label">Rolle</label>
+                        <select id="new-user-role" class="form-input">
+                            <option value="member">Medlem</option>
+                            <option value="admin">Administrator</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer" style="display: flex; justify-content: flex-end; gap: 1rem;">
+                <button type="button" id="cancel-user-modal" class="btn btn-secondary">Avbryt</button>
+                <button type="submit" form="admin-create-user-form" id="create-user-btn" class="btn btn-primary">Opprett
+                    bruker</button>
             </div>
         </div>
     </div>

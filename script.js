@@ -2,8 +2,11 @@ import { app, auth, db, appId, authReady, sendPasswordResetEmail } from './fireb
 import {
     signInWithEmailAndPassword,
     signOut,
-    onAuthStateChanged
+    onAuthStateChanged,
+    createUserWithEmailAndPassword,
+    getAuth
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import {
     doc,
     getDoc,
@@ -120,6 +123,49 @@ const cancelAdminModalBtn = document.getElementById('cancel-admin-modal');
 const saveAdminSelectionBtn = document.getElementById('save-admin-selection');
 const adminUserList = document.getElementById('admin-user-list');
 const adminModalTitle = document.getElementById('admin-modal-title');
+
+// Workshop Status
+const adminStatusBtn = document.getElementById('admin-status-btn');
+const adminStatusModal = document.getElementById('admin-status-modal');
+const adminStatusModalOverlay = document.getElementById('admin-status-modal-overlay');
+const closeStatusModalBtn = document.getElementById('close-status-modal');
+const cancelStatusModalBtn = document.getElementById('cancel-status-modal');
+const saveStatusBtn = document.getElementById('save-status-btn');
+const customStatusInput = document.getElementById('custom-status-input');
+const openingDayInputs = document.querySelectorAll('.opening-day-input');
+
+const workshopCustomStatusDisplay = document.getElementById('workshop-custom-status');
+const workshopHoursDisplay = document.getElementById('workshop-hours-display');
+
+// Admin User Management
+const adminAddUserBtn = document.getElementById('admin-add-user-btn');
+const adminUserModal = document.getElementById('admin-user-modal');
+const adminUserModalOverlay = document.getElementById('admin-user-modal-overlay');
+const closeUserModalBtn = document.getElementById('close-user-modal');
+const cancelUserModalBtn = document.getElementById('cancel-user-modal');
+const createUserForm = document.getElementById('admin-create-user-form');
+const createUserBtn = document.getElementById('create-user-btn');
+
+// Secondary Firebase app for user creation
+let secondaryApp;
+let secondaryAuth;
+
+// Fetch config from main app or redefine (simpler to redefine here for module scope)
+const secondaryConfig = {
+    apiKey: "AIzaSyDA8fQe9akDky_yYDFfNtzGH75-WYq2sF4",
+    authDomain: "leirefolket.firebaseapp.com",
+    projectId: "leirefolket",
+    storageBucket: "leirefolket.firebasestorage.app",
+    messagingSenderId: "641158381331",
+    appId: "1:641158381331:web:e2a5f893d7d504f2d624e6"
+};
+
+try {
+    secondaryApp = initializeApp(secondaryConfig, "SecondaryApp");
+    secondaryAuth = getAuth(secondaryApp);
+} catch (e) {
+    console.warn("Secondary app already exists or failed to init:", e);
+}
 
 // Custom Modals
 const messageModal = document.getElementById('message-modal');
@@ -857,13 +903,166 @@ async function saveAdminSelection() {
 }
 
 
+// --- WORKSHOP STATUS LOGIC ---
+
+function openStatusModal() {
+    if (adminStatusModal) {
+        adminStatusModal.classList.remove('hidden');
+        loadStatusIntoForm();
+    }
+}
+
+function closeStatusModal() {
+    if (adminStatusModal) adminStatusModal.classList.add('hidden');
+}
+
+async function loadStatusIntoForm() {
+    try {
+        const statusDoc = await getDoc(doc(db, 'site_content', 'status'));
+        if (statusDoc.exists()) {
+            const data = statusDoc.data();
+            if (customStatusInput) customStatusInput.value = data.customStatus || '';
+
+            if (data.openingHours) {
+                openingDayInputs.forEach(input => {
+                    const day = input.dataset.day;
+                    if (data.openingHours[day]) {
+                        input.value = data.openingHours[day];
+                    }
+                });
+            }
+        }
+    } catch (error) {
+        console.error("Error loading status into form:", error);
+    }
+}
+
+async function saveWorkshopStatus() {
+    const openingHours = {};
+    openingDayInputs.forEach(input => {
+        openingHours[input.dataset.day] = input.value.trim();
+    });
+
+    const statusData = {
+        customStatus: customStatusInput.value.trim(),
+        openingHours: openingHours,
+        updatedAt: serverTimestamp(),
+        updatedBy: authState.user.uid
+    };
+
+    const originalText = saveStatusBtn.textContent;
+    saveStatusBtn.textContent = 'Lagrer...';
+    saveStatusBtn.disabled = true;
+
+    try {
+        await setDoc(doc(db, 'site_content', 'status'), statusData);
+        showCustomAlert("Verkstedstatus og åpningstider er oppdatert!");
+        closeStatusModal();
+        loadWorkshopStatus(); // Update the display immediately
+    } catch (error) {
+        console.error("Error saving status:", error);
+        showCustomAlert("Kunne ikke lagre: " + error.message);
+    } finally {
+        saveStatusBtn.textContent = originalText;
+        saveStatusBtn.disabled = false;
+    }
+}
+
+async function loadWorkshopStatus() {
+    if (!workshopCustomStatusDisplay || !workshopHoursDisplay) return;
+
+    try {
+        const statusDoc = await getDoc(doc(db, 'site_content', 'status'));
+        if (statusDoc.exists()) {
+            const data = statusDoc.data();
+
+            // Custom Status
+            if (data.customStatus) {
+                workshopCustomStatusDisplay.textContent = data.customStatus;
+                workshopCustomStatusDisplay.classList.remove('hidden');
+            } else {
+                workshopCustomStatusDisplay.classList.add('hidden');
+            }
+
+            // Opening Hours
+            if (data.openingHours) {
+                let html = '';
+                const days = ['Mandag', 'Tirsdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lørdag', 'Søndag'];
+
+                // Group business days if possible
+                let weekdaysHours = data.openingHours['Mandag'];
+                let allWeekdaysSame = true;
+                for (let i = 1; i < 5; i++) {
+                    if (data.openingHours[days[i]] !== weekdaysHours) {
+                        allWeekdaysSame = false;
+                        break;
+                    }
+                }
+
+                let weekendSame = data.openingHours['Lørdag'] === data.openingHours['Søndag'];
+
+                if (allWeekdaysSame && weekendSame) {
+                    html = `<p>Man-Fre: ${weekdaysHours}<br>Lør-Søn: ${data.openingHours['Lørdag']}</p>`;
+                } else {
+                    days.forEach(day => {
+                        html += `<p style="display: flex; justify-content: space-between; gap: 1rem;">
+                            <span>${day}:</span>
+                            <span style="font-weight: 500;">${data.openingHours[day] || 'Stengt'}</span>
+                        </p>`;
+                    });
+                }
+                workshopHoursDisplay.innerHTML = html;
+            }
+        }
+    } catch (error) {
+        console.error("Error loading workshop status:", error);
+    }
+}
+
+
 // --- EVENT LISTENERS ---
 
 // Mobilmeny
 if (mobileMenuButton) {
     mobileMenuButton.addEventListener('click', () => {
-        mobileMenu.classList.toggle('show');
+        // Fjern 'hidden' hvis den finnes (viktig for sider som kurs.html/galleri.html)
+        mobileMenu.classList.remove('hidden');
+
+        const isOpen = mobileMenu.classList.toggle('show');
+
+        // Body scroll lock
+        if (isOpen) {
+            document.body.style.overflow = 'hidden';
+            // Endre ikon til X (enkelt) eller animer SVG (bedre)
+            mobileMenuButton.innerHTML = `
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 6L6 18M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            `;
+        } else {
+            document.body.style.overflow = '';
+            mobileMenuButton.innerHTML = `
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 6h16M4 12h16m-7 6h7" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            `;
+        }
     });
+
+    // Lukk meny når man klikker på en lenke
+    if (mobileMenu) {
+        mobileMenu.querySelectorAll('a, button').forEach(link => {
+            link.addEventListener('click', () => {
+                mobileMenu.classList.remove('show');
+                document.body.style.overflow = '';
+                mobileMenuButton.innerHTML = `
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 6h16M4 12h16m-7 6h7" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                `;
+            });
+        });
+    }
 }
 
 // Login
@@ -917,6 +1116,13 @@ if (saveAdminSelectionBtn) {
     saveAdminSelectionBtn.addEventListener('click', saveAdminSelection);
 }
 
+// Admin: Status/Hours
+if (adminStatusBtn) adminStatusBtn.addEventListener('click', openStatusModal);
+if (closeStatusModalBtn) closeStatusModalBtn.addEventListener('click', closeStatusModal);
+if (cancelStatusModalBtn) cancelStatusModalBtn.addEventListener('click', closeStatusModal);
+if (adminStatusModalOverlay) adminStatusModalOverlay.addEventListener('click', closeStatusModal);
+if (saveStatusBtn) saveStatusBtn.addEventListener('click', saveWorkshopStatus);
+
 // Notes
 if (notesForm) notesForm.addEventListener('submit', handleSaveNotes);
 
@@ -952,6 +1158,7 @@ authReady.then(async (initialUser) => {
     }
 
     updateUI(authState.user, authState.profile);
+    loadWorkshopStatus();
     protectMemberPage();
     protectLoginPage();
 
@@ -992,3 +1199,70 @@ authReady.then(async (initialUser) => {
         protectLoginPage();
     });
 });
+
+// --- ADMIN USER MANAGEMENT ---
+
+if (adminAddUserBtn) {
+    adminAddUserBtn.addEventListener('click', () => {
+        adminUserModal.classList.remove('hidden');
+    });
+}
+
+function closeUserModal() {
+    adminUserModal.classList.add('hidden');
+    createUserForm.reset();
+}
+
+if (closeUserModalBtn) closeUserModalBtn.addEventListener('click', closeUserModal);
+if (cancelUserModalBtn) cancelUserModalBtn.addEventListener('click', closeUserModal);
+if (adminUserModalOverlay) adminUserModalOverlay.addEventListener('click', closeUserModal);
+
+if (createUserForm) {
+    createUserForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const email = document.getElementById('new-user-email').value.trim();
+        const password = document.getElementById('new-user-password').value.trim();
+        const name = document.getElementById('new-user-name').value.trim();
+        const role = document.getElementById('new-user-role').value;
+
+        if (password.length < 6) {
+            showCustomAlert("Passordet må være minst 6 tegn langt.");
+            return;
+        }
+
+        const originalText = createUserBtn.textContent;
+        createUserBtn.textContent = 'Oppretter...';
+        createUserBtn.disabled = true;
+
+        try {
+            // 1. Create account in secondary auth
+            const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+            const newUser = userCredential.user;
+
+            // 2. Create profile in Firestore
+            await setDoc(doc(db, 'users', newUser.uid), {
+                displayName: name,
+                photoURL: null,
+                role: role,
+                memberSince: serverTimestamp(),
+                createdAt: serverTimestamp(),
+                createdBy: authState.user ? authState.user.uid : 'admin'
+            });
+
+            // 3. Sign out secondary auth immediately
+            await signOut(secondaryAuth);
+
+            showCustomAlert(`Bruker ${name} er nå opprettet som ${role === 'admin' ? 'administrator' : 'medlem'}!`);
+            closeUserModal();
+        } catch (error) {
+            console.error("Error creating user:", error);
+            let msg = "Kunne ikke opprette bruker: " + error.message;
+            if (error.code === 'auth/email-already-in-use') msg = "E-postadressen er allerede i bruk.";
+            showCustomAlert(msg);
+        } finally {
+            createUserBtn.textContent = originalText;
+            createUserBtn.disabled = false;
+        }
+    });
+}
