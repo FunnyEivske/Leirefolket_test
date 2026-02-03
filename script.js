@@ -191,7 +191,7 @@ const confirmModalOverlay = document.getElementById('confirm-modal-overlay');
 
 // --- HJELPEFUNKSJONER ---
 
-function toggleModal(modal, show) {
+export function toggleModal(modal, show) {
     if (!modal) return;
     if (show) {
         modal.classList.remove('hidden');
@@ -206,6 +206,7 @@ function toggleModal(modal, show) {
         }
     }
 }
+window.toggleModal = toggleModal; // Eksponer for feed.js if needed via window
 
 function showCustomAlert(message) {
     if (messageModal && messageModalText) {
