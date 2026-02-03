@@ -93,8 +93,11 @@
                         <button id="admin-status-btn" class="btn btn-primary btn-full text-sm mb-2">
                             Administrer status & åpningstider
                         </button>
-                        <button id="admin-add-user-btn" class="btn btn-primary btn-full text-sm">
+                        <button id="admin-add-user-btn" class="btn btn-primary btn-full text-sm mb-2">
                             Legg til bruker
+                        </button>
+                        <button id="admin-members-btn" class="btn btn-primary btn-full text-sm mb-2">
+                            Administrer medlemmer
                         </button>
                     </div>
                 </div>
@@ -393,7 +396,7 @@
         </div>
     </div>
 
-    <!-- Admin Add User Modal -->
+    <!-- Admin Add/Edit User Modal -->
     <div id="admin-user-modal" class="hidden"
         style="position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center;">
         <div id="admin-user-modal-overlay"
@@ -402,7 +405,7 @@
         <div class="card"
             style="position: relative; width: 100%; max-width: 500px; margin: 1rem; z-index: 10; max-height: 90vh; overflow-y: auto;">
             <div class="card-header" style="position: sticky; top: 0; background: var(--color-bg-surface); z-index: 2;">
-                <h4 class="text-lg">Legg til ny bruker</h4>
+                <h4 id="user-modal-title" class="text-lg">Legg til ny bruker</h4>
                 <button id="close-user-modal" class="btn-ghost" style="padding: 0.5rem;">✕</button>
             </div>
             <div class="card-body">
@@ -428,16 +431,44 @@
                             <option value="admin">Administrator</option>
                         </select>
                     </div>
+                    <div class="form-group">
+                        <label for="new-user-member-since" class="form-label">Medlem siden (Startdato)</label>
+                        <input type="date" id="new-user-member-since" class="form-input">
+                        <p class="text-xs text-muted mt-1">La stå tom for å bruke dagens dato.</p>
+                    </div>
+                    <input type="hidden" id="edit-user-id">
                 </form>
             </div>
             <div class="card-footer" style="display: flex; justify-content: flex-end; gap: 1rem;">
                 <button type="button" id="cancel-user-modal" class="btn btn-secondary">Avbryt</button>
-                <button type="submit" form="admin-create-user-form" id="create-user-btn" class="btn btn-primary">Opprett
+                <button type="submit" form="admin-create-user-form" id="create-user-btn" class="btn btn-primary">Lagre
                     bruker</button>
             </div>
         </div>
     </div>
 
+    <!-- Admin Manage Members Modal -->
+    <div id="admin-members-modal" class="hidden"
+        style="position: fixed; inset: 0; z-index: 250; display: flex; align-items: center; justify-content: center;">
+        <div id="admin-members-modal-overlay"
+            style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px);">
+        </div>
+        <div class="card"
+            style="position: relative; width: 100%; max-width: 700px; margin: 1rem; z-index: 10; max-height: 90vh; display: flex; flex-direction: column;">
+            <div class="card-header" style="position: sticky; top: 0; background: var(--color-bg-surface); z-index: 2;">
+                <h3 class="text-lg">Administrer medlemmer</h3>
+                <button id="close-members-modal" class="btn-ghost" style="padding: 0.5rem;">✕</button>
+            </div>
+            <div class="card-body" style="overflow-y: auto; flex: 1;">
+                <div id="admin-members-list" style="display: flex; flex-direction: column; gap: 1rem;">
+                    <p class="text-muted text-center">Laster medlemmer...</p>
+                </div>
+            </div>
+            <div class="card-footer" style="display: flex; justify-content: flex-end;">
+                <button type="button" id="close-members-footer-btn" class="btn btn-secondary">Lukk</button>
+            </div>
+        </div>
+    </div>
     <!-- Custom Alert/Message Modal -->
     <div id="message-modal" class="hidden"
         style="position: fixed; inset: 0; z-index: 400; display: flex; align-items: center; justify-content: center;">

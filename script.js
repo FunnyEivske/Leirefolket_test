@@ -131,20 +131,30 @@ const adminStatusModalOverlay = document.getElementById('admin-status-modal-over
 const closeStatusModalBtn = document.getElementById('close-status-modal');
 const cancelStatusModalBtn = document.getElementById('cancel-status-modal');
 const saveStatusBtn = document.getElementById('save-status-btn');
+const workshopCustomStatusDisplay = document.getElementById('workshop-custom-status');
+const workshopHoursDisplay = document.getElementById('workshop-hours-display');
 const customStatusInput = document.getElementById('custom-status-input');
 const openingDayInputs = document.querySelectorAll('.opening-day-input');
 
-const workshopCustomStatusDisplay = document.getElementById('workshop-custom-status');
-const workshopHoursDisplay = document.getElementById('workshop-hours-display');
-
 // Admin User Management
 const adminAddUserBtn = document.getElementById('admin-add-user-btn');
+const adminMembersBtn = document.getElementById('admin-members-btn');
 const adminUserModal = document.getElementById('admin-user-modal');
 const adminUserModalOverlay = document.getElementById('admin-user-modal-overlay');
 const closeUserModalBtn = document.getElementById('close-user-modal');
 const cancelUserModalBtn = document.getElementById('cancel-user-modal');
 const createUserForm = document.getElementById('admin-create-user-form');
 const createUserBtn = document.getElementById('create-user-btn');
+const userModalTitle = document.getElementById('user-modal-title');
+const editUserIdInput = document.getElementById('edit-user-id');
+const userMemberSinceInput = document.getElementById('new-user-member-since');
+
+// Admin Member List
+const adminMembersModal = document.getElementById('admin-members-modal');
+const adminMembersModalOverlay = document.getElementById('admin-members-modal-overlay');
+const closeMembersModalBtn = document.getElementById('close-members-modal');
+const closeMembersFooterBtn = document.getElementById('close-members-footer-btn');
+const adminMembersList = document.getElementById('admin-members-list');
 
 // Secondary Firebase app for user creation
 let secondaryApp;
@@ -181,13 +191,29 @@ const confirmModalOverlay = document.getElementById('confirm-modal-overlay');
 
 // --- HJELPEFUNKSJONER ---
 
+function toggleModal(modal, show) {
+    if (!modal) return;
+    if (show) {
+        modal.classList.remove('hidden');
+        document.body.classList.add('modal-open');
+    } else {
+        modal.classList.add('hidden');
+        // Sjekk om andre modaler fortsatt er åpne før vi fjerner scroll-lock
+        const allModals = document.querySelectorAll('[id$="-modal"]');
+        const anyOpen = Array.from(allModals).some(m => !m.classList.contains('hidden'));
+        if (!anyOpen) {
+            document.body.classList.remove('modal-open');
+        }
+    }
+}
+
 function showCustomAlert(message) {
     if (messageModal && messageModalText) {
         messageModalText.textContent = message;
-        messageModal.classList.remove('hidden');
+        toggleModal(messageModal, true);
         return new Promise(resolve => {
             const closeHandler = () => {
-                messageModal.classList.add('hidden');
+                toggleModal(messageModal, false);
                 messageModalClose.removeEventListener('click', closeHandler);
                 messageModalOverlay.removeEventListener('click', closeHandler);
                 resolve();
@@ -203,7 +229,7 @@ function showCustomAlert(message) {
 function showCustomConfirm(message) {
     if (confirmModal && confirmModalText) {
         confirmModalText.textContent = message;
-        confirmModal.classList.remove('hidden');
+        toggleModal(confirmModal, true);
         return new Promise(resolve => {
             const handleOk = () => {
                 cleanup();
@@ -214,7 +240,7 @@ function showCustomConfirm(message) {
                 resolve(false);
             };
             const cleanup = () => {
-                confirmModal.classList.add('hidden');
+                toggleModal(confirmModal, false);
                 confirmModalOk.removeEventListener('click', handleOk);
                 confirmModalCancel.removeEventListener('click', handleCancel);
                 confirmModalOverlay.removeEventListener('click', handleCancel);
@@ -438,11 +464,11 @@ async function deleteGalleryImage(uid, imageId) {
 // --- GALLERI OPPLASTING --- 
 
 function openUploadModal() {
-    if (uploadModal) uploadModal.classList.remove('hidden');
+    toggleModal(uploadModal, true);
 }
 
 function closeUploadModal() {
-    if (uploadModal) uploadModal.classList.add('hidden');
+    toggleModal(uploadModal, false);
     if (uploadForm) uploadForm.reset();
 }
 
@@ -785,12 +811,12 @@ function openAdminModal() {
     if (adminModalTitle) {
         adminModalTitle.textContent = 'Administrer offentlig galleri';
     }
-    if (adminImageModal) adminImageModal.classList.remove('hidden');
+    toggleModal(adminImageModal, true);
     loadAdminImages();
 }
 
 function closeAdminModal() {
-    if (adminImageModal) adminImageModal.classList.add('hidden');
+    toggleModal(adminImageModal, false);
 }
 
 // **OPPDATERT**: Laster faktiske brukere og deres bilder
@@ -936,14 +962,12 @@ async function saveAdminSelection() {
 // --- WORKSHOP STATUS LOGIC ---
 
 function openStatusModal() {
-    if (adminStatusModal) {
-        adminStatusModal.classList.remove('hidden');
-        loadStatusIntoForm();
-    }
+    toggleModal(adminStatusModal, true);
+    loadStatusIntoForm();
 }
 
 function closeStatusModal() {
-    if (adminStatusModal) adminStatusModal.classList.add('hidden');
+    toggleModal(adminStatusModal, false);
 }
 
 async function loadStatusIntoForm() {
@@ -1111,10 +1135,10 @@ if (openProfileModal) {
     openProfileModal.addEventListener('click', () => {
         displayNameInput.value = authState.profile?.displayName || '';
         profileImageUrlInput.value = authState.profile?.photoURL || '';
-        profileModal.classList.remove('hidden');
+        toggleModal(profileModal, true);
     });
 }
-function closeModal() { if (profileModal) profileModal.classList.add('hidden'); }
+function closeModal() { toggleModal(profileModal, false); }
 if (closeProfileModalButton) closeProfileModalButton.addEventListener('click', closeModal);
 if (profileModalOverlay) profileModalOverlay.addEventListener('click', closeModal);
 if (profileForm) profileForm.addEventListener('submit', handleProfileSave);
@@ -1152,6 +1176,12 @@ if (closeStatusModalBtn) closeStatusModalBtn.addEventListener('click', closeStat
 if (cancelStatusModalBtn) cancelStatusModalBtn.addEventListener('click', closeStatusModal);
 if (adminStatusModalOverlay) adminStatusModalOverlay.addEventListener('click', closeStatusModal);
 if (saveStatusBtn) saveStatusBtn.addEventListener('click', saveWorkshopStatus);
+
+// Admin: Members
+if (adminMembersBtn) adminMembersBtn.addEventListener('click', openMembersModal);
+if (closeMembersModalBtn) closeMembersModalBtn.addEventListener('click', closeMembersModal);
+if (closeMembersFooterBtn) closeMembersFooterBtn.addEventListener('click', closeMembersModal);
+if (adminMembersModalOverlay) adminMembersModalOverlay.addEventListener('click', closeMembersModal);
 
 // Notes
 if (notesForm) notesForm.addEventListener('submit', handleSaveNotes);
@@ -1230,17 +1260,141 @@ authReady.then(async (initialUser) => {
     });
 });
 
+// --- ADMIN MEMBERS LIST ---
+
+async function openMembersModal() {
+    toggleModal(adminMembersModal, true);
+    loadMembersList();
+}
+
+function closeMembersModal() {
+    toggleModal(adminMembersModal, false);
+}
+
+async function loadMembersList() {
+    if (!adminMembersList) return;
+    adminMembersList.innerHTML = '<p class="text-muted text-center">Laster medlemmer...</p>';
+
+    try {
+        const usersSnapshot = await getDocs(query(collection(db, 'users'), orderBy('displayName', 'asc')));
+        adminMembersList.innerHTML = '';
+
+        if (usersSnapshot.empty) {
+            adminMembersList.innerHTML = '<p class="text-muted text-center">Ingen medlemmer funnet.</p>';
+            return;
+        }
+
+        usersSnapshot.forEach(userDoc => {
+            const userData = userDoc.data();
+            const userId = userDoc.id;
+
+            const div = document.createElement('div');
+            div.className = 'card bg-subtle mb-2';
+            div.style.padding = '1rem';
+            div.style.display = 'flex';
+            div.style.justifyContent = 'space-between';
+            div.style.alignItems = 'center';
+
+            let dateStr = 'Ikke satt';
+            if (userData.memberSince) {
+                const date = userData.memberSince.toDate ? userData.memberSince.toDate() : new Date(userData.memberSince);
+                dateStr = date.toLocaleDateString('no-NO');
+            }
+
+            div.innerHTML = `
+                <div>
+                    <p class="font-semibold">${userData.displayName || 'Ukjent'}</p>
+                    <p class="text-xs text-muted">ID: ${userId} | Medlem siden: ${dateStr}</p>
+                </div>
+                <button class="btn btn-secondary btn-sm edit-member-btn" data-id="${userId}">Rediger</button>
+            `;
+
+            adminMembersList.appendChild(div);
+        });
+
+        // Add event listeners to edit buttons
+        adminMembersList.querySelectorAll('.edit-member-btn').forEach(btn => {
+            btn.onclick = () => openEditUserModal(btn.dataset.id);
+        });
+
+    } catch (error) {
+        console.error("Error loading members:", error);
+        adminMembersList.innerHTML = `<p class="text-error">Feil: ${error.message}</p>`;
+    }
+}
+
+async function openEditUserModal(userId) {
+    try {
+        const userDoc = await getDoc(doc(db, 'users', userId));
+        if (!userDoc.exists()) return;
+
+        const userData = userDoc.data();
+
+        // Populate modal
+        if (userModalTitle) userModalTitle.textContent = `Rediger medlem: ${userData.displayName || userId}`;
+        if (editUserIdInput) editUserIdInput.value = userId;
+
+        // Disable email/password fields for existing users (simplified)
+        const emailInput = document.getElementById('new-user-email');
+        const passInput = document.getElementById('new-user-password');
+        if (emailInput) {
+            emailInput.value = 'Eksisterende bruker (kan ikke endre e-post her)';
+            emailInput.disabled = true;
+            emailInput.required = false;
+        }
+        if (passInput) {
+            passInput.value = '******';
+            passInput.disabled = true;
+            passInput.required = false;
+        }
+
+        document.getElementById('new-user-name').value = userData.displayName || '';
+        document.getElementById('new-user-role').value = userData.role || 'member';
+
+        if (userData.memberSince) {
+            const date = userData.memberSince.toDate ? userData.memberSince.toDate() : new Date(userData.memberSince);
+            // Format to YYYY-MM-DD for date input
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            userMemberSinceInput.value = `${year}-${month}-${day}`;
+        } else {
+            userMemberSinceInput.value = '';
+        }
+
+        toggleModal(adminUserModal, true);
+
+    } catch (error) {
+        console.error("Error fetching user for edit:", error);
+        showCustomAlert("Kunne ikke hente brukerdata.");
+    }
+}
+
 // --- ADMIN USER MANAGEMENT ---
 
 if (adminAddUserBtn) {
     adminAddUserBtn.addEventListener('click', () => {
-        adminUserModal.classList.remove('hidden');
+        toggleModal(adminUserModal, true);
     });
 }
 
 function closeUserModal() {
-    adminUserModal.classList.add('hidden');
+    toggleModal(adminUserModal, false);
     createUserForm.reset();
+
+    // Reset fields that might have been disabled during edit
+    const emailInput = document.getElementById('new-user-email');
+    const passInput = document.getElementById('new-user-password');
+    if (emailInput) {
+        emailInput.disabled = false;
+        emailInput.required = true;
+    }
+    if (passInput) {
+        passInput.disabled = false;
+        passInput.required = true;
+    }
+    if (userModalTitle) userModalTitle.textContent = 'Legg til ny bruker';
+    if (editUserIdInput) editUserIdInput.value = '';
 }
 
 if (closeUserModalBtn) closeUserModalBtn.addEventListener('click', closeUserModal);
@@ -1255,35 +1409,55 @@ if (createUserForm) {
         const password = document.getElementById('new-user-password').value.trim();
         const name = document.getElementById('new-user-name').value.trim();
         const role = document.getElementById('new-user-role').value;
-
-        if (password.length < 6) {
-            showCustomAlert("Passordet må være minst 6 tegn langt.");
-            return;
-        }
+        const memberSince = userMemberSinceInput.value;
+        const editingId = editUserIdInput.value;
 
         const originalText = createUserBtn.textContent;
-        createUserBtn.textContent = 'Oppretter...';
+        createUserBtn.textContent = 'Lagrer...';
         createUserBtn.disabled = true;
 
         try {
-            // 1. Create account in secondary auth
-            const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
-            const newUser = userCredential.user;
+            // Convert date string to Date object
+            let memberSinceDate = memberSince ? new Date(memberSince) : new Date();
 
-            // 2. Create profile in Firestore
-            await setDoc(doc(db, 'users', newUser.uid), {
-                displayName: name,
-                photoURL: null,
-                role: role,
-                memberSince: serverTimestamp(),
-                createdAt: serverTimestamp(),
-                createdBy: authState.user ? authState.user.uid : 'admin'
-            });
+            if (editingId) {
+                // --- UPDATE EXISTING USER ---
+                await setDoc(doc(db, 'users', editingId), {
+                    displayName: name,
+                    role: role,
+                    memberSince: memberSinceDate
+                }, { merge: true });
 
-            // 3. Sign out secondary auth immediately
-            await signOut(secondaryAuth);
+                showCustomAlert(`Bruker ${name} er oppdatert!`);
+                loadMembersList(); // Refresh list if open
+            } else {
+                // --- CREATE NEW USER ---
+                if (password.length < 6) {
+                    showCustomAlert("Passordet må være minst 6 tegn langt.");
+                    createUserBtn.textContent = originalText;
+                    createUserBtn.disabled = false;
+                    return;
+                }
 
-            showCustomAlert(`Bruker ${name} er nå opprettet som ${role === 'admin' ? 'administrator' : 'medlem'}!`);
+                // 1. Create account in secondary auth
+                const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+                const newUser = userCredential.user;
+
+                // 2. Create profile in Firestore
+                await setDoc(doc(db, 'users', newUser.uid), {
+                    displayName: name,
+                    photoURL: null,
+                    role: role,
+                    memberSince: memberSinceDate,
+                    createdAt: serverTimestamp(),
+                    createdBy: authState.user ? authState.user.uid : 'admin'
+                });
+
+                // 3. Sign out secondary auth immediately
+                await signOut(secondaryAuth);
+
+                showCustomAlert(`Bruker ${name} er nå opprettet som ${role === 'admin' ? 'administrator' : 'medlem'}!`);
+            }
             closeUserModal();
         } catch (error) {
             console.error("Error creating user:", error);
