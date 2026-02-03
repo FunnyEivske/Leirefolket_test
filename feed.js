@@ -1,6 +1,6 @@
 // Importer nødvendige funksjoner
 import { db, appId } from './firebase.js';
-import { authState, userReady, toggleModal } from './script.js';
+import { authState, userReady, toggleModal, showCustomAlert, showCustomConfirm } from './script.js';
 import {
     collection,
     addDoc,
@@ -132,6 +132,7 @@ function renderFeed(posts) {
                     <p style="font-weight: 600; margin: 0; color: var(--color-secondary);">${safeAuthorName}</p>
                     <p style="font-size: 0.85rem; margin: 0; color: var(--color-text-muted);">${displayDate}</p>
                 </div>
+                ${authState.role === 'admin' ? `<button class="post-delete-btn" data-id="${post.id}" title="Slett innlegg">🗑️</button>` : ''}
             </div>
             <h3 style="margin-top: 0;">${safeTitle}</h3>
             <div class="feed-item-content">${safeContentHtml}</div>
@@ -193,6 +194,20 @@ function setupFeedEventListeners() {
         const toggleBtn = target.closest('.comment-btn') || target.closest('.show-more-comments');
         if (toggleBtn) {
             toggleComments(toggleBtn.dataset.id);
+            return;
+        }
+
+        // Delete Post (Admin)
+        const deletePostBtn = target.closest('.post-delete-btn');
+        if (deletePostBtn) {
+            handleDeletePost(deletePostBtn.dataset.id);
+            return;
+        }
+
+        // Delete Comment (Admin)
+        const deleteCommentBtn = target.closest('.comment-delete-btn');
+        if (deleteCommentBtn) {
+            handleDeleteComment(deleteCommentBtn.dataset.postid, deleteCommentBtn.dataset.commentid);
             return;
         }
     };
@@ -350,6 +365,7 @@ function loadInlineComments(postId) {
                     <span class="comment-author">${sanitizeHTML(data.userName)}</span>
                     <p class="comment-text">${sanitizeHTML(data.content)}</p>
                 </div>
+                ${authState.role === 'admin' ? `<button class="comment-delete-btn" data-postid="${postId}" data-commentid="${doc.id}" title="Slett kommentar">🗑️</button>` : ''}
             `;
             container.appendChild(div);
         });
@@ -441,6 +457,34 @@ async function handleAddComment(postId, text) {
             createdAt: serverTimestamp()
         });
     } catch (e) { console.error("Comment failed:", e); }
+}
+
+async function handleDeletePost(postId) {
+    if (authState.role !== 'admin') return;
+    const confirmed = await showCustomConfirm("Er du sikker på at du vil slette dette innlegget? Dette kan ikke angres.");
+    if (confirmed) {
+        try {
+            await deleteDoc(doc(db, feedCollectionPath, postId));
+            console.log("Post deleted successfully");
+        } catch (e) {
+            console.error("Error deleting post:", e);
+            showCustomAlert("Kunne ikke slette innlegget.");
+        }
+    }
+}
+
+async function handleDeleteComment(postId, commentId) {
+    if (authState.role !== 'admin') return;
+    const confirmed = await showCustomConfirm("Er du helt sikker på at du vil slette denne kommentaren? Handlingen kan ikke angres.");
+    if (confirmed) {
+        try {
+            await deleteDoc(doc(db, `${feedCollectionPath}/${postId}/comments`, commentId));
+            console.log("Comment deleted successfully");
+        } catch (e) {
+            console.error("Error deleting comment:", e);
+            showCustomAlert("Kunne ikke slette kommentaren.");
+        }
+    }
 }
 
 

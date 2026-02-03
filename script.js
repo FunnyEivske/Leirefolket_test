@@ -208,7 +208,7 @@ export function toggleModal(modal, show) {
 }
 window.toggleModal = toggleModal; // Eksponer for feed.js if needed via window
 
-function showCustomAlert(message) {
+export function showCustomAlert(message) {
     if (messageModal && messageModalText) {
         messageModalText.textContent = message;
         toggleModal(messageModal, true);
@@ -227,7 +227,7 @@ function showCustomAlert(message) {
     }
 }
 
-function showCustomConfirm(message) {
+export function showCustomConfirm(message) {
     if (confirmModal && confirmModalText) {
         confirmModalText.textContent = message;
         toggleModal(confirmModal, true);
