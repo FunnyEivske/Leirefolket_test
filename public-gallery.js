@@ -142,11 +142,16 @@ function setupPublicGalleryListener() {
         renderGallery(target, cachedImages, isTeaser);
     }
 
-    // 2. Lytt på sanntidsoppdateringer
-    onSnapshot(galleryDocRef, (docSnap) => {
-        if (docSnap.exists()) {
-            const data = docSnap.data();
-            const imageUrls = data.images || [];
+    // 2. Lytt på sanntidsoppdateringer i 'items' undersamlingen
+    const galleryItemsRef = collection(db, 'site_content', 'gallery', 'items');
+
+    onSnapshot(galleryItemsRef, (querySnapshot) => {
+        if (!querySnapshot.empty) {
+            // Vi henter alle bilder og sorterer dem hvis nødvendig (vi la til 'order' i script.js)
+            const imageUrls = querySnapshot.docs
+                .map(doc => doc.data())
+                .sort((a, b) => (a.order || 0) - (b.order || 0))
+                .map(data => data.imageUrl);
 
             // Lagre i cache for neste gang
             setCachedGallery(imageUrls);
