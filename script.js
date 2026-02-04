@@ -1,4 +1,4 @@
-import { app, auth, db, appId, authReady, sendPasswordResetEmail } from './firebase.js';
+import { app, auth, db, appId, authReady, sendPasswordResetEmail, functions, httpsCallable } from './firebase.js';
 import {
     signInWithEmailAndPassword,
     signOut,
@@ -137,15 +137,14 @@ const customStatusInput = document.getElementById('custom-status-input');
 const openingDayInputs = document.querySelectorAll('.opening-day-input');
 
 // Admin User Management
-const adminAddUserBtn = document.getElementById('admin-add-user-btn');
 const adminMembersBtn = document.getElementById('admin-members-btn');
-const adminUserModal = document.getElementById('admin-user-modal');
-const adminUserModalOverlay = document.getElementById('admin-user-modal-overlay');
-const closeUserModalBtn = document.getElementById('close-user-modal');
-const cancelUserModalBtn = document.getElementById('cancel-user-modal');
+const adminUserModal = null; // Removed, now part of members modal
+const adminUserModalOverlay = null;
+const closeUserModalBtn = null;
+const cancelUserModalBtn = null;
 const createUserForm = document.getElementById('admin-create-user-form');
 const createUserBtn = document.getElementById('create-user-btn');
-const userModalTitle = document.getElementById('user-modal-title');
+const userModalTitle = null; // Generic title now in members modal
 const editUserIdInput = document.getElementById('edit-user-id');
 const userMemberSinceInput = document.getElementById('new-user-member-since');
 
@@ -155,6 +154,22 @@ const adminMembersModalOverlay = document.getElementById('admin-members-modal-ov
 const closeMembersModalBtn = document.getElementById('close-members-modal');
 const closeMembersFooterBtn = document.getElementById('close-members-footer-btn');
 const adminMembersList = document.getElementById('admin-members-list');
+const tabActiveMembers = document.getElementById('tab-active-members');
+const tabPendingDeletions = document.getElementById('tab-pending-deletions');
+const tabAddMember = document.getElementById('tab-add-member');
+const activeMembersSection = document.getElementById('active-members-section');
+const pendingDeletionsSection = document.getElementById('pending-deletions-section');
+const addMemberSection = document.getElementById('add-member-section');
+const adminPendingList = document.getElementById('admin-pending-list');
+const adminSoftDeleteBtn = document.getElementById('admin-soft-delete-btn');
+
+// TOS & Privacy
+const tosModal = document.getElementById('tos-modal');
+const tosCheckbox = document.getElementById('tos-checkbox');
+const acceptTosBtn = document.getElementById('accept-tos-btn');
+const declineTosBtn = document.getElementById('decline-tos-btn');
+const adminMembersMenuBtn = null;
+const adminMembersSubmenu = null;
 
 // Secondary Firebase app for user creation
 let secondaryApp;
@@ -546,9 +561,16 @@ function updateUI(user, profile) {
         let startDate = null;
 
         // 1. Prioriter manuelt satt dato i Firestore (memberSince)
-        if (profile?.memberSince) {
-            // Firestore Timestamps har .toDate()
-            startDate = profile.memberSince.toDate ? profile.memberSince.toDate() : new Date(profile.memberSince);
+        // Håndter både Firestore Timestamp, Date object, og serialisert objekt fra localStorage
+        const rawDate = profile?.memberSince || profile?.startDate;
+        if (rawDate) {
+            if (rawDate.toDate) {
+                startDate = rawDate.toDate();
+            } else if (rawDate.seconds) { // Serialisert Timestamp fra cache
+                startDate = new Date(rawDate.seconds * 1000);
+            } else {
+                startDate = new Date(rawDate);
+            }
         }
         // 2. Fallback til Auth creation time
         else if (user?.metadata?.creationTime) {
@@ -596,6 +618,9 @@ function updateUI(user, profile) {
         }
     }
 
+    // Check for TOS Acceptance
+    checkTOSAcceptance(profile);
+
     // Vis admin-knapper hvis admin
     if (authState.role === 'admin') {
         if (newPostBtn) newPostBtn.classList.remove('hidden');
@@ -637,7 +662,8 @@ function protectMemberPage() {
 
 function protectLoginPage() {
     if (window.location.pathname.endsWith('/login.html')) {
-        if (authState.user) {
+        // Rediger bare hvis de er logget inn OG har godkjent vilkårene
+        if (authState.user && authState.profile?.termsAccepted) {
             window.location.href = 'medlem.html';
         }
     }
@@ -650,19 +676,48 @@ async function handleLogin(e) {
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
 
+    const loginBtn = loginForm.querySelector('button[type="submit"]');
+    const originalText = loginBtn.textContent;
+
     if (loginError) loginError.textContent = '';
     if (loginSuccess) loginSuccess.textContent = '';
 
+    loginBtn.textContent = 'Logger inn...';
+    loginBtn.disabled = true;
+
     try {
-        await signInWithEmailAndPassword(auth, email, password);
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+
+        // Sjekk status i Firestore
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+            const userData = userDoc.data();
+            if (userData.status === 'pending_deletion') {
+                await signOut(auth);
+                if (loginError) loginError.textContent = "Din konto er i ferd med å slettes. Kontakt administrator for gjenoppretting innen 30 dager.";
+                loginBtn.textContent = originalText;
+                loginBtn.disabled = false;
+                return;
+            }
+        }
+
+
     } catch (error) {
         console.error("Login failed:", error.code);
         if (loginError) {
             if (error.code === 'auth/invalid-credential') {
                 loginError.textContent = 'Feil e-post eller passord.';
+            } else if (error.code === 'auth/user-disabled') {
+                loginError.textContent = 'Denne kontoen er deaktivert. Kontakt administrator.';
             } else {
                 loginError.textContent = 'En feil oppstod. Prøv igjen.';
             }
+        }
+    } finally {
+        if (loginBtn) {
+            loginBtn.textContent = originalText;
+            loginBtn.disabled = false;
         }
     }
 }
@@ -1179,7 +1234,51 @@ if (adminStatusModalOverlay) adminStatusModalOverlay.addEventListener('click', c
 if (saveStatusBtn) saveStatusBtn.addEventListener('click', saveWorkshopStatus);
 
 // Admin: Members
-if (adminMembersBtn) adminMembersBtn.addEventListener('click', openMembersModal);
+if (adminMembersBtn) {
+    adminMembersBtn.addEventListener('click', () => {
+        openMembersModal();
+        // Reset to first tab by default
+        if (tabActiveMembers) tabActiveMembers.click();
+    });
+}
+
+// Tab switching logic for unified 3-tab modal
+function setupMembersTabs() {
+    const tabs = [
+        { btn: tabActiveMembers, section: activeMembersSection },
+        { btn: tabPendingDeletions, section: pendingDeletionsSection },
+        { btn: tabAddMember, section: addMemberSection }
+    ];
+
+    tabs.forEach(tab => {
+        if (tab.btn) {
+            tab.btn.addEventListener('click', () => {
+                // Highlighting
+                tabs.forEach(t => {
+                    if (t.btn) {
+                        t.btn.classList.remove('active');
+                        t.btn.style.borderBottomColor = 'transparent';
+                        t.btn.style.color = 'inherit';
+                    }
+                    if (t.section) t.section.classList.add('hidden');
+                });
+
+                tab.btn.classList.add('active');
+                tab.btn.style.borderBottomColor = 'var(--color-primary)';
+                tab.btn.style.color = 'var(--color-primary)';
+                if (tab.section) tab.section.classList.remove('hidden');
+
+                // If switching away from Add tab, reset password hint
+                if (tab.btn !== tabAddMember) {
+                    const hint = document.getElementById('password-hint');
+                    if (hint) hint.textContent = 'Minst 6 tegn for nye brukere.';
+                }
+            });
+        }
+    });
+}
+setupMembersTabs();
+
 if (closeMembersModalBtn) closeMembersModalBtn.addEventListener('click', closeMembersModal);
 if (closeMembersFooterBtn) closeMembersFooterBtn.addEventListener('click', closeMembersModal);
 if (adminMembersModalOverlay) adminMembersModalOverlay.addEventListener('click', closeMembersModal);
@@ -1264,6 +1363,7 @@ authReady.then(async (initialUser) => {
 // --- ADMIN MEMBERS LIST ---
 
 async function openMembersModal() {
+    resetAddMemberForm();
     toggleModal(adminMembersModal, true);
     loadMembersList();
 }
@@ -1277,16 +1377,19 @@ async function loadMembersList() {
     adminMembersList.innerHTML = '<p class="text-muted text-center">Laster medlemmer...</p>';
 
     try {
-        const usersSnapshot = await getDocs(query(collection(db, 'users'), orderBy('displayName', 'asc')));
+        const usersSnapshot = await getDocs(query(
+            collection(db, 'users'),
+            orderBy('displayName', 'asc')
+        ));
         adminMembersList.innerHTML = '';
 
-        if (usersSnapshot.empty) {
-            adminMembersList.innerHTML = '<p class="text-muted text-center">Ingen medlemmer funnet.</p>';
-            return;
-        }
+        let activeCount = 0;
 
         usersSnapshot.forEach(userDoc => {
             const userData = userDoc.data();
+            if (userData.status === 'pending_deletion') return; // Skip pending ones in the main list
+            activeCount++;
+
             const userId = userDoc.id;
 
             const div = document.createElement('div');
@@ -1331,22 +1434,28 @@ async function openEditUserModal(userId) {
 
         const userData = userDoc.data();
 
-        // Populate modal
-        if (userModalTitle) userModalTitle.textContent = `Rediger medlem: ${userData.displayName || userId}`;
+        // Switch to Add/Edit tab
+        if (tabAddMember) tabAddMember.click();
+
+        // Populate form
         if (editUserIdInput) editUserIdInput.value = userId;
 
-        // Disable email/password fields for existing users (simplified)
         const emailInput = document.getElementById('new-user-email');
         const passInput = document.getElementById('new-user-password');
+        const passHint = document.getElementById('password-hint');
+
         if (emailInput) {
-            emailInput.value = 'Eksisterende bruker (kan ikke endre e-post her)';
+            emailInput.value = userData.email || userId;
             emailInput.disabled = true;
             emailInput.required = false;
         }
         if (passInput) {
-            passInput.value = '******';
-            passInput.disabled = true;
+            passInput.value = ''; // Let them leave it empty
+            passInput.placeholder = '******';
             passInput.required = false;
+        }
+        if (passHint) {
+            passHint.textContent = 'La stå tomt for å beholde nåværende passord.';
         }
 
         document.getElementById('new-user-name').value = userData.displayName || '';
@@ -1363,21 +1472,52 @@ async function openEditUserModal(userId) {
             userMemberSinceInput.value = '';
         }
 
-        toggleModal(adminUserModal, true);
+        if (adminSoftDeleteBtn) {
+            adminSoftDeleteBtn.classList.remove('hidden');
+            adminSoftDeleteBtn.onclick = () => initiateSoftDelete(userId);
+        }
+        if (createUserBtn) createUserBtn.textContent = 'Lagre endringer';
 
     } catch (error) {
-        console.error("Error fetching user for edit:", error);
-        showCustomAlert("Kunne ikke hente brukerdata.");
+        console.error("Error fetching user data:", error);
+        alert("Kunne ikke hente brukerinformasjon.");
     }
+}
+
+function resetAddMemberForm() {
+    if (createUserForm) createUserForm.reset();
+    if (editUserIdInput) editUserIdInput.value = '';
+
+    const emailInput = document.getElementById('new-user-email');
+    const passInput = document.getElementById('new-user-password');
+    const passHint = document.getElementById('password-hint');
+
+    if (emailInput) {
+        emailInput.disabled = false;
+        emailInput.required = true;
+        emailInput.placeholder = 'bruker@epost.no';
+        emailInput.value = '';
+    }
+    if (passInput) {
+        passInput.disabled = false;
+        passInput.required = true;
+        passInput.placeholder = 'Minst 6 tegn';
+        passInput.value = '';
+    }
+    if (passHint) {
+        passHint.textContent = 'Minst 6 tegn for nye brukere.';
+    }
+
+    if (adminSoftDeleteBtn) {
+        adminSoftDeleteBtn.classList.add('hidden');
+        adminSoftDeleteBtn.onclick = null;
+    }
+    if (createUserBtn) createUserBtn.textContent = 'Opprett bruker';
 }
 
 // --- ADMIN USER MANAGEMENT ---
 
-if (adminAddUserBtn) {
-    adminAddUserBtn.addEventListener('click', () => {
-        toggleModal(adminUserModal, true);
-    });
-}
+// Redundant adminAddUserBtn listener removed (merged into unified modal)
 
 function closeUserModal() {
     toggleModal(adminUserModal, false);
@@ -1396,6 +1536,7 @@ function closeUserModal() {
     }
     if (userModalTitle) userModalTitle.textContent = 'Legg til ny bruker';
     if (editUserIdInput) editUserIdInput.value = '';
+    if (adminSoftDeleteBtn) adminSoftDeleteBtn.classList.add('hidden');
 }
 
 if (closeUserModalBtn) closeUserModalBtn.addEventListener('click', closeUserModal);
@@ -1426,7 +1567,8 @@ if (createUserForm) {
                 await setDoc(doc(db, 'users', editingId), {
                     displayName: name,
                     role: role,
-                    memberSince: memberSinceDate
+                    memberSince: memberSinceDate, // Admin controlled display date
+                    status: 'active'
                 }, { merge: true });
 
                 showCustomAlert(`Bruker ${name} er oppdatert!`);
@@ -1449,7 +1591,9 @@ if (createUserForm) {
                     displayName: name,
                     photoURL: null,
                     role: role,
-                    memberSince: memberSinceDate,
+                    memberSince: memberSinceDate, // Admin controlled display date
+                    startDate: serverTimestamp(), // Actual account creation
+                    status: 'active',
                     createdAt: serverTimestamp(),
                     createdBy: authState.user ? authState.user.uid : 'admin'
                 });
@@ -1471,3 +1615,221 @@ if (createUserForm) {
         }
     });
 }
+
+// --- PENDING DELETION MANAGEMENT ---
+
+async function loadPendingDeletionsList() {
+    if (!adminPendingList) return;
+    adminPendingList.innerHTML = '<p class="text-muted text-center">Laster forespørsler...</p>';
+
+    try {
+        const q = query(collection(db, 'users'), orderBy('deletionRequestedAt', 'desc'));
+        const usersSnapshot = await getDocs(q);
+        adminPendingList.innerHTML = '';
+
+        let count = 0;
+        usersSnapshot.forEach(userDoc => {
+            const userData = userDoc.data();
+            if (userData.status !== 'pending_deletion') return;
+            count++;
+
+            const userId = userDoc.id;
+            const requestedDate = userData.deletionRequestedAt?.toDate ? userData.deletionRequestedAt.toDate() : new Date(userData.deletionRequestedAt);
+            const deleteDate = new Date(requestedDate);
+            deleteDate.setDate(deleteDate.getDate() + 30);
+
+            const div = document.createElement('div');
+            div.className = 'card bg-subtle mb-4';
+            div.style.padding = '1rem';
+            div.innerHTML = `
+                <div class="mb-4">
+                    <p class="font-semibold">${userData.displayName || 'Ukjent'}</p>
+                    <p class="text-xs text-muted">ID: ${userId}</p>
+                    <p class="text-xs text-error mt-2">Sletting forespurt: ${requestedDate.toLocaleDateString('no-NO')}</p>
+                    <p class="text-xs font-semibold">Slettes automatisk: ${deleteDate.toLocaleDateString('no-NO')}</p>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn btn-secondary btn-sm restore-user-btn" data-id="${userId}">Gjenopprett</button>
+                    <button class="btn btn-primary btn-sm delete-now-btn" style="background-color: var(--color-error);" data-id="${userId}">Slett nå</button>
+                </div>
+            `;
+            adminPendingList.appendChild(div);
+        });
+
+        if (count === 0) {
+            adminPendingList.innerHTML = '<p class="text-muted text-center">Ingen forespørsler om sletting for øyeblikket.</p>';
+        } else {
+            // Add listeners
+            adminPendingList.querySelectorAll('.restore-user-btn').forEach(btn => {
+                btn.onclick = () => handleRestoreUser(btn.dataset.id);
+            });
+            adminPendingList.querySelectorAll('.delete-now-btn').forEach(btn => {
+                btn.onclick = () => handlePermanentDeleteNow(btn.dataset.id);
+            });
+        }
+    } catch (error) {
+        console.error("Error loading pending deletions:", error);
+        adminPendingList.innerHTML = `<p class="text-error">Feil: ${error.message}</p>`;
+    }
+}
+
+async function handleRestoreUser(userId) {
+    const confirmed = await showCustomConfirm("Er du sikker på at du vil gjenopprette denne kontoen?");
+    if (!confirmed) return;
+
+    try {
+        const restoreFn = httpsCallable(functions, 'restoreUserAccount');
+        const result = await restoreFn({ userId });
+        showCustomAlert(result.data.message);
+        loadPendingDeletionsList();
+        loadMembersList();
+    } catch (error) {
+        console.error("Restore failed:", error);
+        showCustomAlert("Gjenoppretting feilet: " + error.message);
+    }
+}
+
+async function handlePermanentDeleteNow(userId) {
+    const confirmed = await showCustomConfirm("ADVARSEL: Dette vil slette brukeren og alle deres data permanent umiddelbart. Handlingen kan ikke angres. Vil du fortsette?");
+    if (!confirmed) return;
+
+    try {
+        const deleteFn = httpsCallable(functions, 'permanentDeleteNow');
+        const result = await deleteFn({ userId });
+        showCustomAlert(result.data.message);
+        loadPendingDeletionsList();
+    } catch (error) {
+        console.error("Permanent delete failed:", error);
+        showCustomAlert("Sletting feilet: " + error.message);
+    }
+}
+
+// Tab Switching logic
+if (tabActiveMembers && tabPendingDeletions) {
+    tabActiveMembers.addEventListener('click', () => {
+        activeMembersSection.classList.remove('hidden');
+        pendingDeletionsSection.classList.add('hidden');
+        tabActiveMembers.style.borderBottomColor = 'var(--color-primary)';
+        tabActiveMembers.style.color = 'var(--color-primary)';
+        tabPendingDeletions.style.borderBottomColor = 'transparent';
+        tabPendingDeletions.style.color = 'inherit';
+        loadMembersList();
+    });
+
+    tabPendingDeletions.addEventListener('click', () => {
+        activeMembersSection.classList.add('hidden');
+        pendingDeletionsSection.classList.remove('hidden');
+        tabPendingDeletions.style.borderBottomColor = 'var(--color-primary)';
+        tabPendingDeletions.style.color = 'var(--color-primary)';
+        tabActiveMembers.style.borderBottomColor = 'transparent';
+        tabActiveMembers.style.color = 'inherit';
+        loadPendingDeletionsList();
+    });
+}
+
+// Expand openMembersModal to also load pending if that tab is active
+const originalOpenMembersModal = openMembersModal;
+window.openMembersModal = async function () {
+    await originalOpenMembersModal();
+    if (!pendingDeletionsSection.classList.contains('hidden')) {
+        loadPendingDeletionsList();
+    }
+};
+
+// Add "Soft Delete" button to the edit user modal
+async function initiateSoftDelete(userId) {
+    const confirmed = await showCustomConfirm("Vil du sette denne kontoen til sletting? Brukeren vil miste tilgang umiddelbart, og kontoen slettes permanent om 30 dager.");
+    if (!confirmed) return;
+
+    try {
+        await saveUserProfile(userId, {
+            status: 'pending_deletion',
+            deletionRequestedAt: serverTimestamp()
+        });
+        showCustomAlert("Brukeren er nå satt til sletting.");
+        closeUserModal();
+        loadMembersList();
+        loadPendingDeletionsList();
+    } catch (error) {
+        console.error("Soft delete failed:", error);
+        showCustomAlert("Kunne ikke starte sletting: " + error.message);
+    }
+}
+
+// --- TOS LOGIC ---
+
+function checkTOSAcceptance(profile) {
+    if (!tosModal) return;
+
+    // If logged in but hasn't accepted terms
+    if (authState.user && !profile?.termsAccepted) {
+        toggleModal(tosModal, true);
+        // Disable body scroll
+        document.body.style.overflow = 'hidden';
+    } else {
+        // Hide if accepted or not logged in
+        if (tosModal && !tosModal.classList.contains('hidden')) {
+            toggleModal(tosModal, false);
+            document.body.style.overflow = '';
+        }
+    }
+}
+
+if (tosCheckbox && acceptTosBtn) {
+    tosCheckbox.addEventListener('change', () => {
+        acceptTosBtn.disabled = !tosCheckbox.checked;
+    });
+
+    acceptTosBtn.addEventListener('click', async () => {
+        if (!authState.user) return;
+
+        const originalText = acceptTosBtn.textContent;
+        acceptTosBtn.textContent = 'Lagrer...';
+        acceptTosBtn.disabled = true;
+
+        try {
+            await setDoc(doc(db, 'users', authState.user.uid), {
+                termsAccepted: true,
+                termsAcceptedAt: serverTimestamp()
+            }, { merge: true });
+
+            // Update local state immediately
+            if (authState.profile) {
+                authState.profile.termsAccepted = true;
+            }
+
+            toggleModal(tosModal, false);
+            document.body.style.overflow = '';
+
+            // If on login page, redirect now
+            if (window.location.pathname.endsWith('/login.html')) {
+                window.location.href = 'medlem.html';
+            } else {
+                showCustomAlert("Takk! Du har nå full tilgang til Leirefolket.");
+                updateUI(authState.user, authState.profile);
+            }
+        } catch (error) {
+            console.error("Error accepting TOS:", error);
+            showCustomAlert("Det oppsto en feil under lagring. Prøv igjen.");
+            acceptTosBtn.textContent = originalText;
+            acceptTosBtn.disabled = false;
+        }
+    });
+}
+
+if (declineTosBtn) {
+    declineTosBtn.addEventListener('click', async () => {
+        const confirmed = await showCustomConfirm("Hvis du ikke godtar vilkårene, kan du ikke bruke våre tjenester. Vil du logge ut?");
+        if (confirmed) {
+            await signOut(auth);
+            toggleModal(tosModal, false);
+            document.body.style.overflow = '';
+
+            // Ensure they are on login page or redirected there
+            if (!window.location.pathname.endsWith('/login.html')) {
+                window.location.href = 'login.html';
+            }
+        }
+    });
+}
+

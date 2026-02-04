@@ -21,28 +21,36 @@ service cloud.firestore {
     match /users/{userId} {
       // Alle kan lese profilinfo (navn/bilde) - nødvendig for at admin skal kunne liste brukere
       // og for at vi skal kunne sjekke roller
-      allow read: if true; 
+      // MEN: Hvis status er 'pending_deletion', kan ingen (unntatt admin) lese den
+      allow read: if (resource == null || resource.data.get('status', 'active') == 'active' || isAdmin()) && true;
       
-      // Eier kan endre navn/bilde, men IKKE sin egen rolle
+      // Eier kan endre navn/bilde, men IKKE sin egen rolle og IKKE hvis de er under sletting
       allow create: if isOwner(userId) && (!request.resource.data.keys().hasAny(['role']) || request.resource.data.role == 'member');
-      allow update: if isOwner(userId) && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role']);
-      allow delete: if isOwner(userId);
+      allow update: if isOwner(userId) && 
+                      (resource.data.get('status', 'active') == 'active') &&
+                      !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'status', 'deletionRequestedAt']);
+      allow delete: if isOwner(userId) && (resource.data.get('status', 'active') == 'active');
       
-      // Admin kan endre alt, inkludert roller
+      // Admin kan endre alt, inkludert roller og slettestatus
       allow write: if isAdmin(); 
 
       // Personlig galleri
       match /gallery_images/{imageId} {
-        allow read: if true; // Alle (inkludert admin) må kunne se bildene
-        allow write: if isOwner(userId) || isAdmin(); // Eier kan laste opp, admin kan slette (valgfritt)
+        // Blokker tilgang hvis brukeren er under sletting (unntatt for admin)
+        allow read: if (get(/databases/$(database)/documents/users/$(userId)).data.get('status', 'active') == 'active' || isAdmin());
+        allow write: if (isOwner(userId) && get(/databases/$(database)/documents/users/$(userId)).data.get('status', 'active') == 'active') || isAdmin();
       }
     }
 
     // --- Innhold på siden (Offentlig Galleri osv) ---
     match /site_content/{document=**} {
       allow read: if true;
-      // Kun admin får endre hva som vises offentlig
       allow write: if isAdmin(); 
+    }
+
+    // --- Arkiv (Kun Admin) ---
+    match /archive/{docId} {
+      allow read, write: if isAdmin();
     }
     
     // --- Feed ---

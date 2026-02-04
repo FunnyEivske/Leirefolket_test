@@ -8,6 +8,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getStorage } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+import { getFunctions, httpsCallable } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-functions.js";
 
 // --- STEG 1: BRUK GLOBALE VARIABLER ---
 // ... (resten av konfigurasjonen din er uendret) ...
@@ -35,6 +36,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
+const functions = getFunctions(app);
 
 // Slå på debug-logging for Firestore (valgfritt, men nyttig)
 setLogLevel('debug');
@@ -76,4 +78,4 @@ const authReady = new Promise((resolve) => {
     });
 });
 
-export { app, auth, db, storage, authReady, appId, sendPasswordResetEmail };
+export { app, auth, db, storage, functions, httpsCallable, authReady, appId, sendPasswordResetEmail };
