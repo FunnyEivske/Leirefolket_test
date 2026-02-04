@@ -63,6 +63,136 @@
         </div>
     </div>
 
+    <!-- Mandatory TOS & Privacy Modal -->
+    <div id="tos-modal" class="hidden"
+        style="position: fixed; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center;">
+        <div style="position: absolute; inset: 0; background-color: var(--color-bg-page); z-index: -1;"></div>
+        <div class="card"
+            style="position: relative; width: 100%; max-width: 800px; max-height: 90vh; margin: 1rem; z-index: 10; display: flex; flex-direction: column; box-shadow: var(--shadow-xl); border: 2px solid var(--color-primary);">
+            <div class="card-header" style="text-align: center; border-bottom: 2px solid var(--color-bg-section);">
+                <h2 style="margin: 0; font-size: 1.5rem;">Velkommen til Leirefolket</h2>
+                <p class="text-xs text-muted mt-1">Vennligst les og godta våre vilkår for å fortsette</p>
+            </div>
+            <div class="card-body"
+                style="overflow-y: auto; flex: 1; padding: 2rem; line-height: 1.6; font-size: 0.95rem;">
+                <div id="tos-content" class="text-left">
+                    <h3 style="font-size: 1.25rem; margin-top: 0;">Brukervilkår og Personvernerklæring for Leirefolket
+                    </h3>
+                    <p class="text-xs text-muted mb-6">Sist oppdatert: 4. februar 2026</p>
+
+                    <p>Dette er en juridisk bindende avtale mellom deg som medlem og Leirefolket. Brukerkontoer i våre
+                        systemer opprettes kun av administrator eller styret. For å få tilgang til din tildelte konto og
+                        bruke våre tjenester, må du lese og erklære deg enig i samtlige punkter nedenfor ved første
+                        pålogging.</p>
+
+                    <h4 class="font-semibold mt-4 mb-2">1. Opprettelse av konto og Aldersgrense</h4>
+                    <p><strong>1.1 Administrasjonsstyrt opprettelse</strong><br>
+                        Brukerkontoer på denne plattformen opprettes ikke av brukeren selv, men tildeles av Leirefolkets
+                        administratorer eller styret etter godkjent medlemskap eller avtale.</p>
+
+                    <p><strong>1.2 Alderskrav og Samtykke</strong><br>
+                        Over 18 år: Administrator oppretter konto for myndige personer etter avtale.<br>
+                        Under 18 år: Dersom styret oppretter en konto for en person under 18 år, skal det foreligge et
+                        signert samtykkeskjema fra foresatte i Leirefolkets arkiv før kontoen aktiveres.</p>
+
+                    <h4 class="font-semibold mt-4 mb-2">2. Personvernerklæring (GDPR)</h4>
+                    <p>Vi behandler dine data i tråd med personvernforordningen (GDPR). Siden kontoen din er opprettet
+                        av en tredjepart (admin), er det avgjørende at du godkjenner denne behandlingen ved første
+                        pålogging.</p>
+
+                    <p><strong>2.1 Data som behandles</strong><br>
+                        Identitetsdata: Fullt navn og e-postadresse (tildelt av admin).<br>
+                        Tidslinje: Registreringsdato (startdato) og utmeldingsdato (sluttdato).<br>
+                        Brukerinnhold: Bilder du laster opp, kommentarer og prosjektbeskrivelser.</p>
+
+                    <p><strong>2.2 Sletteprosedyre og "Soft Delete" (30-dagers regelen)</strong><br>
+                        Når et medlemskap avsluttes, eller styret bestemmer at en konto skal slettes, trer følgende
+                        prosess i kraft:<br>
+                        - Låst tilstand (30 dager): Alle data lagres i sin helhet i 30 dager etter deaktivering.
+                        Brukeren mister tilgangen umiddelbart.<br>
+                        - Permanent sletting: Etter 30 dager slettes alle personlige filer, bilder og innstillinger
+                        permanent fra aktive systemer.<br>
+                        - Sikkerhetsarkiv: Navn, e-post, startdato og sluttdato flyttes til et lukket arkiv for å
+                        forhindre misbruk (svartelisting).</p>
+
+                    <h4 class="font-semibold mt-4 mb-2">3. Brukergenerert innhold og Promotering</h4>
+                    <p>Leirefolket er en plattform for å fremme kreativitet. For at fellesskapet skal vokse, trenger vi
+                        rettigheter til å vise frem arbeidet som lastes opp på siden.</p>
+
+                    <p><strong>3.1 Opphavsrett</strong><br>
+                        Du beholder eierskapet til bildene du laster opp til din konto.</p>
+
+                    <p><strong>3.2 Global Lisens for Promotering</strong><br>
+                        Ved å laste opp bilder til systemet, gir du Leirefolket en uinnskrenket og vederlagsfri rett til
+                        å bruke dette innholdet til promotering av fellesskapet. Dette inkluderer bruk på nettsider,
+                        sosiale medier (Instagram, Facebook, TikTok) og markedsføring.</p>
+
+                    <h4 class="font-semibold mt-4 mb-2">4. Sikkerhet og Styrets fullmakter</h4>
+                    <p>Eierskap til konto: Kontoen er Leirefolkets eiendom og tildeles brukeren for personlig bruk.<br>
+                        Utestengelse: Styret eller administrator har fullmakt til å låse eller slette kontoer
+                        umiddelbart ved brudd på retningslinjer eller "dum oppførsel".</p>
+
+                    <h4 class="font-semibold mt-4 mb-2">5. Aksept av vilkår ved første pålogging</h4>
+                    <p>Ved å trykke på "Jeg godtar" og logge inn på din tildelte konto, bekrefter du at informasjonen er
+                        korrekt, at du er over 18 år (eller har samtykke), at du forstår sletterutinen og at du gir
+                        tillatelse til promotering av dine bilder.</p>
+                </div>
+            </div>
+            <div class="card-footer"
+                style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; align-items: center; border-top: 2px solid var(--color-bg-section);">
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.5rem;">
+                    <input type="checkbox" id="tos-checkbox" style="width: 20px; height: 20px; cursor: pointer;">
+                    <label for="tos-checkbox" style="font-weight: 600; cursor: pointer;">Jeg har lest og godtar
+                        Brukervilkår og Personvernerklæring</label>
+                </div>
+                <div style="display: flex; gap: 1rem; width: 100%; max-width: 500px;">
+                    <button id="decline-tos-btn" class="btn btn-secondary" style="flex: 1; padding: 1rem;">Nekt og logg
+                        ut</button>
+                    <button id="accept-tos-btn" class="btn btn-primary" style="flex: 2; padding: 1rem;" disabled>Jeg
+                        godtar og vil fortsette</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Alert/Message Modal -->
+    <div id="message-modal" class="hidden"
+        style="position: fixed; inset: 0; z-index: 600; display: flex; align-items: center; justify-content: center; padding: 1rem;">
+        <div id="message-modal-overlay"
+            style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(8px);">
+        </div>
+        <div class="card"
+            style="position: relative; width: 100%; max-width: 400px; z-index: 10; box-shadow: var(--shadow-xl); border: 2px solid var(--color-primary); overflow: hidden;">
+            <div class="card-body text-center" style="padding: 2.5rem 2rem;">
+                <p id="message-modal-text" class="mb-8 text-lg" style="line-height: 1.5;"></p>
+                <div style="display: flex; justify-content: center;">
+                    <button id="message-modal-close" class="btn btn-primary"
+                        style="min-width: 120px; padding: 0.8rem 2rem;">Lukk</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Confirm Modal -->
+    <div id="confirm-modal" class="hidden"
+        style="position: fixed; inset: 0; z-index: 600; display: flex; align-items: center; justify-content: center; padding: 1rem;">
+        <div id="confirm-modal-overlay"
+            style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(8px);">
+        </div>
+        <div class="card"
+            style="position: relative; width: 100%; max-width: 450px; z-index: 10; box-shadow: var(--shadow-xl); border: 2px solid var(--color-primary); overflow: hidden;">
+            <div class="card-body text-center" style="padding: 2.5rem 2rem;">
+                <p id="confirm-modal-text" class="mb-8 text-lg" style="line-height: 1.5;"></p>
+                <div style="display: flex; justify-content: center; gap: 1rem;">
+                    <button id="confirm-modal-cancel" class="btn btn-secondary"
+                        style="flex: 1; padding: 0.8rem 1rem;">Avbryt</button>
+                    <button id="confirm-modal-ok" class="btn btn-primary" style="flex: 1; padding: 0.8rem 1rem;">Gå
+                        videre</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Dark Mode Floating Button -->
     <button class="theme-toggle" aria-label="Bytt tema">
         <svg class="moon-icon" style="width: 24px; height: 24px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
