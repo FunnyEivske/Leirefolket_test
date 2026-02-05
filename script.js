@@ -121,9 +121,21 @@ const notesStatus = document.getElementById('notes-status');
 
 // Admin
 const newPostBtn = document.getElementById('new-post-btn');
-const newPostContainer = document.getElementById('new-post-container');
+const adminPublishCard = document.getElementById('admin-publish-card');
 const adminToolsCard = document.getElementById('admin-tools-card');
 const adminGalleryBtn = document.getElementById('admin-gallery-btn');
+
+// Publishing Modals
+const postModal = document.getElementById('post-modal');
+const postModalOverlay = document.getElementById('post-modal-overlay');
+const closePostModalBtn = document.getElementById('close-post-modal');
+const cancelPostModalBtn = document.getElementById('cancel-post-modal');
+
+const eventModal = document.getElementById('event-modal');
+const eventModalOverlay = document.getElementById('event-modal-overlay');
+const closeEventModalBtn = document.getElementById('close-event-modal');
+const cancelEventModalBtn = document.getElementById('cancel-event-modal');
+
 // const adminPromotedBtn = document.getElementById('admin-promoted-btn'); // REMOVED
 const adminImageModal = document.getElementById('admin-image-modal');
 const adminImageModalOverlay = document.getElementById('admin-image-modal-overlay');
@@ -712,18 +724,11 @@ function updateUI(user, profile) {
     checkTOSAcceptance(profile);
 
     // Vis admin-knapper hvis admin eller bidragsyter
-    if (authState.role === 'admin' || authState.role === 'contributor') {
-        if (newPostBtn) newPostBtn.classList.remove('hidden');
-    } else {
-        if (newPostBtn) newPostBtn.classList.add('hidden');
-    }
+    const canPublish = authState.role === 'admin' || authState.role === 'contributor';
+    if (adminPublishCard) adminPublishCard.classList.toggle('hidden', !canPublish);
 
     // Vis admin-verktøy KUN hvis admin
-    if (authState.role === 'admin') {
-        if (adminToolsCard) adminToolsCard.classList.remove('hidden');
-    } else {
-        if (adminToolsCard) adminToolsCard.classList.add('hidden');
-    }
+    if (adminToolsCard) adminToolsCard.classList.toggle('hidden', authState.role !== 'admin');
 
     // Toggle navigation links based on auth state
     if (user) {
@@ -2017,4 +2022,16 @@ if (declineTosBtn) {
         }
     });
 }
+// --- PUBLISHING MODALS ---
+newPostBtn?.addEventListener('click', () => toggleModal(postModal, true));
+closePostModalBtn?.addEventListener('click', () => toggleModal(postModal, false));
+cancelPostModalBtn?.addEventListener('click', () => toggleModal(postModal, false));
+postModalOverlay?.addEventListener('click', () => toggleModal(postModal, false));
+
+const newEventBtn = document.getElementById('new-event-btn');
+newEventBtn?.addEventListener('click', () => toggleModal(eventModal, true));
+closeEventModalBtn?.addEventListener('click', () => toggleModal(eventModal, false));
+cancelEventModalBtn?.addEventListener('click', () => toggleModal(eventModal, false));
+eventModalOverlay?.addEventListener('click', () => toggleModal(eventModal, false));
+
 

@@ -81,6 +81,28 @@
                     </div>
                 </div>
 
+                <div id="admin-publish-card" class="card hidden">
+                    <div class="card-header">
+                        <h4 class="text-lg">Nytt innlegg/arrangement</h4>
+                    </div>
+                    <div class="card-body">
+                        <button id="new-post-btn" class="btn btn-primary btn-full text-sm mb-2">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M12 5v14M5 12h14" />
+                            </svg>
+                            Nytt innlegg
+                        </button>
+                        <button id="new-event-btn" class="btn btn-primary btn-full text-sm">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M12 5v14M5 12h14" />
+                            </svg>
+                            Nytt arrangement
+                        </button>
+                    </div>
+                </div>
+
                 <div id="admin-tools-card" class="card hidden">
                     <div class="card-header">
                         <h4 class="text-lg">Admin verktøy</h4>
@@ -128,48 +150,56 @@
 
 
 
-                <!-- Velkomst / Feed -->
-                <section>
-                    <div class="section-header">
-                        <h2>Siste nytt</h2>
-                        <!-- Admin-knapp for nytt innlegg (skjult for vanlige medlemmer) -->
-                        <button id="new-post-btn" class="btn btn-primary text-sm hidden">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <path d="M12 5v14M5 12h14" />
-                            </svg>
-                            Nytt innlegg
-                        </button>
-                    </div>
-
-                    <!-- Skjema for nytt innlegg (Admin) -->
-                    <div id="new-post-container" class="card mb-6 hidden">
-                        <div class="card-body">
-                            <form id="new-post-form">
-                                <div class="form-group">
-                                    <label class="form-label">Tittel</label>
-                                    <input type="text" id="post-title" class="form-input" required>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Innhold</label>
-                                    <textarea id="post-content" class="form-input" style="min-height: 100px;"
-                                        required></textarea>
-                                </div>
-
-                                <button type="submit" id="post-submit-button" class="btn btn-primary">Publiser</button>
-                                <p id="post-error" class="form-error"></p>
-                            </form>
+                <!-- Tab Switcher -->
+                <div class="card mb-6">
+                    <div class="card-body" style="padding: 0.75rem;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <button id="tab-posts" class="btn btn-primary text-sm">Innlegg</button>
+                            <button id="tab-events" class="btn btn-secondary text-sm">Arrangementer</button>
                         </div>
                     </div>
+                </div>
+
+                <!-- Velkomst / Feed -->
+                <section id="posts-section">
+
+
 
                     <!-- Feed Container -->
-                    <div id="feed-container" style="display: flex; flex-direction: column; gap: 1.5rem;">
+                    <div id="feed-container"
+                        style="display: flex; flex-direction: column; gap: 1.5rem; margin-top: 1.5rem;">
                         <div id="feed-loading" class="text-center py-10 text-muted">Laster oppdateringer...</div>
                     </div>
 
                     <!-- Load More Button -->
                     <div id="load-more-container" class="text-center mt-6 hidden">
                         <button id="load-more-btn" class="btn btn-secondary text-sm">Last flere</button>
+                    </div>
+                </section>
+
+                <!-- Arrangementer Section -->
+                <section id="events-section" class="hidden">
+
+
+                    <div id="upcoming-events-container"
+                        style="display: flex; flex-direction: column; gap: 1.5rem; margin-top: 1.5rem;">
+                        <div class="text-center py-10 text-muted">Laster arrangementer...</div>
+                    </div>
+
+                    <!-- Past Events (Archived) -->
+                    <div id="past-events-wrapper" class="mt-10">
+                        <button id="toggle-past-events" class="btn btn-ghost text-sm mb-4"
+                            style="width: 100%; justify-content: space-between;">
+                            <span>Tidligere arrangementer</span>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <div id="past-events-container" class="hidden"
+                            style="display: flex; flex-direction: column; gap: 1rem; opacity: 0.7;">
+                            <!-- Tidligere arrangementer her -->
+                        </div>
                     </div>
                 </section>
 
@@ -574,6 +604,92 @@
         </div>
     </div>
 
+    <!-- Nytt Innlegg Modal -->
+    <div id="post-modal" class="hidden"
+        style="position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; padding: 1rem;">
+        <div id="post-modal-overlay"
+            style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px);"></div>
+        <div class="card"
+            style="position: relative; width: 100%; max-width: 600px; z-index: 10; box-shadow: var(--shadow-xl);">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 class="text-lg" style="margin-bottom: 0;">Opprett nytt innlegg</h3>
+                <button id="close-post-modal" class="btn btn-ghost" style="padding: 0.5rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="card-body">
+                <form id="new-post-form">
+                    <div class="form-group">
+                        <label class="form-label">Tittel</label>
+                        <input type="text" id="post-title" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Innhold</label>
+                        <textarea id="post-content" class="form-input" style="min-height: 150px;" required></textarea>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
+                        <button type="button" id="cancel-post-modal" class="btn btn-secondary">Avbryt</button>
+                        <button type="submit" id="post-submit-button" class="btn btn-primary">Publiser innlegg</button>
+                    </div>
+                    <p id="post-error" class="form-error"></p>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nytt Arrangement Modal -->
+    <div id="event-modal" class="hidden"
+        style="position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; padding: 1rem;">
+        <div id="event-modal-overlay"
+            style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px);"></div>
+        <div class="card"
+            style="position: relative; width: 100%; max-width: 600px; z-index: 10; box-shadow: var(--shadow-xl);">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 class="text-lg" style="margin-bottom: 0;">Opprett nytt arrangement</h3>
+                <button id="close-event-modal" class="btn btn-ghost" style="padding: 0.5rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="card-body">
+                <form id="new-event-form">
+                    <div class="form-group">
+                        <label class="form-label">Tittel</label>
+                        <input type="text" id="event-title" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Beskrivelse</label>
+                        <textarea id="event-description" class="form-input" style="min-height: 100px;"
+                            required></textarea>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label class="form-label">Dato og tid</label>
+                            <input type="datetime-local" id="event-date" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Sted (Valgfritt)</label>
+                            <input type="text" id="event-location" class="form-input" placeholder="f.eks. Verkstedet">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Bilde</label>
+                        <input type="file" id="event-image" class="form-input" accept="image/*">
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
+                        <button type="button" id="cancel-event-modal" class="btn btn-secondary">Avbryt</button>
+                        <button type="submit" id="event-submit-button" class="btn btn-primary">Publiser
+                            arrangement</button>
+                    </div>
+                    <p id="event-error" class="form-error"></p>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Custom Confirm Modal -->
     <div id="confirm-modal" class="hidden"
         style="position: fixed; inset: 0; z-index: 600; display: flex; align-items: center; justify-content: center; padding: 1rem;">
@@ -632,6 +748,7 @@
     <script type="module" src="firebase.js"></script>
     <script type="module" src="script.js"></script>
     <script type="module" src="feed.js"></script>
+    <script type="module" src="arrangement.js"></script>
 </body>
 
 </html>

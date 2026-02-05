@@ -48,11 +48,7 @@ const feedCollectionPath = `/artifacts/${appId}/public/data/feed`;
  * Viser eller skjuler admin-funksjoner (f.eks. "Nytt innlegg"-skjema).
  */
 function toggleAdminFeatures(role) {
-    if (role === 'admin' || role === 'contributor') {
-        newPostContainer.classList.remove('hidden');
-    } else {
-        newPostContainer.classList.add('hidden');
-    }
+    // Buttons are in sidebar, modals are at bottom.
 }
 
 /**
@@ -310,6 +306,9 @@ async function handlePostSubmit(e) {
 
         // Tøm skjemaet
         newPostForm.reset();
+        const postModal = document.getElementById('post-modal');
+        if (postModal) toggleModal(postModal, false);
+        showCustomAlert("Innlegget er publisert!");
 
     } catch (error) {
         console.error("Error creating new post:", error);

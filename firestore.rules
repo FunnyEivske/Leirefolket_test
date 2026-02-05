@@ -78,5 +78,18 @@ service cloud.firestore {
         allow write: if isSignedIn() && request.auth.uid == userId;
       }
     }
+
+    // --- Arrangementer ---
+    match /artifacts/{appId}/public/data/arrangements/{arrangementId} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin() || isContributor();
+      allow update, delete: if isAdmin();
+
+      // RSVP
+      match /rsvp/{userId} {
+        allow read: if isSignedIn();
+        allow write: if isSignedIn() && request.auth.uid == userId;
+      }
+    }
   }
 }
