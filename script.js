@@ -99,10 +99,19 @@ const uploadModalOverlay = document.getElementById('upload-modal-overlay');
 const closeUploadModalBtn = document.getElementById('close-upload-modal');
 const uploadForm = document.getElementById('upload-form');
 const uploadFilesInput = document.getElementById('upload-files-input');
-const uploadDescriptionInput = document.getElementById('upload-description-input');
+const uploadDropZone = document.getElementById('upload-drop-zone');
+const pendingUploadsContainer = document.getElementById('pending-uploads-container');
+const uploadActions = document.getElementById('upload-actions');
 const confirmUploadBtn = document.getElementById('confirm-upload-btn');
 const modalGalleryContainer = document.getElementById('modal-gallery-container'); // Renamed
 const dashboardGalleryPreview = document.getElementById('dashboard-gallery-preview'); // New
+
+// Lightbox
+const imageLightbox = document.getElementById('image-lightbox');
+const lightboxOverlay = document.getElementById('lightbox-overlay');
+const lightboxImg = document.getElementById('lightbox-img');
+const lightboxDescription = document.getElementById('lightbox-description');
+const closeLightboxBtn = document.getElementById('close-lightbox');
 
 // Notes
 const notesForm = document.getElementById('notes-form');
@@ -156,11 +165,14 @@ const closeMembersFooterBtn = document.getElementById('close-members-footer-btn'
 const adminMembersList = document.getElementById('admin-members-list');
 const tabActiveMembers = document.getElementById('tab-active-members');
 const tabPendingDeletions = document.getElementById('tab-pending-deletions');
+const tabArchive = document.getElementById('tab-archive');
 const tabAddMember = document.getElementById('tab-add-member');
 const activeMembersSection = document.getElementById('active-members-section');
 const pendingDeletionsSection = document.getElementById('pending-deletions-section');
+const archiveSection = document.getElementById('archive-section');
 const addMemberSection = document.getElementById('add-member-section');
 const adminPendingList = document.getElementById('admin-pending-list');
+const adminArchiveList = document.getElementById('admin-archive-list');
 const adminSoftDeleteBtn = document.getElementById('admin-soft-delete-btn');
 
 // TOS & Privacy
@@ -206,20 +218,26 @@ const confirmModalOverlay = document.getElementById('confirm-modal-overlay');
 
 // --- HJELPEFUNKSJONER ---
 
+export function updateScrollLock() {
+    const allModals = document.querySelectorAll('.lightbox, [id$="-modal"]');
+    const anyModalOpen = Array.from(allModals).some(m => !m.classList.contains('hidden') && m.style.display !== 'none');
+    const menuOpen = mobileMenu && mobileMenu.classList.contains('show');
+
+    if (anyModalOpen || menuOpen) {
+        document.body.classList.add('modal-open');
+    } else {
+        document.body.classList.remove('modal-open');
+    }
+}
+
 export function toggleModal(modal, show) {
     if (!modal) return;
     if (show) {
         modal.classList.remove('hidden');
-        document.body.classList.add('modal-open');
     } else {
         modal.classList.add('hidden');
-        // Sjekk om andre modaler fortsatt er åpne før vi fjerner scroll-lock
-        const allModals = document.querySelectorAll('[id$="-modal"]');
-        const anyOpen = Array.from(allModals).some(m => !m.classList.contains('hidden'));
-        if (!anyOpen) {
-            document.body.classList.remove('modal-open');
-        }
     }
+    updateScrollLock();
 }
 window.toggleModal = toggleModal; // Eksponer for feed.js if needed via window
 
@@ -404,6 +422,10 @@ function setupGalleryListener(uid) {
 
                     div.appendChild(imageEl);
 
+                    // Lightbox click
+                    imageEl.style.cursor = 'pointer';
+                    imageEl.onclick = () => openLightbox(img.imageUrl, img.description);
+
                     // Slett-knapp (kun i modal)
                     const deleteBtn = document.createElement('button');
                     deleteBtn.className = 'gallery-delete-btn';
@@ -481,18 +503,76 @@ async function deleteGalleryImage(uid, imageId) {
 
 function openUploadModal() {
     toggleModal(uploadModal, true);
+    resetUploadForm();
 }
 
 function closeUploadModal() {
     toggleModal(uploadModal, false);
+    resetUploadForm();
+}
+
+function resetUploadForm() {
     if (uploadForm) uploadForm.reset();
+    if (pendingUploadsContainer) {
+        pendingUploadsContainer.innerHTML = '';
+        pendingUploadsContainer.classList.add('hidden');
+    }
+    if (uploadActions) uploadActions.classList.add('hidden');
+    if (uploadDropZone) uploadDropZone.classList.remove('hidden');
+}
+
+// Lightbox
+function openLightbox(url, description) {
+    if (!imageLightbox || !lightboxImg) return;
+    lightboxImg.src = url;
+    if (lightboxDescription) {
+        lightboxDescription.textContent = description || '';
+    }
+    toggleModal(imageLightbox, true);
+}
+
+function closeLightbox() {
+    if (!imageLightbox) return;
+    toggleModal(imageLightbox, false);
+}
+
+// Handle file selection for multi-upload previews
+if (uploadFilesInput) {
+    uploadFilesInput.addEventListener('change', async (e) => {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+
+        if (pendingUploadsContainer) {
+            pendingUploadsContainer.innerHTML = '';
+            pendingUploadsContainer.classList.remove('hidden');
+        }
+        if (uploadActions) uploadActions.classList.remove('hidden');
+        if (uploadDropZone) uploadDropZone.classList.add('hidden');
+
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            const reader = new FileReader();
+
+            reader.onload = (event) => {
+                const card = document.createElement('div');
+                card.className = 'pending-upload-card';
+                card.innerHTML = `
+                    <img src="${event.target.result}" class="pending-upload-preview" alt="Preview">
+                    <div class="pending-upload-info">
+                        <textarea class="pending-description" placeholder="Beskrivelse for dette bildet..." rows="2"></textarea>
+                    </div>
+                `;
+                if (pendingUploadsContainer) pendingUploadsContainer.appendChild(card);
+            };
+            reader.readAsDataURL(file);
+        }
+    });
 }
 
 async function handleGalleryUploadSubmit(e) {
     e.preventDefault();
 
     const files = uploadFilesInput.files;
-    const description = uploadDescriptionInput.value.trim();
 
     if (!files || files.length === 0) return;
 
@@ -509,10 +589,14 @@ async function handleGalleryUploadSubmit(e) {
         const uid = authState.user.uid;
         const galleryRef = collection(db, `users/${uid}/gallery_images`);
 
+        // Finn alle beskrivelses-felter
+        const descInputs = pendingUploadsContainer ? pendingUploadsContainer.querySelectorAll('.pending-description') : [];
+
         // Loop gjennom alle valgte filer
         const allowedTypes = ['image/jpeg', 'image/png'];
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
+            const individualDesc = descInputs[i] ? descInputs[i].value.trim() : null;
 
             if (!allowedTypes.includes(file.type)) {
                 console.warn("Skipping file due to type:", file.name, file.type);
@@ -523,7 +607,7 @@ async function handleGalleryUploadSubmit(e) {
 
             await addDoc(galleryRef, {
                 imageUrl: base64Image,
-                description: description || null, // Shared description for batch
+                description: individualDesc || null,
                 createdAt: serverTimestamp(),
                 uploadedBy: uid
             });
@@ -553,7 +637,13 @@ function updateUI(user, profile) {
     if (profileName) profileName.textContent = displayName;
     if (profileImg) profileImg.src = photoURL;
     if (profileRoleText) {
-        profileRoleText.textContent = authState.role === 'admin' ? 'Administrator' : 'Medlem';
+        if (authState.role === 'admin') {
+            profileRoleText.textContent = 'Administrator';
+        } else if (authState.role === 'contributor') {
+            profileRoleText.textContent = 'Bidragsyter';
+        } else {
+            profileRoleText.textContent = 'Medlem';
+        }
     }
 
     // Membership Duration
@@ -621,12 +711,17 @@ function updateUI(user, profile) {
     // Check for TOS Acceptance
     checkTOSAcceptance(profile);
 
-    // Vis admin-knapper hvis admin
-    if (authState.role === 'admin') {
+    // Vis admin-knapper hvis admin eller bidragsyter
+    if (authState.role === 'admin' || authState.role === 'contributor') {
         if (newPostBtn) newPostBtn.classList.remove('hidden');
-        if (adminToolsCard) adminToolsCard.classList.remove('hidden');
     } else {
         if (newPostBtn) newPostBtn.classList.add('hidden');
+    }
+
+    // Vis admin-verktøy KUN hvis admin
+    if (authState.role === 'admin') {
+        if (adminToolsCard) adminToolsCard.classList.remove('hidden');
+    } else {
         if (adminToolsCard) adminToolsCard.classList.add('hidden');
     }
 
@@ -1141,8 +1236,9 @@ if (mobileMenuButton) {
         const isOpen = mobileMenu.classList.toggle('show');
 
         // Body scroll lock
+        updateScrollLock();
+
         if (isOpen) {
-            document.body.style.overflow = 'hidden';
             // Endre ikon til X (enkelt) eller animer SVG (bedre)
             mobileMenuButton.innerHTML = `
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -1164,7 +1260,7 @@ if (mobileMenuButton) {
         mobileMenu.querySelectorAll('a, button').forEach(link => {
             link.addEventListener('click', () => {
                 mobileMenu.classList.remove('show');
-                document.body.style.overflow = '';
+                updateScrollLock();
                 mobileMenuButton.innerHTML = `
                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M4 6h16M4 12h16m-7 6h7" stroke-linecap="round" stroke-linejoin="round"/>
@@ -1209,6 +1305,10 @@ if (uploadForm) {
 if (closeUploadModalBtn) closeUploadModalBtn.addEventListener('click', closeUploadModal);
 if (uploadModalOverlay) uploadModalOverlay.addEventListener('click', closeUploadModal);
 
+// Lightbox listeners
+if (closeLightboxBtn) closeLightboxBtn.addEventListener('click', closeLightbox);
+if (lightboxOverlay) lightboxOverlay.addEventListener('click', closeLightbox);
+
 
 // Admin: Nytt innlegg toggle
 if (newPostBtn) {
@@ -1245,14 +1345,17 @@ if (adminMembersBtn) {
 // Tab switching logic for unified 3-tab modal
 function setupMembersTabs() {
     const tabs = [
-        { btn: tabActiveMembers, section: activeMembersSection },
-        { btn: tabPendingDeletions, section: pendingDeletionsSection },
+        { btn: tabActiveMembers, section: activeMembersSection, loadFunc: loadMembersList },
+        { btn: tabPendingDeletions, section: pendingDeletionsSection, loadFunc: loadPendingDeletionsList },
+        { btn: tabArchive, section: archiveSection, loadFunc: loadArchiveList },
         { btn: tabAddMember, section: addMemberSection }
     ];
 
     tabs.forEach(tab => {
         if (tab.btn) {
             tab.btn.addEventListener('click', () => {
+                if (tab.btn.classList.contains('active')) return;
+
                 // Highlighting
                 tabs.forEach(t => {
                     if (t.btn) {
@@ -1267,6 +1370,9 @@ function setupMembersTabs() {
                 tab.btn.style.borderBottomColor = 'var(--color-primary)';
                 tab.btn.style.color = 'var(--color-primary)';
                 if (tab.section) tab.section.classList.remove('hidden');
+
+                // Load data if function provided
+                if (tab.loadFunc) tab.loadFunc();
 
                 // If switching away from Add tab, reset password hint
                 if (tab.btn !== tabAddMember) {
@@ -1589,6 +1695,7 @@ if (createUserForm) {
                 // 2. Create profile in Firestore
                 await setDoc(doc(db, 'users', newUser.uid), {
                     displayName: name,
+                    email: email, // Saved for archive purposes
                     photoURL: null,
                     role: role,
                     memberSince: memberSinceDate, // Admin controlled display date
@@ -1704,28 +1811,106 @@ async function handlePermanentDeleteNow(userId) {
     }
 }
 
-// Tab Switching logic
-if (tabActiveMembers && tabPendingDeletions) {
-    tabActiveMembers.addEventListener('click', () => {
-        activeMembersSection.classList.remove('hidden');
-        pendingDeletionsSection.classList.add('hidden');
-        tabActiveMembers.style.borderBottomColor = 'var(--color-primary)';
-        tabActiveMembers.style.color = 'var(--color-primary)';
-        tabPendingDeletions.style.borderBottomColor = 'transparent';
-        tabPendingDeletions.style.color = 'inherit';
-        loadMembersList();
-    });
+// --- ARCHIVE MANAGEMENT ---
 
-    tabPendingDeletions.addEventListener('click', () => {
-        activeMembersSection.classList.add('hidden');
-        pendingDeletionsSection.classList.remove('hidden');
-        tabPendingDeletions.style.borderBottomColor = 'var(--color-primary)';
-        tabPendingDeletions.style.color = 'var(--color-primary)';
-        tabActiveMembers.style.borderBottomColor = 'transparent';
-        tabActiveMembers.style.color = 'inherit';
-        loadPendingDeletionsList();
-    });
+async function loadArchiveList() {
+    if (!adminArchiveList) return;
+    adminArchiveList.innerHTML = '<p class="text-muted text-center">Laster arkiv...</p>';
+
+    try {
+        // Fetch all archived users. Using orderBy might exclude documents without the field.
+        const q = query(collection(db, 'archive'));
+        const archiveSnapshot = await getDocs(q);
+        adminArchiveList.innerHTML = '';
+
+        let archiveDataArray = [];
+        archiveSnapshot.forEach(doc => {
+            const data = doc.data();
+            data.id = doc.id;
+            archiveDataArray.push(data);
+        });
+
+        // Sort client-side to handle both archivedAt and old endDate fields
+        archiveDataArray.sort((a, b) => {
+            const dateA = a.archivedAt?.toDate?.() || a.archivedAt?.toDate || a.endDate?.toDate?.() || a.endDate?.toDate || new Date(0);
+            const dateB = b.archivedAt?.toDate?.() || b.archivedAt?.toDate || b.endDate?.toDate?.() || b.endDate?.toDate || new Date(0);
+            return new Date(dateB) - new Date(dateA);
+        });
+
+        let count = 0;
+        archiveDataArray.forEach(data => {
+            count++;
+            const userId = data.id;
+            const archivedRaw = data.archivedAt || data.endDate;
+            const archivedDate = archivedRaw?.toDate ? archivedRaw.toDate() : (archivedRaw ? new Date(archivedRaw) : new Date(0));
+
+            const div = document.createElement('div');
+            div.className = 'card bg-subtle mb-4';
+            div.style.padding = '1rem';
+            div.innerHTML = `
+                <div class="mb-4">
+                    <p class="font-semibold">${data.fullName || 'Ukjent'}</p>
+                    <p class="text-xs text-muted">ID: ${userId} | E-post: ${data.email || 'Mangler'}</p>
+                    <p class="text-xs text-muted mt-2">Arkivert: ${archivedDate.toLocaleDateString('no-NO')}</p>
+                    <p class="text-xs text-muted">Rolle: ${data.role || 'member'}</p>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button class="btn btn-secondary btn-sm restore-archive-btn" data-id="${userId}">Gjenopprett</button>
+                    <button class="btn btn-ghost btn-sm wipe-archive-btn" style="color: var(--color-error);" data-id="${userId}">Slett fra arkiv</button>
+                </div>
+            `;
+            adminArchiveList.appendChild(div);
+        });
+
+        if (count === 0) {
+            adminArchiveList.innerHTML = '<p class="text-muted text-center">Arkivet er tomt.</p>';
+        } else {
+            // Add listeners
+            adminArchiveList.querySelectorAll('.restore-archive-btn').forEach(btn => {
+                btn.onclick = () => handleRestoreFromArchive(btn.dataset.id);
+            });
+            adminArchiveList.querySelectorAll('.wipe-archive-btn').forEach(btn => {
+                btn.onclick = () => handleWipeFromArchive(btn.dataset.id);
+            });
+        }
+    } catch (error) {
+        console.error("Error loading archive:", error);
+        adminArchiveList.innerHTML = `<p class="text-error">Feil: ${error.message}</p>`;
+    }
 }
+
+async function handleRestoreFromArchive(userId) {
+    const confirmed = await showCustomConfirm("Vil du gjenopprette denne brukeren? De vil få en ny konto og må be om nytt passord for å logge inn. De må også godta vilkårene på nytt.");
+    if (!confirmed) return;
+
+    try {
+        const restoreFn = httpsCallable(functions, 'restoreFromArchive');
+        const result = await restoreFn({ userId });
+        showCustomAlert(result.data.message);
+        loadArchiveList();
+        loadMembersList();
+    } catch (error) {
+        console.error("Restore from archive failed:", error);
+        showCustomAlert("Gjenoppretting feilet: " + error.message);
+    }
+}
+
+async function handleWipeFromArchive(userId) {
+    const confirmed = await showCustomConfirm("ER DU HELT SIKKER? Dette sletter all arkivert informasjon om brukeren for alltid. Dette kan ikke angres.");
+    if (!confirmed) return;
+
+    try {
+        const wipeFn = httpsCallable(functions, 'wipeFromArchive');
+        const result = await wipeFn({ userId });
+        showCustomAlert(result.data.message);
+        loadArchiveList();
+    } catch (error) {
+        console.error("Wipe from archive failed:", error);
+        showCustomAlert("Sletting fra arkiv feilet: " + error.message);
+    }
+}
+
+// Tab Switching logic handled by setupMembersTabs() above.
 
 // Expand openMembersModal to also load pending if that tab is active
 const originalOpenMembersModal = openMembersModal;

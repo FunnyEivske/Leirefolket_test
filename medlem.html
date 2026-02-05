@@ -97,6 +97,7 @@
                         </div>
 
                         <div>
+                            <h5 class="text-xs font-semibold uppercase text-muted mb-2">Medlemmer</h5>
                             <button id="admin-members-btn" class="btn btn-primary btn-full text-sm">
                                 Administrer medlemmer
                             </button>
@@ -268,18 +269,36 @@
                 <!-- Upload Section -->
                 <form id="upload-form" class="mb-6">
                     <div class="form-group">
-                        <label class="form-label">Last opp nye bilder</label>
-                        <div style="display: flex; gap: 0.5rem; align-items: flex-start;">
-                            <input type="file" id="upload-files-input" class="form-input" accept="image/png, image/jpeg"
-                                multiple required style="flex:1;">
-                            <button type="submit" id="confirm-upload-btn" class="btn btn-primary"
-                                style="white-space: nowrap;">Last opp</button>
+                        <label class="form-label" style="display: block; margin-bottom: 1rem;">Last opp nye
+                            bilder</label>
+
+                        <!-- Premium Drop Zone -->
+                        <div id="upload-drop-zone" class="upload-drop-zone">
+                            <div class="drop-zone-content">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" class="mb-2" style="opacity: 0.5;">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
+                                <p class="text-sm font-semibold mb-1">Dra og slipp bilder her</p>
+                                <p class="text-xs text-muted">eller klikk for å velge filer</p>
+                            </div>
+                            <input type="file" id="upload-files-input" accept="image/png, image/jpeg" multiple required>
                         </div>
-                        <p class="text-xs text-muted mt-1">Kun JPG og PNG er tillatt. Video og RAW støttes ikke.</p>
+                        <p class="text-xs text-muted mt-2">Kun JPG og PNG er tillatt. Video og RAW støttes ikke.</p>
                     </div>
-                    <div class="form-group">
-                        <textarea id="upload-description-input" class="form-input" rows="2"
-                            placeholder="Beskrivelse (valgfritt)"></textarea>
+
+                    <!-- Pending Uploads Grid -->
+                    <div id="pending-uploads-container" class="pending-uploads-grid hidden">
+                        <!-- Preview cards with description fields will be added here -->
+                    </div>
+
+                    <div id="upload-actions" class="hidden"
+                        style="margin-top: 2rem; border-top: 1px solid var(--color-border); padding-top: 1rem; display: flex; justify-content: flex-end;">
+                        <button type="submit" id="confirm-upload-btn" class="btn btn-primary">Last opp alle valgte
+                            bilder</button>
                     </div>
                 </form>
 
@@ -463,6 +482,7 @@
                     </style>
                     <button id="tab-active-members" class="tab-btn active">Aktive medlemmer</button>
                     <button id="tab-pending-deletions" class="tab-btn">Sletting forespurt</button>
+                    <button id="tab-archive" class="tab-btn">Arkiv</button>
                     <button id="tab-add-member" class="tab-btn">+ Legg til / Rediger</button>
                 </div>
             </div>
@@ -478,6 +498,14 @@
                 <div id="pending-deletions-section" class="hidden">
                     <div id="admin-pending-list" style="display: flex; flex-direction: column; gap: 1rem;">
                         <p class="text-muted text-center">Ingen forespørsler om sletting.</p>
+                    </div>
+                </div>
+
+                <!-- Archive Tab -->
+                <div id="archive-section" class="hidden">
+                    <div id="admin-archive-list"
+                        style="display: flex; flex-direction: column; gap: 1rem; padding: 1.5rem;">
+                        <p class="text-muted text-center">Laster arkiv...</p>
                     </div>
                 </div>
 
@@ -504,6 +532,7 @@
                             <label for="new-user-role" class="form-label">Rolle</label>
                             <select id="new-user-role" class="form-input">
                                 <option value="member">Medlem</option>
+                                <option value="contributor">Bidragsyter</option>
                                 <option value="admin">Administrator</option>
                             </select>
                         </div>
@@ -580,6 +609,24 @@
                 d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
         </svg>
     </button>
+
+    <!-- Image Lightbox Modal -->
+    <div id="image-lightbox" class="hidden lightbox">
+        <div class="lightbox-overlay" id="lightbox-overlay"></div>
+        <div class="lightbox-content">
+            <button id="close-lightbox" class="lightbox-close">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+            </button>
+            <div class="lightbox-image-container">
+                <img id="lightbox-img" src="" alt="Enlarged view">
+            </div>
+            <div class="lightbox-caption">
+                <p id="lightbox-description"></p>
+            </div>
+        </div>
+    </div>
 
     <!-- Firebase og hoved-script -->
     <script type="module" src="firebase.js"></script>

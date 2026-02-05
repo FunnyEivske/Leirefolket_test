@@ -48,7 +48,7 @@ const feedCollectionPath = `/artifacts/${appId}/public/data/feed`;
  * Viser eller skjuler admin-funksjoner (f.eks. "Nytt innlegg"-skjema).
  */
 function toggleAdminFeatures(role) {
-    if (role === 'admin') {
+    if (role === 'admin' || role === 'contributor') {
         newPostContainer.classList.remove('hidden');
     } else {
         newPostContainer.classList.add('hidden');
@@ -281,7 +281,7 @@ function setupFeedListener(limitCount = 5) {
  */
 async function handlePostSubmit(e) {
     e.preventDefault();
-    if (authState.role !== 'admin' || !authState.user) {
+    if ((authState.role !== 'admin' && authState.role !== 'contributor') || !authState.user) {
         postError.textContent = 'Du har ikke tilgang til å publisere.';
         return;
     }

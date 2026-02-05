@@ -17,6 +17,12 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', null) == 'admin';
     }
+
+    function isContributor() {
+      return isSignedIn() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', null) == 'contributor';
+    }
     // --- Brukere og Galleri ---
     match /users/{userId} {
       // Alle kan lese profilinfo (navn/bilde) - nødvendig for at admin skal kunne liste brukere
@@ -56,7 +62,8 @@ service cloud.firestore {
     // --- Feed ---
     match /artifacts/{appId}/public/data/feed/{postId} {
       allow read: if isSignedIn(); // Only members/admins
-      allow write: if isAdmin(); 
+      allow create: if isAdmin() || isContributor();
+      allow update, delete: if isAdmin();
 
       // Kommentarer
       match /comments/{commentId} {
