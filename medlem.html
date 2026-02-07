@@ -6,7 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Min side - Leirefolket</title>
     <link rel="stylesheet" href="medlem.css">
+    <!-- Quill.js for Rich Text Editing -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
     <!-- Tema-veksler (Laster tidlig for å unngå flash) -->
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
     <script src="theme-switcher.js"></script>
 </head>
 
@@ -78,12 +81,24 @@
                             <button id="open-profile-modal" class="btn btn-primary btn-full text-sm">Rediger
                                 profil</button>
                         </div>
+                        <div id="admin-trigger-container" class="admin-trigger-container hidden">
+                            <button id="open-admin-control-btn" class="btn btn-secondary btn-full text-xs"
+                                style="gap: 0.4rem;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <circle cx="12" cy="12" r="3" />
+                                    <path
+                                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                                </svg>
+                                Administrasjon
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 <div id="admin-publish-card" class="card hidden">
                     <div class="card-header">
-                        <h4 class="text-lg">Nytt innlegg/arrangement</h4>
+                        <h4 id="publish-card-title" class="text-lg">Nytt innlegg/arrangement</h4>
                     </div>
                     <div class="card-body">
                         <button id="new-post-btn" class="btn btn-primary btn-full text-sm mb-2">
@@ -93,39 +108,28 @@
                             </svg>
                             Nytt innlegg
                         </button>
-                        <button id="new-event-btn" class="btn btn-primary btn-full text-sm">
+                        <button id="new-event-btn" class="btn btn-primary btn-full text-sm mb-2">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2">
                                 <path d="M12 5v14M5 12h14" />
                             </svg>
                             Nytt arrangement
                         </button>
+                        <button id="open-documents-btn" class="btn btn-secondary btn-full text-sm">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" style="margin-right: 0.5rem;">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                                <polyline points="10 9 9 9 8 9"></polyline>
+                            </svg>
+                            Dokumenter
+                        </button>
                     </div>
                 </div>
 
-                <div id="admin-tools-card" class="card hidden">
-                    <div class="card-header">
-                        <h4 class="text-lg">Admin verktøy</h4>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-4">
-                            <h5 class="text-xs font-semibold uppercase text-muted mb-2">Innhold</h5>
-                            <button id="admin-gallery-btn" class="btn btn-primary btn-full text-sm mb-2">
-                                Administrer galleri
-                            </button>
-                            <button id="admin-status-btn" class="btn btn-primary btn-full text-sm mb-4">
-                                Status & åpningstider
-                            </button>
-                        </div>
 
-                        <div>
-                            <h5 class="text-xs font-semibold uppercase text-muted mb-2">Medlemmer</h5>
-                            <button id="admin-members-btn" class="btn btn-primary btn-full text-sm">
-                                Administrer medlemmer
-                            </button>
-                        </div>
-                    </div>
-                </div>
 
                 <!-- Info-kort -->
                 <div class="card">
@@ -143,6 +147,7 @@
                         </div>
                     </div>
                 </div>
+
             </aside>
 
             <!-- Hovedinnhold (Midten) -->
@@ -208,21 +213,15 @@
             <!-- Sidebar Høyre: Promotert & Galleri -->
             <aside class="dashboard-sidebar-right">
 
-                <!-- Mine Notater (Flyttet hit) -->
+                <!-- Alle Medlemmer -->
                 <div class="card mb-6">
                     <div class="card-header">
-                        <h3 class="text-lg">Mine notater</h3>
+                        <h3 class="text-lg">Medlemmer</h3>
                     </div>
                     <div class="card-body">
-                        <form id="notes-form">
-                            <textarea id="user-notes-input" class="form-input" rows="5"
-                                placeholder="Skriv dine personlige notater her..."></textarea>
-                            <div class="mt-4 text-right">
-                                <button type="submit" id="save-notes-btn" class="btn btn-secondary text-sm">Lagre
-                                    notater</button>
-                            </div>
-                            <p id="notes-status" class="text-sm text-center mt-2"></p>
-                        </form>
+                        <div id="sidebar-members-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <p class="text-muted text-sm">Laster medlemmer...</p>
+                        </div>
                     </div>
                 </div>
 
@@ -349,28 +348,21 @@
         </div>
     </div>
 
-    <!-- Admin Image Selection Modal -->
-    <div id="admin-image-modal" class="hidden"
-        style="position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;">
-        <div id="admin-image-modal-overlay"
-            style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px);"></div>
-        <div class="card"
-            style="position: relative; width: 100%; max-width: 800px; height: 80vh; margin: 1rem; z-index: 10; display: flex; flex-direction: column;">
+    <!-- Admin Image Selection Modal (Gallery Management) -->
+    <div id="admin-image-modal" class="hidden modal-container">
+        <div id="admin-image-modal-overlay" class="modal-overlay"></div>
+        <div class="card modal-content maxWidth-800">
             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <h3 id="admin-modal-title">Velg bilder</h3>
-                <button id="close-admin-modal" class="btn btn-ghost"
-                    style="padding: 0.5rem; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-md);">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        style="opacity: 0.7;">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                <h3 id="admin-modal-title" class="text-lg">Velg bilder til galleri</h3>
+                <button id="close-admin-modal" class="btn btn-ghost" style="padding: 0.5rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12" />
                     </svg>
                 </button>
             </div>
-            <div class="card-body" style="overflow-y: auto; flex: 1;">
+            <div class="card-body" style="overflow-y: auto; flex: 1; min-height: 400px;">
                 <!-- User List Container -->
-                <div id="admin-user-list" style="display: flex; flex-direction: column; gap: 1rem;">
+                <div id="admin-user-list" style="display: flex; flex-direction: column; gap: 1.5rem;">
                     <p class="text-muted text-center">Laster brukere og bilder...</p>
                 </div>
             </div>
@@ -382,21 +374,14 @@
     </div>
 
     <!-- Admin Status/Hours Modal -->
-    <div id="admin-status-modal" class="hidden"
-        style="position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;">
-        <div id="admin-status-modal-overlay"
-            style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px);"></div>
-        <div class="card"
-            style="position: relative; width: 100%; max-width: 600px; max-height: 90vh; margin: 1rem; z-index: 10; display: flex; flex-direction: column;">
+    <div id="admin-status-modal" class="hidden modal-container">
+        <div id="admin-status-modal-overlay" class="modal-overlay"></div>
+        <div class="card modal-content maxWidth-600">
             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <h3>Administrer status & åpningstider</h3>
-                <button id="close-status-modal" class="btn btn-ghost"
-                    style="padding: 0.5rem; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-md);">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                        style="opacity: 0.7;">
-                        <line x1="18" y1="6" x2="6" y2="18"></line>
-                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                <h3 class="text-lg">Status & åpningstider</h3>
+                <button id="close-status-modal" class="btn btn-ghost" style="padding: 0.5rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12" />
                     </svg>
                 </button>
             </div>
@@ -408,7 +393,7 @@
                             placeholder="La stå tom for standard">
                     </div>
 
-                    <h4 class="text-sm font-semibold mb-3">Åpningstider</h4>
+                    <h4 class="text-sm font-semibold mb-3 mt-6">Ukentlige åpningstider</h4>
                     <div id="opening-hours-inputs" style="display: flex; flex-direction: column; gap: 0.75rem;">
                         <div style="display: grid; grid-template-columns: 100px 1fr; align-items: center; gap: 1rem;">
                             <label class="text-xs font-semibold">Mandag</label>
@@ -459,24 +444,17 @@
 
 
     <!-- Admin Manage Members Modal -->
-    <div id="admin-members-modal" class="hidden"
-        style="position: fixed; inset: 0; z-index: 250; display: flex; align-items: center; justify-content: center;">
-        <div id="admin-members-modal-overlay"
-            style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px);">
-        </div>
-        <div class="card"
-            style="position: relative; width: 100%; max-width: 700px; margin: 1rem; z-index: 10; max-height: 90vh; display: flex; flex-direction: column;">
-            <div class="card-header"
-                style="position: sticky; top: 0; background: var(--color-bg-surface); z-index: 2; flex-direction: column; align-items: flex-start;">
-                <div style="display: flex; justify-content: space-between; width: 100%; align-items: center;">
-                    <h3 class="text-lg">Administrer medlemmer</h3>
-                    <button id="close-members-modal" class="btn-ghost"
-                        style="padding: 0.5rem; display: flex; align-items: center; justify-content: center; border-radius: var(--radius-md);">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-                            style="opacity: 0.7;">
-                            <line x1="18" y1="6" x2="6" y2="18"></line>
-                            <line x1="6" y1="6" x2="18" y2="18"></line>
+    <div id="admin-members-modal" class="hidden modal-container">
+        <div id="admin-members-modal-overlay" class="modal-overlay"></div>
+        <div class="card modal-content maxWidth-800">
+            <div class="card-header" style="flex-direction: column; align-items: flex-start; padding-bottom: 0;">
+                <div
+                    style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-bottom: 1rem;">
+                    <h3 class="text-lg">Medlemsadministrasjon</h3>
+                    <button id="close-members-modal" class="btn btn-ghost" style="padding: 0.5rem;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M18 6L6 18M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
@@ -562,7 +540,8 @@
                             <label for="new-user-role" class="form-label">Rolle</label>
                             <select id="new-user-role" class="form-input">
                                 <option value="member">Medlem</option>
-                                <option value="contributor">Bidragsyter</option>
+                                <option value="styremedlem">Styremedlem</option>
+                                <option value="contributor">Medlem/Sekretær</option>
                                 <option value="admin">Administrator</option>
                             </select>
                         </div>
@@ -604,15 +583,12 @@
         </div>
     </div>
 
-    <!-- Nytt Innlegg Modal -->
-    <div id="post-modal" class="hidden"
-        style="position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; padding: 1rem;">
-        <div id="post-modal-overlay"
-            style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px);"></div>
-        <div class="card"
-            style="position: relative; width: 100%; max-width: 600px; z-index: 10; box-shadow: var(--shadow-xl);">
+    <!-- Nytt innlegg Modal -->
+    <div id="post-modal" class="hidden modal-container">
+        <div id="post-modal-overlay" class="modal-overlay"></div>
+        <div class="card modal-content maxWidth-600">
             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <h3 class="text-lg" style="margin-bottom: 0;">Opprett nytt innlegg</h3>
+                <h3 class="text-lg" style="margin-bottom: 0;">Nytt innlegg</h3>
                 <button id="close-post-modal" class="btn btn-ghost" style="padding: 0.5rem;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M18 6L6 18M6 6l12 12" />
@@ -640,12 +616,9 @@
     </div>
 
     <!-- Nytt Arrangement Modal -->
-    <div id="event-modal" class="hidden"
-        style="position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; padding: 1rem;">
-        <div id="event-modal-overlay"
-            style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px);"></div>
-        <div class="card"
-            style="position: relative; width: 100%; max-width: 600px; z-index: 10; box-shadow: var(--shadow-xl);">
+    <div id="event-modal" class="hidden modal-container">
+        <div id="event-modal-overlay" class="modal-overlay"></div>
+        <div class="card modal-content maxWidth-600">
             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                 <h3 class="text-lg" style="margin-bottom: 0;">Opprett nytt arrangement</h3>
                 <button id="close-event-modal" class="btn btn-ghost" style="padding: 0.5rem;">
@@ -690,28 +663,185 @@
         </div>
     </div>
 
-    <!-- Custom Confirm Modal -->
-    <div id="confirm-modal" class="hidden"
-        style="position: fixed; inset: 0; z-index: 600; display: flex; align-items: center; justify-content: center; padding: 1rem;">
-        <div id="confirm-modal-overlay"
-            style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(8px);">
+    <!-- View Documents Modal -->
+    <div id="view-documents-modal" class="hidden modal-container">
+        <div id="view-documents-modal-overlay" class="modal-overlay"></div>
+        <div class="card modal-content"
+            style="max-height: 90vh; display: flex; flex-direction: column; width: 100%; max-width: 800px;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    <h3 class="text-lg" style="margin-bottom: 0;">Dokumenter</h3>
+                </div>
+                <button id="close-documents-modal" class="btn btn-ghost" style="padding: 0.5rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="card-body" style="overflow-y: hidden; display: flex; flex-direction: column;">
+                <div
+                    style="display: flex; justify-content: space-between; align-items: center; width: 100%; border-bottom: 1px solid var(--color-border); margin-bottom: 1rem;">
+                    <div
+                        style="display: flex; gap: 1.5rem; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;">
+                        <button id="tab-referater" class="tab-btn active">Referater</button>
+                        <button id="tab-retningslinjer" class="tab-btn">Retningslinjer</button>
+                        <button id="tab-vedtekter" class="tab-btn">Vedtekter</button>
+                    </div>
+                    <button id="admin-add-doc-btn" class="btn btn-primary btn-sm hidden"
+                        style="margin-bottom: 0.5rem;">+ Nytt dokument</button>
+                </div>
+                <div id="documents-list-container"
+                    style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 1.25rem;">
+                    <p class="text-muted text-center">Laster dokumenter...</p>
+                </div>
+            </div>
+            <div class="card-footer" style="display: flex; justify-content: flex-end;">
+                <button type="button" id="close-documents-footer-btn" class="btn btn-secondary">Lukk</button>
+            </div>
         </div>
-        <div class="card"
-            style="position: relative; width: 100%; max-width: 450px; z-index: 10; box-shadow: var(--shadow-xl); border: 2px solid var(--color-primary); overflow: hidden;">
+    </div>
+
+    <!-- Document Entry Form Modal (Admin/Contributor) -->
+    <div id="doc-entry-modal" class="hidden modal-container">
+        <div id="doc-entry-modal-overlay" class="modal-overlay"></div>
+        <div class="card modal-content maxWidth-600">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 id="doc-entry-title" class="text-lg" style="margin-bottom: 0;">Nytt dokument</h3>
+                <button id="close-doc-entry-modal" class="btn btn-ghost" style="padding: 0.5rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="card-body">
+                <form id="doc-entry-form">
+                    <input type="hidden" id="doc-entry-id">
+                    <input type="hidden" id="doc-entry-category">
+                    <div class="form-group" id="doc-entry-name-group">
+                        <label class="form-label">Tittel</label>
+                        <input type="text" id="doc-entry-name" class="form-input" required
+                            placeholder="f.eks. Årsmøte 2024">
+                    </div>
+                    <div class="form-group" id="doc-entry-date-group">
+                        <label class="form-label">Dato</label>
+                        <input type="date" id="doc-entry-date" class="form-input" required>
+                    </div>
+                    <div id="doc-entry-type-group" class="form-group hidden">
+                        <label class="form-label">Type retningslinje</label>
+                        <select id="doc-entry-type" class="form-input">
+                            <option value="verksted">Verksted</option>
+                            <option value="glasur">Glasur</option>
+                            <option value="brann">Brann</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="doc-content-group">
+                        <label class="form-label" id="doc-content-label">Innhold</label>
+                        <p class="text-xs text-muted mb-2" id="doc-content-hint">Tips: Hver linje blir et eget punkt i
+                            en liste.</p>
+                        <textarea id="doc-entry-content" class="form-input" style="min-height: 200px;" required
+                            placeholder="Skriv reglene her (linje for linje)..."></textarea>
+
+                        <!-- For Referater: Rich Text Editor -->
+                        <div id="doc-quill-editor" class="hidden" style="height: 220px; margin-bottom: 1rem;"></div>
+
+                        <!-- For Retningslinjer: Dynamic inputs -->
+                        <div id="doc-points-container" class="hidden"
+                            style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem;">
+                            <!-- Input fields will be added here via JS -->
+                        </div>
+                        <button type="button" id="add-more-points-btn" class="btn btn-ghost btn-xs mt-3 hidden"
+                            style="width: fit-content; opacity: 0.8;">
+                            + Legg til flere felt
+                        </button>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; gap: 1rem; margin-top: 2rem;">
+                        <button type="button" id="delete-doc-entry-btn" class="btn btn-ghost hidden"
+                            style="color: var(--color-error);">Slett</button>
+                        <div style="display: flex; gap: 1rem; margin-left: auto;">
+                            <button type="button" id="cancel-doc-entry-modal" class="btn btn-secondary">Avbryt</button>
+                            <button type="submit" id="save-doc-entry-btn" class="btn btn-primary">Lagre</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Confirm Modal -->
+    <div id="confirm-modal" class="hidden modal-container">
+        <div id="confirm-modal-overlay" class="modal-overlay"></div>
+        <div class="card modal-content" style="max-width: 450px; border: 2px solid var(--color-primary);">
             <div class="card-body text-center" style="padding: 2.5rem 2rem;">
                 <p id="confirm-modal-text" class="mb-8 text-lg" style="line-height: 1.5;"></p>
                 <div style="display: flex; justify-content: center; gap: 1rem;">
-                    <button id="confirm-modal-cancel" class="btn btn-secondary"
-                        style="flex: 1; padding: 0.8rem 1rem;">Avbryt</button>
-                    <button id="confirm-modal-ok" class="btn btn-primary" style="flex: 1; padding: 0.8rem 1rem;">Gå
-                        videre</button>
+                    <button id="confirm-modal-cancel" class="btn btn-secondary" style="flex: 1;">Avbryt</button>
+                    <button id="confirm-modal-ok" class="btn btn-primary" style="flex: 1;">Gå videre</button>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Admin Control Panel Modal -->
+    <div id="admin-control-modal" class="hidden modal-container">
+        <div id="admin-control-modal-overlay" class="modal-overlay"></div>
+        <div class="card modal-content" style="max-width: 650px;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 class="text-lg" style="margin-bottom: 0;">Administrasjon</h3>
+                <button id="close-admin-control-modal" class="btn btn-ghost" style="padding: 0.5rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="admin-panel-grid">
+                    <button id="admin-panel-gallery-btn" class="admin-tool-item btn-ghost">
+                        <svg class="admin-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <polyline points="21 15 16 10 5 21" />
+                        </svg>
+                        <h4 class="admin-tool-title">Offentlig galleri</h4>
+                        <p class="admin-tool-desc">Velg hvilke bilder som skal vises i det offentlige galleriet.</p>
+                    </button>
 
+                    <button id="admin-panel-status-btn" class="admin-tool-item btn-ghost">
+                        <svg class="admin-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <polyline points="12 6 12 12 16 14" />
+                        </svg>
+                        <h4 class="admin-tool-title">Status & åpningstider</h4>
+                        <p class="admin-tool-desc">Oppdater verkstedets status og ukentlige åpningstider.</p>
+                    </button>
 
+                    <button id="admin-panel-members-btn" class="admin-tool-item btn-ghost">
+                        <svg class="admin-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                            <circle cx="9" cy="7" r="4" />
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                        </svg>
+                        <h4 class="admin-tool-title">Medlemmer</h4>
+                        <p class="admin-tool-desc">Legg til nye brukere, slett kontoer eller endre roller.</p>
+                    </button>
+                </div>
+            </div>
+            <div class="card-footer" style="display: flex; justify-content: flex-end;">
+                <button type="button" id="close-admin-control-footer" class="btn btn-secondary">Lukk</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Dark Mode Floating Button -->
     <button class="theme-toggle" aria-label="Bytt tema">
@@ -745,6 +875,7 @@
     </div>
 
     <!-- Firebase og hoved-script -->
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
     <script type="module" src="firebase.js"></script>
     <script type="module" src="script.js"></script>
     <script type="module" src="feed.js"></script>

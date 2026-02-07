@@ -15,6 +15,7 @@ import {
     deleteDoc,
     collection,
     query,
+    where,
     getDocs,
     onSnapshot,
     serverTimestamp,
@@ -113,17 +114,18 @@ const lightboxImg = document.getElementById('lightbox-img');
 const lightboxDescription = document.getElementById('lightbox-description');
 const closeLightboxBtn = document.getElementById('close-lightbox');
 
-// Notes
-const notesForm = document.getElementById('notes-form');
-const userNotesInput = document.getElementById('user-notes-input');
-const saveNotesBtn = document.getElementById('save-notes-btn');
-const notesStatus = document.getElementById('notes-status');
+// Sidebar Member List
+const sidebarMembersList = document.getElementById('sidebar-members-list');
 
 // Admin
-const newPostBtn = document.getElementById('new-post-btn');
 const adminPublishCard = document.getElementById('admin-publish-card');
+const publishCardTitle = document.getElementById('publish-card-title');
+const newPostBtn = document.getElementById('new-post-btn');
+const newEventBtn = document.getElementById('new-event-btn');
 const adminToolsCard = document.getElementById('admin-tools-card');
 const adminGalleryBtn = document.getElementById('admin-gallery-btn');
+const adminTriggerContainer = document.getElementById('admin-trigger-container');
+const openAdminControlBtn = document.getElementById('open-admin-control-btn');
 
 // Publishing Modals
 const postModal = document.getElementById('post-modal');
@@ -147,6 +149,9 @@ const adminModalTitle = document.getElementById('admin-modal-title');
 
 // Workshop Status
 const adminStatusBtn = document.getElementById('admin-status-btn');
+const adminToolsHeader = document.getElementById('admin-tools-header');
+const adminToolsContent = document.getElementById('admin-tools-content');
+const adminToolsChevron = document.getElementById('admin-tools-chevron');
 const adminStatusModal = document.getElementById('admin-status-modal');
 const adminStatusModalOverlay = document.getElementById('admin-status-modal-overlay');
 const closeStatusModalBtn = document.getElementById('close-status-modal');
@@ -186,6 +191,15 @@ const addMemberSection = document.getElementById('add-member-section');
 const adminPendingList = document.getElementById('admin-pending-list');
 const adminArchiveList = document.getElementById('admin-archive-list');
 const adminSoftDeleteBtn = document.getElementById('admin-soft-delete-btn');
+
+// Admin Control Panel Modal
+const adminControlModal = document.getElementById('admin-control-modal');
+const adminControlModalOverlay = document.getElementById('admin-control-modal-overlay');
+const closeAdminControlModalBtn = document.getElementById('close-admin-control-modal');
+const closeAdminControlFooterBtn = document.getElementById('close-admin-control-footer');
+const adminPanelGalleryBtn = document.getElementById('admin-panel-gallery-btn');
+const adminPanelStatusBtn = document.getElementById('admin-panel-status-btn');
+const adminPanelMembersBtn = document.getElementById('admin-panel-members-btn');
 
 // TOS & Privacy
 const tosModal = document.getElementById('tos-modal');
@@ -227,6 +241,57 @@ const confirmModalText = document.getElementById('confirm-modal-text');
 const confirmModalOk = document.getElementById('confirm-modal-ok');
 const confirmModalCancel = document.getElementById('confirm-modal-cancel');
 const confirmModalOverlay = document.getElementById('confirm-modal-overlay');
+
+// Documents
+const openDocumentsBtn = document.getElementById('open-documents-btn');
+const documentsModal = document.getElementById('view-documents-modal');
+const documentsModalOverlay = document.getElementById('documents-modal-overlay');
+const closeDocumentsModalBtn = document.getElementById('close-documents-modal');
+const closeDocumentsFooterBtn = document.getElementById('close-documents-footer-btn');
+const tabReferater = document.getElementById('tab-referater');
+const tabVedtekter = document.getElementById('tab-vedtekter');
+const tabRetningslinjer = document.getElementById('tab-retningslinjer');
+const documentsListContainer = document.getElementById('documents-list-container');
+const adminAddDocBtn = document.getElementById('admin-add-doc-btn');
+
+const docEntryModal = document.getElementById('doc-entry-modal');
+const docEntryModalOverlay = document.getElementById('doc-entry-modal-overlay');
+const closeDocEntryModalBtn = document.getElementById('close-doc-entry-modal');
+const cancelDocEntryModalBtn = document.getElementById('cancel-doc-entry-modal');
+const docEntryForm = document.getElementById('doc-entry-form');
+const docEntryIdInput = document.getElementById('doc-entry-id');
+const docEntryCategoryInput = document.getElementById('doc-entry-category');
+const docEntryNameInput = document.getElementById('doc-entry-name');
+const docEntryDateInput = document.getElementById('doc-entry-date');
+const docEntryContentInput = document.getElementById('doc-entry-content');
+const saveDocEntryBtn = document.getElementById('save-doc-entry-btn');
+const deleteDocEntryBtn = document.getElementById('delete-doc-entry-btn');
+const docEntryTitle = document.getElementById('doc-entry-title');
+const docEntryTypeGroup = document.getElementById('doc-entry-type-group');
+const docEntryTypeInput = document.getElementById('doc-entry-type');
+const docEntryNameGroup = document.getElementById('doc-entry-name-group');
+const docEntryDateGroup = document.getElementById('doc-entry-date-group');
+const docPointsContainer = document.getElementById('doc-points-container');
+const addMorePointsBtn = document.getElementById('add-more-points-btn');
+const docContentHint = document.getElementById('doc-content-hint');
+const docContentLabel = document.getElementById('doc-content-label');
+const docQuillEditor = document.getElementById('doc-quill-editor');
+
+// Initialize Quill
+let quill;
+if (typeof Quill !== 'undefined' && docQuillEditor) {
+    quill = new Quill('#doc-quill-editor', {
+        theme: 'snow',
+        modules: {
+            toolbar: [
+                [{ 'header': [1, 2, 3, false] }],
+                ['bold', 'italic', 'underline'],
+                [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+                ['clean']
+            ]
+        }
+    });
+}
 
 // --- HJELPEFUNKSJONER ---
 
@@ -652,7 +717,9 @@ function updateUI(user, profile) {
         if (authState.role === 'admin') {
             profileRoleText.textContent = 'Administrator';
         } else if (authState.role === 'contributor') {
-            profileRoleText.textContent = 'Bidragsyter';
+            profileRoleText.textContent = 'Medlem/Sekretær';
+        } else if (authState.role === 'styremedlem') {
+            profileRoleText.textContent = 'Styremedlem';
         } else {
             profileRoleText.textContent = 'Medlem';
         }
@@ -712,23 +779,35 @@ function updateUI(user, profile) {
     // Populate form inputs if modal is explicitly opened (handled in click listener), 
     // but also helpful to update if open
 
-    // Notes logic
-    if (userNotesInput) {
-        // Only update if not currently focused to avoid overwriting user input while typing
-        if (document.activeElement !== userNotesInput) {
-            userNotesInput.value = profile?.notes || '';
-        }
-    }
+
 
     // Check for TOS Acceptance
     checkTOSAcceptance(profile);
 
-    // Vis admin-knapper hvis admin eller bidragsyter
-    const canPublish = authState.role === 'admin' || authState.role === 'contributor';
-    if (adminPublishCard) adminPublishCard.classList.toggle('hidden', !canPublish);
+    // Publisering & Dokumenter Card
+    if (adminPublishCard) {
+        // Alltid vis for innloggede (siden den inneholder Dokumenter)
+        adminPublishCard.classList.toggle('hidden', !user);
 
-    // Vis admin-verktøy KUN hvis admin
-    if (adminToolsCard) adminToolsCard.classList.toggle('hidden', authState.role !== 'admin');
+        const canPublish = authState.role === 'admin' || authState.role === 'contributor';
+
+        // Oppdater tittel basert på rolle
+        if (publishCardTitle) {
+            publishCardTitle.textContent = canPublish ? 'Publisering & Dokumenter' : 'Dokumenter';
+        }
+
+        // Vis/skjul knapper basert på tilgang
+        if (newPostBtn) newPostBtn.classList.toggle('hidden', !canPublish);
+        if (newEventBtn) newEventBtn.classList.toggle('hidden', !canPublish);
+    }
+
+    // Vis/skjul Administrasjon-knapp i profilkort (KUN for admin)
+    if (adminTriggerContainer) {
+        adminTriggerContainer.classList.toggle('hidden', authState.role !== 'admin');
+    }
+
+    // Admin Documents button visibility (Inside modal)
+    if (adminAddDocBtn) adminAddDocBtn.classList.toggle('hidden', authState.role !== 'admin' && authState.role !== 'contributor');
 
     // Toggle navigation links based on auth state
     if (user) {
@@ -924,39 +1003,54 @@ async function handleProfileSave(e) {
     }
 }
 
-async function handleSaveNotes(e) {
-    e.preventDefault();
-    if (!authState.user) return;
-
-    const notes = userNotesInput.value;
-    const saveBtn = saveNotesBtn;
-    const statusMsg = notesStatus;
-
-    saveBtn.textContent = 'Lagrer...';
-    saveBtn.disabled = true;
-    if (statusMsg) statusMsg.textContent = '';
+async function loadSidebarMembersList() {
+    if (!sidebarMembersList) return;
 
     try {
-        await saveUserProfile(authState.user.uid, { notes: notes });
+        const usersSnapshot = await getDocs(query(
+            collection(db, 'users'),
+            orderBy('displayName', 'asc')
+        ));
 
-        if (statusMsg) {
-            statusMsg.textContent = 'Notater lagret!';
-            statusMsg.style.color = 'var(--color-success)';
+        sidebarMembersList.innerHTML = '';
+
+        usersSnapshot.forEach(userDoc => {
+            const userData = userDoc.data();
+            if (userData.status === 'pending_deletion') return;
+
+            const div = document.createElement('div');
+            div.style.display = 'flex';
+            div.style.alignItems = 'center';
+            div.style.gap = '0.5rem';
+            div.style.padding = '0.25rem 0.5rem';
+            div.style.borderRadius = 'var(--radius-sm)';
+            // div.style.backgroundColor = 'var(--color-bg-subtle)'; // Removed for tighter spacing
+
+            const img = document.createElement('img');
+            img.src = userData.photoURL || `https://ui-avatars.com/api/?name=${userData.displayName || 'M'}&background=random`;
+            img.style.width = '24px';
+            img.style.height = '24px';
+            img.style.borderRadius = '50%';
+            img.style.objectFit = 'cover';
+
+            const info = document.createElement('div');
+            // Role text removed for cleaner look under names
+            info.innerHTML = `
+                <p style="margin: 0; font-size: 0.85rem; font-weight: 600; line-height: 1.2;">${userData.displayName || 'Ukjent'}</p>
+            `;
+
+            div.appendChild(img);
+            div.appendChild(info);
+            sidebarMembersList.appendChild(div);
+        });
+
+        if (sidebarMembersList.innerHTML === '') {
+            sidebarMembersList.innerHTML = '<p class="text-muted text-sm">Ingen medlemmer funnet.</p>';
         }
-        setTimeout(() => {
-            if (statusMsg) statusMsg.textContent = '';
-            saveBtn.textContent = 'Lagre notater';
-            saveBtn.disabled = false;
-        }, 2000);
 
     } catch (error) {
-        console.error("Notes save error:", error);
-        if (statusMsg) {
-            statusMsg.textContent = 'Feil ved lagring.';
-            statusMsg.style.color = 'var(--color-error)';
-        }
-        saveBtn.textContent = 'Lagre notater';
-        saveBtn.disabled = false;
+        console.error("Error loading sidebar members:", error);
+        sidebarMembersList.innerHTML = `<p class="text-error text-xs">Kunne ikke laste medlemmer.</p>`;
     }
 }
 
@@ -1005,16 +1099,16 @@ async function loadAdminImages() {
             const gallerySnapshot = await getDocs(collection(db, `users/${userId}/gallery_images`));
 
             const userGroup = document.createElement('div');
-            userGroup.className = 'user-group mb-4';
+            userGroup.className = 'user-group';
 
             const header = document.createElement('h4');
-            header.className = 'text-sm font-semibold mb-2';
-            header.textContent = `${displayName} (${userId})`;
+            header.className = 'text-sm font-semibold mb-3 text-muted';
+            header.textContent = `${displayName}`;
             userGroup.appendChild(header);
 
             if (gallerySnapshot.empty) {
                 const noImg = document.createElement('p');
-                noImg.className = 'text-sm text-muted';
+                noImg.className = 'text-sm text-muted bg-subtle p-3 rounded';
                 noImg.textContent = 'Ingen bilder lastet opp.';
                 userGroup.appendChild(noImg);
             } else {
@@ -1026,27 +1120,29 @@ async function loadAdminImages() {
                     const isSelected = currentPublicImages.includes(imgData.imageUrl);
 
                     const item = document.createElement('div');
-                    item.className = 'gallery-preview-item bg-subtle';
-                    item.style.position = 'relative';
+                    item.className = `admin-gallery-item ${isSelected ? 'selected' : ''}`;
+                    item.dataset.url = imgData.imageUrl;
+                    item.dataset.userId = userId;
 
                     const img = document.createElement('img');
                     img.src = imgData.imageUrl;
 
-                    const checkbox = document.createElement('input');
-                    checkbox.type = 'checkbox';
-                    checkbox.className = 'admin-image-select';
-                    checkbox.value = imgData.imageUrl; // Vi lagrer URL-en
-                    checkbox.checked = isSelected; // Hukk av hvis bilde allerede er i det offentlige galleriet
-                    checkbox.dataset.userId = userId;
-                    checkbox.style.position = 'absolute';
-                    checkbox.style.top = '0.5rem';
-                    checkbox.style.right = '0.5rem';
-                    checkbox.style.width = '1.25rem';
-                    checkbox.style.height = '1.25rem';
-                    checkbox.style.cursor = 'pointer';
+                    const checkIndicator = document.createElement('div');
+                    checkIndicator.className = 'admin-gallery-check';
+                    checkIndicator.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    `;
 
                     item.appendChild(img);
-                    item.appendChild(checkbox);
+                    item.appendChild(checkIndicator);
+
+                    // Toggle selection on click
+                    item.addEventListener('click', () => {
+                        item.classList.toggle('selected');
+                    });
+
                     grid.appendChild(item);
                 });
                 userGroup.appendChild(grid);
@@ -1064,9 +1160,9 @@ async function loadAdminImages() {
 // --- ADMIN SAVE SELECTION ---
 async function saveAdminSelection() {
 
-    // Finn alle valgte bilder
-    const checkboxes = document.querySelectorAll('.admin-image-select:checked');
-    const selectedImages = Array.from(checkboxes).map(cb => cb.value);
+    // Finn alle valgte bilder via CSS-klassen
+    const selectedItems = document.querySelectorAll('.admin-gallery-item.selected');
+    const selectedImages = Array.from(selectedItems).map(item => item.dataset.url);
 
     // Lagre valget i 'site_content' samlingen
     const contentRef = doc(db, 'site_content', 'gallery');
@@ -1314,38 +1410,22 @@ if (uploadModalOverlay) uploadModalOverlay.addEventListener('click', closeUpload
 if (closeLightboxBtn) closeLightboxBtn.addEventListener('click', closeLightbox);
 if (lightboxOverlay) lightboxOverlay.addEventListener('click', closeLightbox);
 
+// Admin Gallery Modals (Selection)
+if (closeAdminModalBtn) closeAdminModalBtn.addEventListener('click', () => toggleModal(adminImageModal, false));
+if (cancelAdminModalBtn) cancelAdminModalBtn.addEventListener('click', () => toggleModal(adminImageModal, false));
+if (adminImageModalOverlay) adminImageModalOverlay.addEventListener('click', () => toggleModal(adminImageModal, false));
 
-// Admin: Nytt innlegg toggle
-if (newPostBtn) {
-    newPostBtn.addEventListener('click', () => {
-        if (newPostContainer) newPostContainer.classList.toggle('hidden');
-    });
-}
+// Admin Status Modal
+if (closeStatusModalBtn) closeStatusModalBtn.addEventListener('click', () => toggleModal(adminStatusModal, false));
+if (cancelStatusModalBtn) cancelStatusModalBtn.addEventListener('click', () => toggleModal(adminStatusModal, false));
+if (adminStatusModalOverlay) adminStatusModalOverlay.addEventListener('click', () => toggleModal(adminStatusModal, false));
 
-// Admin: Modals
-if (adminGalleryBtn) adminGalleryBtn.addEventListener('click', openAdminModal);
-if (closeAdminModalBtn) closeAdminModalBtn.addEventListener('click', closeAdminModal);
-if (cancelAdminModalBtn) cancelAdminModalBtn.addEventListener('click', closeAdminModal);
-if (adminImageModalOverlay) adminImageModalOverlay.addEventListener('click', closeAdminModal);
-if (saveAdminSelectionBtn) {
-    saveAdminSelectionBtn.addEventListener('click', saveAdminSelection);
-}
+// Admin Members Modal
+if (closeMembersModalBtn) closeMembersModalBtn.addEventListener('click', closeMembersModal);
+if (closeMembersFooterBtn) closeMembersFooterBtn.addEventListener('click', closeMembersModal);
+if (adminMembersModalOverlay) adminMembersModalOverlay.addEventListener('click', closeMembersModal);
 
-// Admin: Status/Hours
-if (adminStatusBtn) adminStatusBtn.addEventListener('click', openStatusModal);
-if (closeStatusModalBtn) closeStatusModalBtn.addEventListener('click', closeStatusModal);
-if (cancelStatusModalBtn) cancelStatusModalBtn.addEventListener('click', closeStatusModal);
-if (adminStatusModalOverlay) adminStatusModalOverlay.addEventListener('click', closeStatusModal);
-if (saveStatusBtn) saveStatusBtn.addEventListener('click', saveWorkshopStatus);
 
-// Admin: Members
-if (adminMembersBtn) {
-    adminMembersBtn.addEventListener('click', () => {
-        openMembersModal();
-        // Reset to first tab by default
-        if (tabActiveMembers) tabActiveMembers.click();
-    });
-}
 
 // Tab switching logic for unified 3-tab modal
 function setupMembersTabs() {
@@ -1394,8 +1474,43 @@ if (closeMembersModalBtn) closeMembersModalBtn.addEventListener('click', closeMe
 if (closeMembersFooterBtn) closeMembersFooterBtn.addEventListener('click', closeMembersModal);
 if (adminMembersModalOverlay) adminMembersModalOverlay.addEventListener('click', closeMembersModal);
 
-// Notes
-if (notesForm) notesForm.addEventListener('submit', handleSaveNotes);
+// Documentation Event Listeners
+if (openDocumentsBtn) openDocumentsBtn.addEventListener('click', openDocumentsModal);
+if (closeDocumentsModalBtn) closeDocumentsModalBtn.addEventListener('click', closeDocumentsModal);
+if (closeDocumentsFooterBtn) closeDocumentsFooterBtn.addEventListener('click', closeDocumentsModal);
+if (documentsModalOverlay) documentsModalOverlay.addEventListener('click', closeDocumentsModal);
+
+setupDocumentsTabs();
+
+if (adminAddDocBtn) adminAddDocBtn.addEventListener('click', () => openDocEntryModal());
+if (closeDocEntryModalBtn) closeDocEntryModalBtn.addEventListener('click', closeDocEntryModal);
+if (cancelDocEntryModalBtn) cancelDocEntryModalBtn.addEventListener('click', closeDocEntryModal);
+if (docEntryModalOverlay) docEntryModalOverlay.addEventListener('click', closeDocEntryModal);
+if (docEntryForm) docEntryForm.addEventListener('submit', handleDocEntrySubmit);
+if (deleteDocEntryBtn) deleteDocEntryBtn.addEventListener('click', handleDeleteDocEntry);
+
+// Admin Control Panel Modal
+if (openAdminControlBtn) openAdminControlBtn.addEventListener('click', () => toggleModal(adminControlModal, true));
+if (closeAdminControlModalBtn) closeAdminControlModalBtn.addEventListener('click', () => toggleModal(adminControlModal, false));
+if (closeAdminControlFooterBtn) closeAdminControlFooterBtn.addEventListener('click', () => toggleModal(adminControlModal, false));
+if (adminControlModalOverlay) adminControlModalOverlay.addEventListener('click', () => toggleModal(adminControlModal, false));
+
+// Admin Control Panel Tool Buttons
+if (adminPanelGalleryBtn) adminPanelGalleryBtn.addEventListener('click', () => {
+    toggleModal(adminControlModal, false);
+    openAdminModal();
+});
+if (adminPanelStatusBtn) adminPanelStatusBtn.addEventListener('click', () => {
+    toggleModal(adminControlModal, false);
+    openStatusModal();
+});
+if (adminPanelMembersBtn) adminPanelMembersBtn.addEventListener('click', () => {
+    toggleModal(adminControlModal, false);
+    openMembersModal();
+});
+
+
+
 
 // --- INIT ---
 
@@ -1430,6 +1545,7 @@ authReady.then(async (initialUser) => {
 
     updateUI(authState.user, authState.profile);
     loadWorkshopStatus();
+    loadSidebarMembersList(); // Added
     protectMemberPage();
     protectLoginPage();
 
@@ -1466,6 +1582,7 @@ authReady.then(async (initialUser) => {
             if (galleryUnsubscribe) galleryUnsubscribe();
         }
         updateUI(authState.user, authState.profile);
+        loadSidebarMembersList(); // Added
         protectMemberPage();
         protectLoginPage();
     });
@@ -1504,11 +1621,7 @@ async function loadMembersList() {
             const userId = userDoc.id;
 
             const div = document.createElement('div');
-            div.className = 'card bg-subtle mb-2';
-            div.style.padding = '1rem';
-            div.style.display = 'flex';
-            div.style.justifyContent = 'space-between';
-            div.style.alignItems = 'center';
+            div.className = 'admin-list-item';
 
             let dateStr = 'Ikke satt';
             if (userData.memberSince) {
@@ -1518,7 +1631,7 @@ async function loadMembersList() {
 
             div.innerHTML = `
                 <div>
-                    <p class="font-semibold">${userData.displayName || 'Ukjent'}</p>
+                    <p class="font-semibold text-sm">${userData.displayName || 'Ukjent'}</p>
                     <p class="text-xs text-muted">ID: ${userId} | Medlem siden: ${dateStr}</p>
                 </div>
                 <button class="btn btn-secondary btn-sm edit-member-btn" data-id="${userId}">Rediger</button>
@@ -1946,6 +2059,476 @@ async function initiateSoftDelete(userId) {
     }
 }
 
+// --- DOCUMENTS LOGIC ---
+
+let currentDocCategory = 'referater';
+
+function openDocumentsModal() {
+    toggleModal(documentsModal, true);
+    // Refresh admin button visibility (redundant with updateUI but safe)
+    const canEdit = authState.role === 'admin' || authState.role === 'contributor';
+    if (adminAddDocBtn) adminAddDocBtn.classList.toggle('hidden', !canEdit);
+
+    // Default to referater tab if not already active
+    if (tabReferater && !tabReferater.classList.contains('active')) {
+        tabReferater.click();
+    } else {
+        loadDocumentsList(currentDocCategory);
+    }
+}
+
+function closeDocumentsModal() {
+    toggleModal(documentsModal, false);
+}
+
+function setupDocumentsTabs() {
+    const docTabs = [
+        { btn: tabReferater, category: 'referater' },
+        { btn: tabRetningslinjer, category: 'retningslinjer' },
+        { btn: tabVedtekter, category: 'vedtekter' }
+    ];
+
+    docTabs.forEach(tab => {
+        if (tab.btn) {
+            tab.btn.addEventListener('click', () => {
+                if (tab.btn.classList.contains('active')) return;
+
+                // Deactivate all
+                docTabs.forEach(t => {
+                    if (t.btn) {
+                        t.btn.classList.remove('active');
+                        t.btn.style.borderBottomColor = 'transparent';
+                        t.btn.style.color = 'inherit';
+                    }
+                });
+
+                // Activate selected
+                tab.btn.classList.add('active');
+                tab.btn.style.borderBottomColor = 'var(--color-primary)';
+                tab.btn.style.color = 'var(--color-primary)';
+
+                currentDocCategory = tab.category;
+
+                // Update Add button text
+                if (adminAddDocBtn) {
+                    if (tab.category === 'retningslinjer') adminAddDocBtn.innerText = '+ Legg til punkt';
+                    else if (tab.category === 'vedtekter') adminAddDocBtn.innerText = '+ Legg til vedtekt';
+                    else adminAddDocBtn.innerText = '+ Nytt referat';
+                }
+
+                loadDocumentsList(tab.category);
+            });
+        }
+    });
+}
+
+async function loadDocumentsList(category) {
+    if (!documentsListContainer) return;
+    documentsListContainer.innerHTML = '<p class="text-muted text-center">Laster dokumenter...</p>';
+
+    try {
+        const q = query(
+            collection(db, 'documents'),
+            where('category', '==', category),
+            orderBy('date', 'desc')
+        );
+        const querySnapshot = await getDocs(q);
+
+        documentsListContainer.innerHTML = '';
+
+        if (querySnapshot.empty) {
+            documentsListContainer.innerHTML = '<p class="text-muted text-center py-4">Ingen dokumenter her ennå.</p>';
+            return;
+        }
+
+        if (category === 'retningslinjer') {
+            const types = [
+                { id: 'verksted', name: 'Verksted' },
+                { id: 'glasur', name: 'Glasur' },
+                { id: 'brann', name: 'Brann' }
+            ];
+
+            types.forEach(typeObj => {
+                const docsInType = querySnapshot.docs.filter(doc => doc.data().type === typeObj.id);
+
+                // Add header for group
+                const header = document.createElement('h5');
+                header.className = 'text-sm font-semibold mt-4 mb-3';
+                header.style.color = 'var(--color-primary)';
+                header.style.borderBottom = '1px solid var(--color-border)';
+                header.style.paddingBottom = '0.5rem';
+                header.innerText = typeObj.name;
+                documentsListContainer.appendChild(header);
+
+                if (docsInType.length === 0) {
+                    const empty = document.createElement('p');
+                    empty.className = 'text-xs text-muted mb-6';
+                    empty.innerText = `Ingen retningslinjer for ${typeObj.name.toLowerCase()} ennå.`;
+                    documentsListContainer.appendChild(empty);
+                } else {
+                    docsInType.forEach(docSnap => {
+                        const item = createDocumentItem(docSnap, category);
+                        documentsListContainer.appendChild(item);
+                    });
+                }
+            });
+        } else {
+            querySnapshot.forEach(docSnap => {
+                const item = createDocumentItem(docSnap, category);
+                documentsListContainer.appendChild(item);
+            });
+        }
+
+    } catch (error) {
+        console.error("Error loading documents:", error);
+        documentsListContainer.innerHTML = `<p class="text-error">Kunne ikke laste: ${error.message}</p>`;
+    }
+}
+
+function createDocumentItem(docSnap, category) {
+    const data = docSnap.data();
+    const id = docSnap.id;
+
+    const isVedtekter = category === 'vedtekter';
+    const isRetningslinjer = category === 'retningslinjer';
+
+    // Guidelines are non-boxed bullet points
+    if (isRetningslinjer) {
+        const item = document.createElement('div');
+        item.style.display = 'flex';
+        item.style.alignItems = 'flex-start';
+        item.style.gap = '0.75rem';
+        item.style.padding = '0.5rem 0';
+        item.style.borderBottom = '1px dashed var(--color-border)';
+
+        const canEdit = authState.role === 'admin' || authState.role === 'contributor';
+
+        item.innerHTML = `
+            <span style="color: var(--color-primary); font-size: 1.25rem; line-height: 1;">•</span>
+            <div style="flex: 1; font-size: 0.95rem; line-height: 1.5; color: var(--color-text-main);">${data.content}</div>
+            ${canEdit ? `
+                <button class="btn btn-ghost edit-doc-btn" data-id="${id}" style="padding: 0.25rem; min-width: auto; height: auto; opacity: 0.5;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg>
+                </button>
+            ` : ''}
+        `;
+
+        if (canEdit) {
+            const editBtn = item.querySelector('.edit-doc-btn');
+            if (editBtn) {
+                editBtn.addEventListener('click', () => {
+                    openDocEntryModal(id, data);
+                });
+            }
+            item.addEventListener('mouseenter', () => { item.querySelector('.edit-doc-btn').style.opacity = '1'; });
+            item.addEventListener('mouseleave', () => { item.querySelector('.edit-doc-btn').style.opacity = '0.5'; });
+        }
+
+        return item;
+    }
+
+    const isReferat = category === 'referater';
+    const item = document.createElement(isVedtekter ? 'div' : 'article');
+    item.className = isVedtekter ? 'card' : `feed-item ${isReferat ? 'collapsible-item' : ''}`;
+    item.style.marginBottom = '1.5rem';
+    item.style.padding = '1.25rem';
+
+    if (isVedtekter) {
+        item.style.backgroundColor = 'var(--color-bg-surface)';
+        item.style.border = '1px solid var(--color-border)';
+    }
+
+    const canEdit = authState.role === 'admin' || authState.role === 'contributor';
+
+    // Format date
+    const dateStr = data.date ? new Date(data.date).toLocaleDateString('no-NO') : 'Ukjent dato';
+
+    // Format content: If category is referater or vedtekter, it's HTML from Quill
+    let contentHtml = '';
+    const isRichText = category === 'referater' || category === 'vedtekter';
+
+    if (isRichText) {
+        contentHtml = `<div class="text-sm ql-editor" style="line-height: 1.6; color: var(--color-text-main); padding: 0;">${data.content}</div>`;
+    } else {
+        contentHtml = `<div class="text-sm" style="white-space: pre-wrap; line-height: 1.6; color: var(--color-text-main);">${data.content}</div>`;
+    }
+
+    if (isReferat) {
+        item.innerHTML = `
+            <div class="collapsible-header">
+                <div style="flex: 1;">
+                    <h4 class="text-md font-semibold mb-1" style="margin: 0; color: var(--color-text-main); font-family: var(--font-display);">${data.name}</h4>
+                    <p class="text-xs text-muted" style="margin: 0;">${dateStr}</p>
+                </div>
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    ${canEdit ? `
+                        <button class="btn btn-ghost btn-sm edit-doc-btn" data-id="${id}" style="padding: 0.25rem; min-width: auto; height: auto;">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                        </button>
+                    ` : ''}
+                    <div class="toggle-arrow">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M6 9l6 6 6-6" />
+                        </svg>
+                    </div>
+                </div>
+            </div>
+            <div class="collapsible-content">
+                ${contentHtml}
+            </div>
+        `;
+
+        const header = item.querySelector('.collapsible-header');
+        header.addEventListener('click', (e) => {
+            // Don't toggle if clicking the edit button
+            if (e.target.closest('.edit-doc-btn')) return;
+            item.classList.toggle('expanded');
+        });
+    } else {
+        item.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;">
+                <div style="flex: 1;">
+                    <h4 class="text-md font-semibold mb-1" style="margin: 0; color: var(--color-text-main); font-family: var(--font-display);">${data.name}</h4>
+                    ${isVedtekter || isRetningslinjer ? '' : `<p class="text-xs text-muted mb-3">${dateStr}</p>`}
+                    ${contentHtml}
+                </div>
+                ${canEdit ? `
+                    <button class="btn btn-ghost btn-sm edit-doc-btn" data-id="${id}" style="padding: 0.25rem; min-width: auto; height: auto;">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                        </svg>
+                    </button>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    if (canEdit) {
+        const editBtn = item.querySelector('.edit-doc-btn');
+        if (editBtn) {
+            editBtn.addEventListener('click', () => {
+                openDocEntryModal(id, data);
+            });
+        }
+    }
+
+    return item;
+}
+
+function openDocEntryModal(id = null, data = null) {
+    if (!docEntryModal) return;
+
+    docEntryForm.reset();
+    if (quill) quill.setText('');
+    docEntryIdInput.value = id || '';
+    docEntryCategoryInput.value = currentDocCategory;
+    docEntryTitle.innerText = id ? 'Rediger' : 'Legg til';
+
+    const isRetningslinje = currentDocCategory === 'retningslinjer';
+    const isReferatEllerVedtekt = currentDocCategory === 'referater' || currentDocCategory === 'vedtekter';
+
+    // Toggle specific fields based on category
+    if (isRetningslinje) {
+        // Multi-point inputs for Guidelines
+        docEntryTypeGroup.classList.remove('hidden');
+        docEntryNameGroup.classList.add('hidden');
+        docEntryDateGroup.classList.add('hidden');
+        docEntryContentInput.classList.add('hidden');
+        docContentHint.classList.add('hidden');
+        if (docQuillEditor) {
+            docQuillEditor.classList.add('hidden');
+            docQuillEditor.parentElement.querySelector('.ql-toolbar')?.classList.add('hidden');
+        }
+        docPointsContainer.classList.remove('hidden');
+        addMorePointsBtn.classList.toggle('hidden', !!id);
+        docContentLabel.innerText = id ? 'Rediger punkt' : 'Punkter';
+
+        docPointsContainer.innerHTML = '';
+        if (id && data) {
+            addDocPointInput(data.content);
+        } else {
+            addDocPointInput();
+        }
+
+        docEntryNameInput.required = false;
+        docEntryDateInput.required = false;
+        docEntryContentInput.required = false;
+    } else {
+        // Standard Title/Date fields
+        docEntryTypeGroup.classList.add('hidden');
+        docEntryNameGroup.classList.remove('hidden');
+        docEntryDateGroup.classList.remove('hidden');
+        docPointsContainer.classList.add('hidden');
+        addMorePointsBtn.classList.add('hidden');
+
+        if (isReferatEllerVedtekt && quill) {
+            // Rich Text for Referater/Vedtekter
+            docEntryContentInput.classList.add('hidden');
+            docContentHint.classList.add('hidden');
+            if (docQuillEditor) {
+                docQuillEditor.classList.remove('hidden');
+                // The .ql-toolbar is added by Quill, we need to show/hide the whole container if needed
+                // But generally simpler to just show the editor
+                docQuillEditor.parentElement.querySelector('.ql-toolbar')?.classList.remove('hidden');
+                docQuillEditor.style.display = 'block';
+            }
+            docEntryContentInput.required = false;
+        } else {
+            // Normal fallback (if Quill failed or category is different)
+            docEntryContentInput.classList.remove('hidden');
+            docContentHint.classList.remove('hidden');
+            if (docQuillEditor) {
+                docQuillEditor.classList.add('hidden');
+                docQuillEditor.parentElement.querySelector('.ql-toolbar')?.classList.add('hidden');
+            }
+            docEntryContentInput.required = true;
+        }
+
+        docContentLabel.innerText = 'Innhold';
+        docEntryNameInput.required = true;
+        docEntryDateInput.required = true;
+    }
+
+    if (data) {
+        docEntryNameInput.value = data.name || '';
+        docEntryDateInput.value = data.date || '';
+        if (isReferatEllerVedtekt && quill) {
+            quill.root.innerHTML = data.content || '';
+        } else {
+            docEntryContentInput.value = data.content || '';
+        }
+        if (data.type) docEntryTypeInput.value = data.type;
+    } else {
+        docEntryDateInput.value = new Date().toISOString().split('T')[0];
+    }
+
+    if (id) deleteDocEntryBtn.classList.remove('hidden');
+    else deleteDocEntryBtn.classList.add('hidden');
+
+    toggleModal(docEntryModal, true);
+}
+
+function addDocPointInput(value = '') {
+    const input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'form-input doc-point-input';
+    input.placeholder = 'Skriv punktet her...';
+    input.value = value;
+    docPointsContainer.appendChild(input);
+    input.focus();
+}
+
+if (addMorePointsBtn) {
+    addMorePointsBtn.addEventListener('click', () => addDocPointInput());
+}
+
+function closeDocEntryModal() {
+    toggleModal(docEntryModal, false);
+}
+
+async function handleDocEntrySubmit(e) {
+    e.preventDefault();
+
+    const id = docEntryIdInput.value;
+    const category = docEntryCategoryInput.value;
+    const isRetningslinje = category === 'retningslinjer';
+    const isReferatEllerVedtekt = category === 'referater' || category === 'vedtekter';
+
+    let points = [];
+    if (isRetningslinje) {
+        points = Array.from(document.querySelectorAll('.doc-point-input')).map(i => i.value.trim()).filter(v => v !== '');
+    } else if (isReferatEllerVedtekt && quill) {
+        const html = quill.root.innerHTML.trim();
+        // Check if actually empty (Quill often has <p><br></p>)
+        if (quill.getText().trim().length > 0) points = [html];
+    } else {
+        const val = docEntryContentInput.value.trim();
+        if (val) points = [val];
+    }
+
+    if (points.length === 0) {
+        showCustomAlert("Fyll ut innhold.");
+        return;
+    }
+    if (!isRetningslinje && (!docEntryNameInput.value.trim() || !docEntryDateInput.value)) {
+        showCustomAlert("Fyll ut tittel og dato.");
+        return;
+    }
+
+    const originalText = saveDocEntryBtn.textContent;
+    saveDocEntryBtn.disabled = true;
+    saveDocEntryBtn.innerText = 'Lagrer...';
+
+    try {
+        const baseData = {
+            category: category,
+            updatedAt: serverTimestamp(),
+            updatedBy: authState.user.uid
+        };
+
+        if (isRetningslinje) baseData.type = docEntryTypeInput.value;
+
+        if (id) {
+            // Editing one existing point
+            const docData = {
+                ...baseData,
+                name: isRetningslinje ? 'Retningslinje' : docEntryNameInput.value,
+                date: isRetningslinje ? new Date().toISOString().split('T')[0] : docEntryDateInput.value,
+                content: points[0]
+            };
+            await setDoc(doc(db, 'documents', id), docData, { merge: true });
+        } else {
+            // Adding one or MORE new points
+            const promises = points.map(content => {
+                const docData = {
+                    ...baseData,
+                    name: isRetningslinje ? 'Retningslinje' : docEntryNameInput.value,
+                    date: isRetningslinje ? new Date().toISOString().split('T')[0] : docEntryDateInput.value,
+                    content: content,
+                    createdAt: serverTimestamp()
+                };
+                return addDoc(collection(db, 'documents'), docData);
+            });
+            await Promise.all(promises);
+        }
+
+        showCustomAlert("Dokument lagret!");
+        closeDocEntryModal();
+        loadDocumentsList(category);
+    } catch (error) {
+        console.error("Error saving document:", error);
+        showCustomAlert("Feil under lagring: " + error.message);
+    } finally {
+        saveDocEntryBtn.textContent = originalText;
+        saveDocEntryBtn.disabled = false;
+    }
+}
+
+async function handleDeleteDocEntry() {
+    const id = docEntryIdInput.value;
+    if (!id) return;
+
+    const confirmed = await showCustomConfirm("Er du sikker på at du vil slette dette dokumentet?");
+    if (!confirmed) return;
+
+    try {
+        await deleteDoc(doc(db, 'documents', id));
+        showCustomAlert("Dokument slettet.");
+        closeDocEntryModal();
+        loadDocumentsList(currentDocCategory);
+    } catch (error) {
+        console.error("Error deleting document:", error);
+        showCustomAlert("Kunne ikke slette: " + error.message);
+    }
+}
+
 // --- TOS LOGIC ---
 
 function checkTOSAcceptance(profile) {
@@ -2028,10 +2611,11 @@ closePostModalBtn?.addEventListener('click', () => toggleModal(postModal, false)
 cancelPostModalBtn?.addEventListener('click', () => toggleModal(postModal, false));
 postModalOverlay?.addEventListener('click', () => toggleModal(postModal, false));
 
-const newEventBtn = document.getElementById('new-event-btn');
 newEventBtn?.addEventListener('click', () => toggleModal(eventModal, true));
 closeEventModalBtn?.addEventListener('click', () => toggleModal(eventModal, false));
 cancelEventModalBtn?.addEventListener('click', () => toggleModal(eventModal, false));
 eventModalOverlay?.addEventListener('click', () => toggleModal(eventModal, false));
+
+
 
 
