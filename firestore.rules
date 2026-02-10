@@ -93,7 +93,14 @@ service cloud.firestore {
     }
 
     // --- Dokumenter ---
+    // Allow access to old documents structure for migration/deletion
     match /documents/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || isContributor();
+    }
+
+    // Allow access to new subcollection structure
+    match /documents/{category}/items/{docId} {
       allow read: if isSignedIn();
       allow write: if isAdmin() || isContributor();
     }

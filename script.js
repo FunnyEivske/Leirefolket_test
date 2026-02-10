@@ -126,6 +126,8 @@ const adminToolsCard = document.getElementById('admin-tools-card');
 const adminGalleryBtn = document.getElementById('admin-gallery-btn');
 const adminTriggerContainer = document.getElementById('admin-trigger-container');
 const openAdminControlBtn = document.getElementById('open-admin-control-btn');
+// Stats button is handled locally in the logic block or can be global if needed, 
+// but let's keep it cleaned up.
 
 // Publishing Modals
 const postModal = document.getElementById('post-modal');
@@ -245,14 +247,21 @@ const confirmModalOverlay = document.getElementById('confirm-modal-overlay');
 // Documents
 const openDocumentsBtn = document.getElementById('open-documents-btn');
 const documentsModal = document.getElementById('view-documents-modal');
-const documentsModalOverlay = document.getElementById('documents-modal-overlay');
+const documentsModalOverlay = document.getElementById('view-documents-modal-overlay');
 const closeDocumentsModalBtn = document.getElementById('close-documents-modal');
 const closeDocumentsFooterBtn = document.getElementById('close-documents-footer-btn');
-const tabReferater = document.getElementById('tab-referater');
-const tabVedtekter = document.getElementById('tab-vedtekter');
-const tabRetningslinjer = document.getElementById('tab-retningslinjer');
+const btnReferater = document.getElementById('btn-referater');
+const btnRetningslinjer = document.getElementById('btn-retningslinjer');
+const btnVedtekter = document.getElementById('btn-vedtekter');
+const documentsModalTitle = document.getElementById('documents-modal-title');
+const retningslinjerTabs = document.getElementById('retningslinjer-tabs');
+const tabFire = document.getElementById('tab-fire');
+const tabGlaze = document.getElementById('tab-glaze');
+const tabWorkshop = document.getElementById('tab-workshop');
 const documentsListContainer = document.getElementById('documents-list-container');
 const adminAddDocBtn = document.getElementById('admin-add-doc-btn');
+let currentVedtektData = null; // Store for single-view Vedtekter
+let currentVedtektId = null;
 
 const docEntryModal = document.getElementById('doc-entry-modal');
 const docEntryModalOverlay = document.getElementById('doc-entry-modal-overlay');
@@ -269,6 +278,7 @@ const deleteDocEntryBtn = document.getElementById('delete-doc-entry-btn');
 const docEntryTitle = document.getElementById('doc-entry-title');
 const docEntryTypeGroup = document.getElementById('doc-entry-type-group');
 const docEntryTypeInput = document.getElementById('doc-entry-type');
+const docTypeDisplay = document.getElementById('doc-type-display');
 const docEntryNameGroup = document.getElementById('doc-entry-name-group');
 const docEntryDateGroup = document.getElementById('doc-entry-date-group');
 const docPointsContainer = document.getElementById('doc-points-container');
@@ -297,7 +307,11 @@ if (typeof Quill !== 'undefined' && docQuillEditor) {
 
 export function updateScrollLock() {
     const allModals = document.querySelectorAll('.lightbox, [id$="-modal"]');
-    const anyModalOpen = Array.from(allModals).some(m => !m.classList.contains('hidden') && m.style.display !== 'none');
+    const anyModalOpen = Array.from(allModals).some(m => {
+        const style = window.getComputedStyle(m);
+        // A modal is considered "open" if it's not hidden via class OR has a visible display
+        return !m.classList.contains('hidden') && style.display !== 'none' && style.visibility !== 'hidden';
+    });
     const menuOpen = mobileMenu && mobileMenu.classList.contains('show');
 
     if (anyModalOpen || menuOpen) {
@@ -1347,7 +1361,6 @@ if (mobileMenuButton) {
                 </svg>
             `;
         } else {
-            document.body.style.overflow = '';
             mobileMenuButton.innerHTML = `
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M4 6h16M4 12h16m-7 6h7" stroke-linecap="round" stroke-linejoin="round"/>
@@ -1475,12 +1488,17 @@ if (closeMembersFooterBtn) closeMembersFooterBtn.addEventListener('click', close
 if (adminMembersModalOverlay) adminMembersModalOverlay.addEventListener('click', closeMembersModal);
 
 // Documentation Event Listeners
-if (openDocumentsBtn) openDocumentsBtn.addEventListener('click', openDocumentsModal);
+// Documentation Event Listeners
 if (closeDocumentsModalBtn) closeDocumentsModalBtn.addEventListener('click', closeDocumentsModal);
 if (closeDocumentsFooterBtn) closeDocumentsFooterBtn.addEventListener('click', closeDocumentsModal);
 if (documentsModalOverlay) documentsModalOverlay.addEventListener('click', closeDocumentsModal);
 
-setupDocumentsTabs();
+// New Dashboard Buttons
+if (btnReferater) btnReferater.addEventListener('click', () => openDocumentsModal('referater'));
+if (btnRetningslinjer) btnRetningslinjer.addEventListener('click', () => openDocumentsModal('retningslinjer'));
+if (btnVedtekter) btnVedtekter.addEventListener('click', () => openDocumentsModal('vedtekter'));
+
+setupRetningslinjerTabs();
 
 if (adminAddDocBtn) adminAddDocBtn.addEventListener('click', () => openDocEntryModal());
 if (closeDocEntryModalBtn) closeDocEntryModalBtn.addEventListener('click', closeDocEntryModal);
@@ -2062,61 +2080,81 @@ async function initiateSoftDelete(userId) {
 // --- DOCUMENTS LOGIC ---
 
 let currentDocCategory = 'referater';
-
-function openDocumentsModal() {
-    toggleModal(documentsModal, true);
-    // Refresh admin button visibility (redundant with updateUI but safe)
-    const canEdit = authState.role === 'admin' || authState.role === 'contributor';
-    if (adminAddDocBtn) adminAddDocBtn.classList.toggle('hidden', !canEdit);
-
-    // Default to referater tab if not already active
-    if (tabReferater && !tabReferater.classList.contains('active')) {
-        tabReferater.click();
-    } else {
-        loadDocumentsList(currentDocCategory);
-    }
-}
+let currentRetningslinjeType = 'brann'; // Default sub-tab
 
 function closeDocumentsModal() {
     toggleModal(documentsModal, false);
 }
 
-function setupDocumentsTabs() {
-    const docTabs = [
-        { btn: tabReferater, category: 'referater' },
-        { btn: tabRetningslinjer, category: 'retningslinjer' },
-        { btn: tabVedtekter, category: 'vedtekter' }
+function openDocumentsModal(category = 'referater') {
+    toggleModal(documentsModal, true);
+    currentDocCategory = category;
+
+    // Refresh admin button visibility
+    const canEdit = authState.role === 'admin' || authState.role === 'contributor';
+    if (adminAddDocBtn) adminAddDocBtn.classList.toggle('hidden', !canEdit);
+
+    // Reset UI based on category
+    if (retningslinjerTabs) retningslinjerTabs.classList.add('hidden');
+    if (documentsModalTitle) documentsModalTitle.textContent = 'Dokumenter';
+
+    const headerControls = document.getElementById('documents-header-controls');
+
+    if (category === 'referater') {
+        if (documentsModalTitle) documentsModalTitle.textContent = 'Referater';
+        if (adminAddDocBtn) adminAddDocBtn.innerText = '+ Nytt referat';
+        if (headerControls) {
+            headerControls.style.display = canEdit ? 'flex' : 'none';
+            headerControls.style.justifyContent = 'flex-end';
+        }
+    } else if (category === 'vedtekter') {
+        if (documentsModalTitle) documentsModalTitle.textContent = 'Vedtekter';
+        if (adminAddDocBtn) adminAddDocBtn.innerText = '+ Rediger vedtekter';
+        if (headerControls) {
+            headerControls.style.display = canEdit ? 'flex' : 'none';
+            headerControls.style.justifyContent = 'flex-end';
+        }
+    } else if (category === 'retningslinjer') {
+        if (documentsModalTitle) documentsModalTitle.textContent = 'Retningslinjer';
+        if (retningslinjerTabs) retningslinjerTabs.classList.remove('hidden');
+        if (adminAddDocBtn) adminAddDocBtn.innerText = '+ Rediger liste';
+        if (headerControls) {
+            headerControls.style.display = 'grid';
+            headerControls.style.gridTemplateColumns = '1fr auto 1fr';
+        }
+
+        // Reset to first tab if needed, or keep current
+        if (!currentRetningslinjeType) currentRetningslinjeType = 'brann';
+        updateRetningslinjerTabsUI();
+    }
+
+    loadDocumentsList(category);
+}
+
+function updateRetningslinjerTabsUI() {
+    [tabFire, tabGlaze, tabWorkshop].forEach(tab => {
+        if (!tab) return;
+        if (tab.id === `tab-${currentRetningslinjeType === 'brann' ? 'fire' : currentRetningslinjeType === 'glasur' ? 'glaze' : 'workshop'}`) {
+            tab.classList.add('active');
+        } else {
+            tab.classList.remove('active');
+        }
+    });
+}
+
+function setupRetningslinjerTabs() {
+    const tabs = [
+        { btn: tabFire, type: 'brann' },
+        { btn: tabGlaze, type: 'glasur' },
+        { btn: tabWorkshop, type: 'verksted' }
     ];
 
-    docTabs.forEach(tab => {
-        if (tab.btn) {
-            tab.btn.addEventListener('click', () => {
-                if (tab.btn.classList.contains('active')) return;
-
-                // Deactivate all
-                docTabs.forEach(t => {
-                    if (t.btn) {
-                        t.btn.classList.remove('active');
-                        t.btn.style.borderBottomColor = 'transparent';
-                        t.btn.style.color = 'inherit';
-                    }
-                });
-
-                // Activate selected
-                tab.btn.classList.add('active');
-                tab.btn.style.borderBottomColor = 'var(--color-primary)';
-                tab.btn.style.color = 'var(--color-primary)';
-
-                currentDocCategory = tab.category;
-
-                // Update Add button text
-                if (adminAddDocBtn) {
-                    if (tab.category === 'retningslinjer') adminAddDocBtn.innerText = '+ Legg til punkt';
-                    else if (tab.category === 'vedtekter') adminAddDocBtn.innerText = '+ Legg til vedtekt';
-                    else adminAddDocBtn.innerText = '+ Nytt referat';
-                }
-
-                loadDocumentsList(tab.category);
+    tabs.forEach(t => {
+        if (t.btn) {
+            t.btn.addEventListener('click', () => {
+                currentRetningslinjeType = t.type;
+                updateRetningslinjerTabsUI();
+                loadDocumentsList('retningslinjer');
             });
         }
     });
@@ -2127,57 +2165,62 @@ async function loadDocumentsList(category) {
     documentsListContainer.innerHTML = '<p class="text-muted text-center">Laster dokumenter...</p>';
 
     try {
-        const q = query(
-            collection(db, 'documents'),
-            where('category', '==', category),
-            orderBy('date', 'desc')
-        );
+        let q;
+        // Use subcollection: documents/{category}/items
+        const collectionRef = collection(db, 'documents', category, 'items');
+
+        if (category === 'retningslinjer') {
+            // Filter also by active sub-tab (type)
+            q = query(
+                collectionRef,
+                where('type', '==', currentRetningslinjeType),
+                orderBy('date', 'desc')
+            );
+        } else {
+            q = query(
+                collectionRef,
+                orderBy('date', 'desc')
+            );
+        }
+
+        if (category === 'vedtekter') {
+            const querySnapshot = await getDocs(q);
+            documentsListContainer.innerHTML = '';
+            if (querySnapshot.empty) {
+                documentsListContainer.innerHTML = '<p class="text-muted text-center py-4">Ingen vedtekter her ennå.</p>';
+                currentVedtektId = null;
+                currentVedtektData = null;
+                return;
+            }
+            // Just take the first one
+            const docSnap = querySnapshot.docs[0];
+            const data = docSnap.data();
+            currentVedtektId = docSnap.id;
+            currentVedtektData = data;
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'card';
+            contentDiv.style.padding = '2rem';
+            contentDiv.style.backgroundColor = 'var(--color-bg-surface)';
+            contentDiv.style.border = '1px solid var(--color-border)';
+            contentDiv.style.lineHeight = '1.8';
+            contentDiv.style.fontSize = '1.1rem';
+            contentDiv.innerHTML = data.content || '';
+            documentsListContainer.appendChild(contentDiv);
+            return;
+        }
+
         const querySnapshot = await getDocs(q);
-
         documentsListContainer.innerHTML = '';
-
         if (querySnapshot.empty) {
             documentsListContainer.innerHTML = '<p class="text-muted text-center py-4">Ingen dokumenter her ennå.</p>';
             return;
         }
 
-        if (category === 'retningslinjer') {
-            const types = [
-                { id: 'verksted', name: 'Verksted' },
-                { id: 'glasur', name: 'Glasur' },
-                { id: 'brann', name: 'Brann' }
-            ];
-
-            types.forEach(typeObj => {
-                const docsInType = querySnapshot.docs.filter(doc => doc.data().type === typeObj.id);
-
-                // Add header for group
-                const header = document.createElement('h5');
-                header.className = 'text-sm font-semibold mt-4 mb-3';
-                header.style.color = 'var(--color-primary)';
-                header.style.borderBottom = '1px solid var(--color-border)';
-                header.style.paddingBottom = '0.5rem';
-                header.innerText = typeObj.name;
-                documentsListContainer.appendChild(header);
-
-                if (docsInType.length === 0) {
-                    const empty = document.createElement('p');
-                    empty.className = 'text-xs text-muted mb-6';
-                    empty.innerText = `Ingen retningslinjer for ${typeObj.name.toLowerCase()} ennå.`;
-                    documentsListContainer.appendChild(empty);
-                } else {
-                    docsInType.forEach(docSnap => {
-                        const item = createDocumentItem(docSnap, category);
-                        documentsListContainer.appendChild(item);
-                    });
-                }
-            });
-        } else {
-            querySnapshot.forEach(docSnap => {
-                const item = createDocumentItem(docSnap, category);
-                documentsListContainer.appendChild(item);
-            });
-        }
+        querySnapshot.forEach(docSnap => {
+            const item = createDocumentItem(docSnap, category);
+            documentsListContainer.appendChild(item);
+        });
 
     } catch (error) {
         console.error("Error loading documents:", error);
@@ -2206,7 +2249,7 @@ function createDocumentItem(docSnap, category) {
         item.innerHTML = `
             <span style="color: var(--color-primary); font-size: 1.25rem; line-height: 1;">•</span>
             <div style="flex: 1; font-size: 0.95rem; line-height: 1.5; color: var(--color-text-main);">${data.content}</div>
-            ${canEdit ? `
+            ${(canEdit && !isRetningslinjer) ? `
                 <button class="btn btn-ghost edit-doc-btn" data-id="${id}" style="padding: 0.25rem; min-width: auto; height: auto; opacity: 0.5;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -2222,9 +2265,9 @@ function createDocumentItem(docSnap, category) {
                 editBtn.addEventListener('click', () => {
                     openDocEntryModal(id, data);
                 });
+                item.addEventListener('mouseenter', () => { editBtn.style.opacity = '1'; });
+                item.addEventListener('mouseleave', () => { editBtn.style.opacity = '0.5'; });
             }
-            item.addEventListener('mouseenter', () => { item.querySelector('.edit-doc-btn').style.opacity = '1'; });
-            item.addEventListener('mouseleave', () => { item.querySelector('.edit-doc-btn').style.opacity = '0.5'; });
         }
 
         return item;
@@ -2322,19 +2365,28 @@ function createDocumentItem(docSnap, category) {
     return item;
 }
 
-function openDocEntryModal(id = null, data = null) {
+async function openDocEntryModal(id = null, data = null) {
     if (!docEntryModal) return;
 
     docEntryForm.reset();
     if (quill) quill.setText('');
     docEntryIdInput.value = id || '';
     docEntryCategoryInput.value = currentDocCategory;
-    docEntryTitle.innerText = id ? 'Rediger' : 'Legg til';
+    docEntryTitle.innerText = id ? 'Rediger' : (currentDocCategory === 'retningslinjer' ? 'Rediger punktliste' : currentDocCategory === 'vedtekter' ? 'Rediger Vedtekter' : 'Legg til');
 
     const isRetningslinje = currentDocCategory === 'retningslinjer';
-    const isReferatEllerVedtekt = currentDocCategory === 'referater' || currentDocCategory === 'vedtekter';
+    const isVedtekter = currentDocCategory === 'vedtekter';
+    const isReferat = currentDocCategory === 'referater';
+    const isReferatEllerVedtekt = isReferat || isVedtekter;
 
     // Toggle specific fields based on category
+    if (isVedtekter) {
+        // Auto-load existing Vedtekt
+        id = currentVedtektId;
+        data = currentVedtektData;
+        docEntryIdInput.value = id || '';
+    }
+
     if (isRetningslinje) {
         // Multi-point inputs for Guidelines
         docEntryTypeGroup.classList.remove('hidden');
@@ -2347,19 +2399,60 @@ function openDocEntryModal(id = null, data = null) {
             docQuillEditor.parentElement.querySelector('.ql-toolbar')?.classList.add('hidden');
         }
         docPointsContainer.classList.remove('hidden');
-        addMorePointsBtn.classList.toggle('hidden', !!id);
-        docContentLabel.innerText = id ? 'Rediger punkt' : 'Punkter';
+        addMorePointsBtn.classList.remove('hidden'); // Always allow more points for the list
+        docContentLabel.innerText = 'Regler/Punkter';
 
-        docPointsContainer.innerHTML = '';
-        if (id && data) {
-            addDocPointInput(data.content);
-        } else {
+        docPointsContainer.innerHTML = '<p class="text-sm text-muted">Henter punkter...</p>';
+
+        try {
+            // Fetch ALL points for this type to allow batch editing
+            const collectionRef = collection(db, 'documents', 'retningslinjer', 'items');
+            const q = query(
+                collectionRef,
+                where('type', '==', currentRetningslinjeType),
+                orderBy('date', 'desc') // Or some other order
+            );
+            const snapshot = await getDocs(q);
+
+            docPointsContainer.innerHTML = '';
+            if (!snapshot.empty) {
+                // Sort by something if needed? Let's just use the order they come in or by date
+                snapshot.docs.forEach(docSnap => {
+                    addDocPointInput(docSnap.data().content);
+                });
+            }
+            // Always add one empty at the end
+            addDocPointInput();
+
+        } catch (error) {
+            console.error("Error loading points for batch edit:", error);
+            docPointsContainer.innerHTML = '';
             addDocPointInput();
         }
 
         docEntryNameInput.required = false;
         docEntryDateInput.required = false;
         docEntryContentInput.required = false;
+    } else if (isVedtekter) {
+        // Simple editor for Vedtekter
+        docEntryTypeGroup.classList.add('hidden');
+        docEntryNameGroup.classList.add('hidden');
+        docEntryDateGroup.classList.add('hidden');
+        docPointsContainer.classList.add('hidden');
+        addMorePointsBtn.classList.add('hidden');
+
+        if (quill) {
+            docEntryContentInput.classList.add('hidden');
+            docContentHint.classList.add('hidden');
+            if (docQuillEditor) {
+                docQuillEditor.classList.remove('hidden');
+                docQuillEditor.parentElement.querySelector('.ql-toolbar')?.classList.remove('hidden');
+                docQuillEditor.style.display = 'block';
+            }
+        }
+        docEntryContentInput.required = false;
+        docEntryNameInput.required = false;
+        docEntryDateInput.required = false;
     } else {
         // Standard Title/Date fields
         docEntryTypeGroup.classList.add('hidden');
@@ -2374,14 +2467,12 @@ function openDocEntryModal(id = null, data = null) {
             docContentHint.classList.add('hidden');
             if (docQuillEditor) {
                 docQuillEditor.classList.remove('hidden');
-                // The .ql-toolbar is added by Quill, we need to show/hide the whole container if needed
-                // But generally simpler to just show the editor
                 docQuillEditor.parentElement.querySelector('.ql-toolbar')?.classList.remove('hidden');
                 docQuillEditor.style.display = 'block';
             }
             docEntryContentInput.required = false;
         } else {
-            // Normal fallback (if Quill failed or category is different)
+            // Normal fallback
             docEntryContentInput.classList.remove('hidden');
             docContentHint.classList.remove('hidden');
             if (docQuillEditor) {
@@ -2396,20 +2487,35 @@ function openDocEntryModal(id = null, data = null) {
         docEntryDateInput.required = true;
     }
 
-    if (data) {
-        docEntryNameInput.value = data.name || '';
-        docEntryDateInput.value = data.date || '';
+    if (data && !isRetningslinje) {
+        if (!isVedtekter) {
+            docEntryNameInput.value = data.name || '';
+            docEntryDateInput.value = data.date || '';
+        }
         if (isReferatEllerVedtekt && quill) {
             quill.root.innerHTML = data.content || '';
         } else {
             docEntryContentInput.value = data.content || '';
         }
         if (data.type) docEntryTypeInput.value = data.type;
-    } else {
+    } else if (!isRetningslinje) {
         docEntryDateInput.value = new Date().toISOString().split('T')[0];
     }
 
-    if (id) deleteDocEntryBtn.classList.remove('hidden');
+    // Set default type if retningslinjer
+    if (isRetningslinje) {
+        docEntryTypeInput.value = currentRetningslinjeType;
+        if (docTypeDisplay) {
+            docTypeDisplay.innerText = currentRetningslinjeType;
+            docTypeDisplay.classList.remove('hidden');
+        }
+        if (docEntryTypeInput) docEntryTypeInput.classList.add('hidden');
+    } else {
+        if (docTypeDisplay) docTypeDisplay.classList.add('hidden');
+        if (docEntryTypeInput) docEntryTypeInput.classList.remove('hidden');
+    }
+
+    if (id && !isRetningslinje) deleteDocEntryBtn.classList.remove('hidden');
     else deleteDocEntryBtn.classList.add('hidden');
 
     toggleModal(docEntryModal, true);
@@ -2446,18 +2552,18 @@ async function handleDocEntrySubmit(e) {
         points = Array.from(document.querySelectorAll('.doc-point-input')).map(i => i.value.trim()).filter(v => v !== '');
     } else if (isReferatEllerVedtekt && quill) {
         const html = quill.root.innerHTML.trim();
-        // Check if actually empty (Quill often has <p><br></p>)
         if (quill.getText().trim().length > 0) points = [html];
     } else {
         const val = docEntryContentInput.value.trim();
         if (val) points = [val];
     }
 
-    if (points.length === 0) {
+    if (points.length === 0 && !isRetningslinje) {
         showCustomAlert("Fyll ut innhold.");
         return;
     }
-    if (!isRetningslinje && (!docEntryNameInput.value.trim() || !docEntryDateInput.value)) {
+    const isVedtekter = category === 'vedtekter';
+    if (!isRetningslinje && !isVedtekter && (!docEntryNameInput.value.trim() || !docEntryDateInput.value)) {
         showCustomAlert("Fyll ut tittel og dato.");
         return;
     }
@@ -2473,33 +2579,69 @@ async function handleDocEntrySubmit(e) {
             updatedBy: authState.user.uid
         };
 
-        if (isRetningslinje) baseData.type = docEntryTypeInput.value;
+        if (isRetningslinje) {
+            // BATCH SYNC for Retningslinjer
+            const type = docEntryTypeInput.value;
+            const collectionRef = collection(db, 'documents', 'retningslinjer', 'items');
 
-        if (id) {
-            // Editing one existing point
+            // 1. Fetch ALL existing for this type
+            const q = query(collectionRef, where('type', '==', type));
+            const snapshot = await getDocs(q);
+
+            // 2. Delete ALL existing
+            const deletePromises = snapshot.docs.map(docSnap => deleteDoc(docSnap.ref));
+            await Promise.all(deletePromises);
+
+            // 3. Add ALL new
+            const addPromises = points.map((content, index) => {
+                return addDoc(collectionRef, {
+                    ...baseData,
+                    type: type,
+                    name: 'Retningslinje',
+                    date: new Date().toISOString().split('T')[0],
+                    content: content,
+                    order: index, // Maintain order
+                    createdAt: serverTimestamp()
+                });
+            });
+            await Promise.all(addPromises);
+
+        } else if (id) {
+            // Editing one existing non-retningslinje doc
             const docData = {
                 ...baseData,
-                name: isRetningslinje ? 'Retningslinje' : docEntryNameInput.value,
-                date: isRetningslinje ? new Date().toISOString().split('T')[0] : docEntryDateInput.value,
                 content: points[0]
             };
-            await setDoc(doc(db, 'documents', id), docData, { merge: true });
+            if (category !== 'vedtekter') {
+                docData.name = docEntryNameInput.value;
+                docData.date = docEntryDateInput.value;
+            } else {
+                docData.name = 'Vedtekter';
+                docData.date = new Date().toISOString().split('T')[0];
+            }
+            await setDoc(doc(db, 'documents', category, 'items', id), docData, { merge: true });
         } else {
-            // Adding one or MORE new points
+            // Adding new non-retningslinje doc(s)
+            const collectionRef = collection(db, 'documents', category, 'items');
             const promises = points.map(content => {
                 const docData = {
                     ...baseData,
-                    name: isRetningslinje ? 'Retningslinje' : docEntryNameInput.value,
-                    date: isRetningslinje ? new Date().toISOString().split('T')[0] : docEntryDateInput.value,
                     content: content,
                     createdAt: serverTimestamp()
                 };
-                return addDoc(collection(db, 'documents'), docData);
+                if (category === 'vedtekter') {
+                    docData.name = 'Vedtekter';
+                    docData.date = new Date().toISOString().split('T')[0];
+                } else {
+                    docData.name = docEntryNameInput.value;
+                    docData.date = docEntryDateInput.value;
+                }
+                return addDoc(collectionRef, docData);
             });
             await Promise.all(promises);
         }
 
-        showCustomAlert("Dokument lagret!");
+        showCustomAlert(isRetningslinje ? "Liste oppdatert!" : "Dokument lagret!");
         closeDocEntryModal();
         loadDocumentsList(category);
     } catch (error) {
@@ -2511,15 +2653,20 @@ async function handleDocEntrySubmit(e) {
     }
 }
 
+// --- DOCUMENTS LOGIC (UPDATED PATHS) ---
+// ... (rest of the file updates for paths)
+
 async function handleDeleteDocEntry() {
     const id = docEntryIdInput.value;
+    const category = docEntryCategoryInput.value; // Need category to delete
     if (!id) return;
 
     const confirmed = await showCustomConfirm("Er du sikker på at du vil slette dette dokumentet?");
     if (!confirmed) return;
 
     try {
-        await deleteDoc(doc(db, 'documents', id));
+        // Updated path
+        await deleteDoc(doc(db, 'documents', category, 'items', id));
         showCustomAlert("Dokument slettet.");
         closeDocEntryModal();
         loadDocumentsList(currentDocCategory);
@@ -2537,13 +2684,10 @@ function checkTOSAcceptance(profile) {
     // If logged in but hasn't accepted terms
     if (authState.user && !profile?.termsAccepted) {
         toggleModal(tosModal, true);
-        // Disable body scroll
-        document.body.style.overflow = 'hidden';
     } else {
         // Hide if accepted or not logged in
         if (tosModal && !tosModal.classList.contains('hidden')) {
             toggleModal(tosModal, false);
-            document.body.style.overflow = '';
         }
     }
 }
@@ -2572,7 +2716,6 @@ if (tosCheckbox && acceptTosBtn) {
             }
 
             toggleModal(tosModal, false);
-            document.body.style.overflow = '';
 
             // If on login page, redirect now
             if (window.location.pathname.endsWith('/login.html')) {
@@ -2596,7 +2739,6 @@ if (declineTosBtn) {
         if (confirmed) {
             await signOut(auth);
             toggleModal(tosModal, false);
-            document.body.style.overflow = '';
 
             // Ensure they are on login page or redirected there
             if (!window.location.pathname.endsWith('/login.html')) {

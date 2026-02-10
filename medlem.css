@@ -1477,8 +1477,34 @@ body.modal-open {
   position: relative;
   width: 100%;
   max-height: 90vh;
-  overflow-y: auto;
   z-index: 10;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* Prevent the card itself from scrolling */
+}
+
+/* Ensure the body within a modal card is the scrollable part */
+.modal-content .card-body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  /* Important for flex scrolling */
+}
+
+/* Hide scrollbar ONLY for the document editor as requested */
+#doc-entry-modal .modal-content {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+#doc-entry-modal .modal-content::-webkit-scrollbar {
+  display: none;
+}
+
+/* Scroll Lock */
+body.modal-open {
+  overflow: hidden !important;
 }
 
 /* Modal sizing utilities */
@@ -1744,4 +1770,94 @@ textarea {
     margin-left: 0;
     text-align: center;
   }
+}
+
+/* --- Collapsible Documents (Referater) --- */
+.collapsible-item .collapsible-content {
+  display: none;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+  margin-top: 1rem;
+}
+
+.collapsible-item.expanded .collapsible-content {
+  display: block;
+  animation: fadeIn 0.3s ease;
+}
+
+.collapsible-item .toggle-arrow {
+  transition: transform 0.3s ease;
+}
+
+.collapsible-item.expanded .toggle-arrow {
+  transform: rotate(180deg);
+}
+
+.collapsible-header {
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* --- Retningslinjer Tabs --- */
+/* --- Retningslinjer Tabs --- */
+.tab-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  gap: 0.5rem;
+  min-width: 120px;
+  white-space: nowrap;
+
+  /* Inactive: Clear outline */
+  background-color: var(--color-bg-surface) !important;
+  color: var(--color-text-main) !important;
+  border: 2px solid var(--color-text-muted) !important;
+  opacity: 0.7;
+}
+
+#retningslinjer-tabs {
+  gap: 0.75rem;
+}
+
+.tab-btn:hover {
+  background-color: var(--color-bg-subtle) !important;
+  border-color: var(--color-primary) !important;
+  color: var(--color-primary) !important;
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.tab-btn.active {
+  /* Active: Solid Primary */
+  background-color: var(--color-primary) !important;
+  color: #ffffff !important;
+  border-color: var(--color-primary) !important;
+  box-shadow: var(--shadow-md);
+  opacity: 1;
+  font-weight: 700;
+}
+
+.tab-btn.active:hover {
+  background-color: var(--color-primary-hover) !important;
+  box-shadow: var(--shadow-lg);
 }
