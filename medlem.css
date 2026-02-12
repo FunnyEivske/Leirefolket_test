@@ -256,6 +256,7 @@ h6 {
   color: var(--color-text-main);
   font-weight: 700;
   line-height: 1.2;
+  margin-top: 0;
   margin-bottom: 1rem;
 }
 
@@ -455,7 +456,19 @@ p {
 
 .card-header {
   padding: 1.25rem;
-  border-bottom: 1px solid var(--color-bg-body);
+  border-bottom: 1px solid var(--color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-header h1,
+.card-header h2,
+.card-header h3,
+.card-header h4,
+.card-header h5,
+.card-header h6 {
+  margin: 0 !important;
 }
 
 .card-body {
@@ -801,7 +814,6 @@ p {
   width: 100%;
   min-width: 0;
   margin-top: 0 !important;
-  /* Force top alignment */
   padding-top: 0 !important;
 }
 

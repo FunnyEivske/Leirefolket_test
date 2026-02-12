@@ -31,6 +31,7 @@ export let authState = {
 
 let profileUnsubscribe = null;
 let galleryUnsubscribe = null; // Listener for user's own gallery
+let sidebarMembersLimit = 5; // Initial limit for sidebar display
 
 // --- DARK MODE LOGIKK (Flyttet til theme-switcher.js) ---
 
@@ -1028,17 +1029,17 @@ async function loadSidebarMembersList() {
 
         sidebarMembersList.innerHTML = '';
 
-        usersSnapshot.forEach(userDoc => {
-            const userData = userDoc.data();
-            if (userData.status === 'pending_deletion') return;
+        const allMembers = usersSnapshot.docs.filter(doc => doc.data().status !== 'pending_deletion');
+        const visibleMembers = allMembers.slice(0, sidebarMembersLimit);
 
+        visibleMembers.forEach(userDoc => {
+            const userData = userDoc.data();
             const div = document.createElement('div');
             div.style.display = 'flex';
             div.style.alignItems = 'center';
             div.style.gap = '0.5rem';
             div.style.padding = '0.25rem 0.5rem';
             div.style.borderRadius = 'var(--radius-sm)';
-            // div.style.backgroundColor = 'var(--color-bg-subtle)'; // Removed for tighter spacing
 
             const img = document.createElement('img');
             img.src = userData.photoURL || `https://ui-avatars.com/api/?name=${userData.displayName || 'M'}&background=random`;
@@ -1048,8 +1049,6 @@ async function loadSidebarMembersList() {
             img.style.objectFit = 'cover';
 
             const info = document.createElement('div');
-
-            // Format memberSince date (fallback to createdAt if missing)
             let dateStr = 'Nylig';
             const rawDate = userData.memberSince || userData.startDate || userData.createdAt;
             if (rawDate) {
@@ -1069,8 +1068,24 @@ async function loadSidebarMembersList() {
             sidebarMembersList.appendChild(div);
         });
 
-        if (sidebarMembersList.innerHTML === '') {
+        if (allMembers.length === 0) {
             sidebarMembersList.innerHTML = '<p class="text-muted text-sm">Ingen medlemmer funnet.</p>';
+        } else if (allMembers.length > sidebarMembersLimit) {
+            const moreBtn = document.createElement('button');
+            moreBtn.className = 'btn btn-ghost btn-sm btn-full mt-2';
+            moreBtn.style.fontSize = '0.75rem';
+
+            if (sidebarMembersLimit < 15 && allMembers.length > sidebarMembersLimit) {
+                moreBtn.textContent = 'Vis flere';
+                moreBtn.onclick = () => {
+                    sidebarMembersLimit = Math.min(15, allMembers.length);
+                    loadSidebarMembersList();
+                };
+            } else {
+                moreBtn.textContent = 'Se alle medlemmer';
+                moreBtn.onclick = () => openMembersModal();
+            }
+            sidebarMembersList.appendChild(moreBtn);
         }
 
     } catch (error) {
@@ -1619,6 +1634,16 @@ authReady.then(async (initialUser) => {
 
 async function openMembersModal() {
     resetAddMemberForm();
+
+    // Rolle-basert synlighet for faner
+    const isAdmin = authState.role === 'admin';
+    if (tabPendingDeletions) tabPendingDeletions.classList.toggle('hidden', !isAdmin);
+    if (tabArchive) tabArchive.classList.toggle('hidden', !isAdmin);
+    if (tabAddMember) tabAddMember.classList.toggle('hidden', !isAdmin);
+
+    // Standard til aktive medlemmer
+    if (tabActiveMembers) tabActiveMembers.click();
+
     toggleModal(adminMembersModal, true);
     loadMembersList();
 }
@@ -1661,7 +1686,9 @@ async function loadMembersList() {
                     <p class="font-semibold text-sm">${userData.displayName || 'Ukjent'}</p>
                     <p class="text-xs text-muted">ID: ${userId} | Medlem siden: ${dateStr}</p>
                 </div>
-                <button class="btn btn-secondary btn-sm edit-member-btn" data-id="${userId}">Rediger</button>
+                ${authState.role === 'admin' ? `
+                    <button class="btn btn-secondary btn-sm edit-member-btn" data-id="${userId}">Rediger</button>
+                ` : ''}
             `;
 
             adminMembersList.appendChild(div);
