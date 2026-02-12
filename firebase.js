@@ -46,6 +46,7 @@ setLogLevel('debug');
  * Nå prøver den IKKE lenger å logge inn anonymt.
  */
 const authReady = new Promise((resolve) => {
+    let isProcessingToken = false;
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
         if (user) {
             // Bruker er allerede logget inn
@@ -55,17 +56,19 @@ const authReady = new Promise((resolve) => {
         } else {
             // Ingen bruker er logget inn.
             // Sjekk om vi har en spesial-token (brukes kun i forhåndsvisning)
-            if (typeof __initial_auth_token !== 'undefined') {
+            if (typeof __initial_auth_token !== 'undefined' && !isProcessingToken) {
+                isProcessingToken = true;
                 console.log("Prøver å logge inn med custom token (Preview)...");
                 try {
                     await signInWithCustomToken(auth, __initial_auth_token);
                     // onAuthStateChanged vil kjøre på nytt med brukeren
                 } catch (error) {
                     console.error("Custom token feilet:", error);
+                    isProcessingToken = false;
                     unsubscribe();
                     resolve(null);
                 }
-            } else {
+            } else if (!isProcessingToken) {
                 // Ingen token og ingen bruker -> Vi forblir utlogget.
                 console.log("Ingen bruker logget inn. Anonym innlogging er deaktivert.");
                 unsubscribe();
@@ -78,4 +81,4 @@ const authReady = new Promise((resolve) => {
     });
 });
 
-export { app, auth, db, storage, functions, httpsCallable, authReady, appId, sendPasswordResetEmail };
+export { app, auth, db, storage, functions, httpsCallable, authReady, appId, sendPasswordResetEmail, firebaseConfig };

@@ -800,7 +800,9 @@ p {
   gap: 1.5rem;
   width: 100%;
   min-width: 0;
-  /* Critical for flex/grid overflow */
+  margin-top: 0 !important;
+  /* Force top alignment */
+  padding-top: 0 !important;
 }
 
 .dashboard-main {
@@ -888,14 +890,19 @@ p {
   .dashboard-grid {
     display: grid;
     grid-template-columns: 300px minmax(0, 1fr) 300px;
-    /* Sidebar + Main + Promoted */
+    gap: 2rem;
+    align-items: start;
+    padding-top: 1rem;
+    padding-bottom: 2rem;
   }
 
   .dashboard-sidebar,
   .dashboard-sidebar-right {
     position: sticky;
-    top: 6rem;
+    top: 5.5rem;
+    /* Matches Header 4.5rem + Grid padding 1rem */
     height: fit-content;
+    margin-top: 0 !important;
   }
 }
 
@@ -981,12 +988,53 @@ p {
   margin-bottom: 1.5rem;
 }
 
+.mt-2 {
+  margin-top: 0.5rem;
+}
+
 .mt-4 {
   margin-top: 1rem;
 }
 
-.text-primary {
-  color: var(--color-primary);
+.mt-6 {
+  margin-top: 1.5rem;
+}
+
+.mt-8 {
+  margin-top: 2rem;
+}
+
+/* Modal Tabs */
+.modal-tabs-container {
+  display: flex;
+  gap: 0.75rem;
+  margin: 1.5rem 0;
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 0.5rem;
+}
+
+.modal-tabs-container::-webkit-scrollbar {
+  display: none;
+}
+
+.tab-btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+  background-color: var(--color-bg-subtle) !important;
+  border-color: var(--color-border) !important;
+}
+
+.tab-btn.active {
+  background-color: var(--color-primary) !important;
+  color: white !important;
+  border-color: var(--color-primary) !important;
+}
+
+#tab-add-member {
+  margin-left: auto;
 }
 
 .bg-subtle {

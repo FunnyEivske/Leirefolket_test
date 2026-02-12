@@ -1,4 +1,4 @@
-import { app, auth, db, appId, authReady, sendPasswordResetEmail, functions, httpsCallable } from './firebase.js';
+import { app, auth, db, appId, authReady, sendPasswordResetEmail, functions, httpsCallable, firebaseConfig } from './firebase.js';
 import {
     signInWithEmailAndPassword,
     signOut,
@@ -6,7 +6,7 @@ import {
     createUserWithEmailAndPassword,
     getAuth
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { initializeApp, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import {
     doc,
     getDoc,
@@ -122,6 +122,7 @@ const adminPublishCard = document.getElementById('admin-publish-card');
 const publishCardTitle = document.getElementById('publish-card-title');
 const newPostBtn = document.getElementById('new-post-btn');
 const newEventBtn = document.getElementById('new-event-btn');
+const adminPublishSeparator = document.getElementById('admin-publish-separator');
 const adminToolsCard = document.getElementById('admin-tools-card');
 const adminGalleryBtn = document.getElementById('admin-gallery-btn');
 const adminTriggerContainer = document.getElementById('admin-trigger-container');
@@ -215,22 +216,14 @@ const adminMembersSubmenu = null;
 let secondaryApp;
 let secondaryAuth;
 
-// Fetch config from main app or redefine (simpler to redefine here for module scope)
-const secondaryConfig = {
-    apiKey: "AIzaSyDA8fQe9akDky_yYDFfNtzGH75-WYq2sF4",
-    authDomain: "leirefolket.firebaseapp.com",
-    projectId: "leirefolket",
-    storageBucket: "leirefolket.firebasestorage.app",
-    messagingSenderId: "641158381331",
-    appId: "1:641158381331:web:e2a5f893d7d504f2d624e6"
-};
-
+// Initialiser secondary app bare hvis den ikke finnes
 try {
-    secondaryApp = initializeApp(secondaryConfig, "SecondaryApp");
-    secondaryAuth = getAuth(secondaryApp);
+    secondaryApp = initializeApp(firebaseConfig, "Secondary");
 } catch (e) {
-    console.warn("Secondary app already exists or failed to init:", e);
+    // Hvis den allerede finnes, hent den eksisterende
+    secondaryApp = getApp("Secondary");
 }
+secondaryAuth = getAuth(secondaryApp);
 
 // Custom Modals
 const messageModal = document.getElementById('message-modal');
@@ -730,8 +723,8 @@ function updateUI(user, profile) {
     if (profileRoleText) {
         if (authState.role === 'admin') {
             profileRoleText.textContent = 'Administrator';
-        } else if (authState.role === 'contributor') {
-            profileRoleText.textContent = 'Medlem/Sekretær';
+        } else if (authState.role === 'sekretær' || authState.role === 'contributor') {
+            profileRoleText.textContent = 'Sekretær';
         } else if (authState.role === 'styremedlem') {
             profileRoleText.textContent = 'Styremedlem';
         } else {
@@ -803,7 +796,7 @@ function updateUI(user, profile) {
         // Alltid vis for innloggede (siden den inneholder Dokumenter)
         adminPublishCard.classList.toggle('hidden', !user);
 
-        const canPublish = authState.role === 'admin' || authState.role === 'contributor';
+        const canPublish = authState.role === 'admin' || authState.role === 'sekretær' || authState.role === 'contributor';
 
         // Oppdater tittel basert på rolle
         if (publishCardTitle) {
@@ -813,6 +806,7 @@ function updateUI(user, profile) {
         // Vis/skjul knapper basert på tilgang
         if (newPostBtn) newPostBtn.classList.toggle('hidden', !canPublish);
         if (newEventBtn) newEventBtn.classList.toggle('hidden', !canPublish);
+        if (adminPublishSeparator) adminPublishSeparator.classList.toggle('hidden', !canPublish);
     }
 
     // Vis/skjul Administrasjon-knapp i profilkort (KUN for admin)
@@ -821,7 +815,7 @@ function updateUI(user, profile) {
     }
 
     // Admin Documents button visibility (Inside modal)
-    if (adminAddDocBtn) adminAddDocBtn.classList.toggle('hidden', authState.role !== 'admin' && authState.role !== 'contributor');
+    if (adminAddDocBtn) adminAddDocBtn.classList.toggle('hidden', authState.role !== 'admin' && authState.role !== 'sekretær' && authState.role !== 'contributor');
 
     // Toggle navigation links based on auth state
     if (user) {
@@ -866,8 +860,10 @@ function protectLoginPage() {
 
 async function handleLogin(e) {
     e.preventDefault();
-    const email = document.getElementById('login-email').value;
-    const password = document.getElementById('login-password').value;
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value.trim();
+
+    console.log("Logger inn forsøk med e-post:", email);
 
     const loginBtn = loginForm.querySelector('button[type="submit"]');
     const originalText = loginBtn.textContent;
@@ -897,14 +893,18 @@ async function handleLogin(e) {
 
 
     } catch (error) {
-        console.error("Login failed:", error.code);
+        console.error("Login failed error code:", error.code);
         if (loginError) {
             if (error.code === 'auth/invalid-credential') {
                 loginError.textContent = 'Feil e-post eller passord.';
             } else if (error.code === 'auth/user-disabled') {
                 loginError.textContent = 'Denne kontoen er deaktivert. Kontakt administrator.';
+            } else if (error.code === 'auth/too-many-requests') {
+                loginError.textContent = 'For mange forsøk. Tilgangen er midlertidig sperret. Vent litt og prøv igjen, eller be om nytt passord.';
+            } else if (error.code === 'auth/network-request-failed') {
+                loginError.textContent = 'Nettverksfeil. Sjekk internettforbindelsen din.';
             } else {
-                loginError.textContent = 'En feil oppstod. Prøv igjen.';
+                loginError.textContent = 'En feil oppstod (' + error.code + '). Prøv igjen.';
             }
         }
     } finally {
@@ -1048,9 +1048,20 @@ async function loadSidebarMembersList() {
             img.style.objectFit = 'cover';
 
             const info = document.createElement('div');
-            // Role text removed for cleaner look under names
+
+            // Format memberSince date (fallback to createdAt if missing)
+            let dateStr = 'Nylig';
+            const rawDate = userData.memberSince || userData.startDate || userData.createdAt;
+            if (rawDate) {
+                const date = rawDate.toDate ? rawDate.toDate() : new Date(rawDate);
+                if (!isNaN(date.getTime())) {
+                    dateStr = date.toLocaleDateString('no-NO');
+                }
+            }
+
             info.innerHTML = `
                 <p style="margin: 0; font-size: 0.85rem; font-weight: 600; line-height: 1.2;">${userData.displayName || 'Ukjent'}</p>
+                <p style="margin: 0; font-size: 0.75rem; color: var(--color-text-muted);">Siden: ${dateStr}</p>
             `;
 
             div.appendChild(img);
@@ -1458,15 +1469,13 @@ function setupMembersTabs() {
                 tabs.forEach(t => {
                     if (t.btn) {
                         t.btn.classList.remove('active');
-                        t.btn.style.borderBottomColor = 'transparent';
-                        t.btn.style.color = 'inherit';
+                        t.btn.classList.replace('btn-primary', 'btn-secondary');
                     }
                     if (t.section) t.section.classList.add('hidden');
                 });
 
                 tab.btn.classList.add('active');
-                tab.btn.style.borderBottomColor = 'var(--color-primary)';
-                tab.btn.style.color = 'var(--color-primary)';
+                tab.btn.classList.replace('btn-secondary', 'btn-primary');
                 if (tab.section) tab.section.classList.remove('hidden');
 
                 // Load data if function provided
@@ -2091,8 +2100,17 @@ function openDocumentsModal(category = 'referater') {
     currentDocCategory = category;
 
     // Refresh admin button visibility
-    const canEdit = authState.role === 'admin' || authState.role === 'contributor';
-    if (adminAddDocBtn) adminAddDocBtn.classList.toggle('hidden', !canEdit);
+    const canEditAll = authState.role === 'admin';
+    const isSecretary = authState.role === 'sekretær' || authState.role === 'contributor';
+    const canEditReferater = canEditAll || isSecretary;
+
+    if (adminAddDocBtn) {
+        if (category === 'referater') {
+            adminAddDocBtn.classList.toggle('hidden', !canEditReferater);
+        } else {
+            adminAddDocBtn.classList.toggle('hidden', !canEditAll);
+        }
+    }
 
     // Reset UI based on category
     if (retningslinjerTabs) retningslinjerTabs.classList.add('hidden');
@@ -2104,14 +2122,18 @@ function openDocumentsModal(category = 'referater') {
         if (documentsModalTitle) documentsModalTitle.textContent = 'Referater';
         if (adminAddDocBtn) adminAddDocBtn.innerText = '+ Nytt referat';
         if (headerControls) {
-            headerControls.style.display = canEdit ? 'flex' : 'none';
+            // For referater, secretaries can see the controls. For others, only admin.
+            const canSeeControls = category === 'referater' ? canEditReferater : canEditAll;
+            headerControls.style.display = canSeeControls ? 'flex' : 'none';
             headerControls.style.justifyContent = 'flex-end';
         }
     } else if (category === 'vedtekter') {
         if (documentsModalTitle) documentsModalTitle.textContent = 'Vedtekter';
         if (adminAddDocBtn) adminAddDocBtn.innerText = '+ Rediger vedtekter';
         if (headerControls) {
-            headerControls.style.display = canEdit ? 'flex' : 'none';
+            // For referater, secretaries can see the controls. For others, only admin.
+            const canSeeControls = category === 'referater' ? canEditReferater : canEditAll;
+            headerControls.style.display = canSeeControls ? 'flex' : 'none';
             headerControls.style.justifyContent = 'flex-end';
         }
     } else if (category === 'retningslinjer') {
@@ -2232,6 +2254,10 @@ function createDocumentItem(docSnap, category) {
     const data = docSnap.data();
     const id = docSnap.id;
 
+    const canEditAll = authState.role === 'admin';
+    const isSecretary = authState.role === 'sekretær' || authState.role === 'contributor';
+    const canEditThisCategory = category === 'referater' ? (canEditAll || isSecretary) : canEditAll;
+
     const isVedtekter = category === 'vedtekter';
     const isRetningslinjer = category === 'retningslinjer';
 
@@ -2244,12 +2270,12 @@ function createDocumentItem(docSnap, category) {
         item.style.padding = '0.5rem 0';
         item.style.borderBottom = '1px dashed var(--color-border)';
 
-        const canEdit = authState.role === 'admin' || authState.role === 'contributor';
+        // role-based canEdit now handled by canEditThisCategory
 
         item.innerHTML = `
             <span style="color: var(--color-primary); font-size: 1.25rem; line-height: 1;">•</span>
             <div style="flex: 1; font-size: 0.95rem; line-height: 1.5; color: var(--color-text-main);">${data.content}</div>
-            ${(canEdit && !isRetningslinjer) ? `
+            ${(canEditThisCategory && !isRetningslinjer) ? `
                 <button class="btn btn-ghost edit-doc-btn" data-id="${id}" style="padding: 0.25rem; min-width: auto; height: auto; opacity: 0.5;">
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -2259,7 +2285,7 @@ function createDocumentItem(docSnap, category) {
             ` : ''}
         `;
 
-        if (canEdit) {
+        if (canEditThisCategory) {
             const editBtn = item.querySelector('.edit-doc-btn');
             if (editBtn) {
                 editBtn.addEventListener('click', () => {
@@ -2284,7 +2310,7 @@ function createDocumentItem(docSnap, category) {
         item.style.border = '1px solid var(--color-border)';
     }
 
-    const canEdit = authState.role === 'admin' || authState.role === 'contributor';
+    // role-based canEdit now handled by canEditThisCategory
 
     // Format date
     const dateStr = data.date ? new Date(data.date).toLocaleDateString('no-NO') : 'Ukjent dato';
@@ -2307,7 +2333,7 @@ function createDocumentItem(docSnap, category) {
                     <p class="text-xs text-muted" style="margin: 0;">${dateStr}</p>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    ${canEdit ? `
+                    ${canEditThisCategory ? `
                         <button class="btn btn-ghost btn-sm edit-doc-btn" data-id="${id}" style="padding: 0.25rem; min-width: auto; height: auto;">
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -2353,7 +2379,7 @@ function createDocumentItem(docSnap, category) {
         `;
     }
 
-    if (canEdit) {
+    if (canEditThisCategory) {
         const editBtn = item.querySelector('.edit-doc-btn');
         if (editBtn) {
             editBtn.addEventListener('click', () => {

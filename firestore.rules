@@ -23,6 +23,18 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', null) == 'contributor';
     }
+
+    function isSecretary() {
+      return isSignedIn() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', null) == 'sekretær';
+    }
+
+    function isBoardMember() {
+      return isSignedIn() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', null) == 'styremedlem';
+    }
     // --- Brukere og Galleri ---
     match /users/{userId} {
       // Alle kan lese profilinfo (navn/bilde) - nødvendig for at admin skal kunne liste brukere
@@ -62,7 +74,7 @@ service cloud.firestore {
     // --- Feed ---
     match /artifacts/{appId}/public/data/feed/{postId} {
       allow read: if isSignedIn(); // Only members/admins
-      allow create: if isAdmin() || isContributor();
+      allow create: if isAdmin() || isSecretary() || isContributor();
       allow update, delete: if isAdmin();
 
       // Kommentarer
@@ -82,7 +94,7 @@ service cloud.firestore {
     // --- Arrangementer ---
     match /artifacts/{appId}/public/data/arrangements/{arrangementId} {
       allow read: if isSignedIn();
-      allow create: if isAdmin() || isContributor();
+      allow create: if isAdmin() || isSecretary() || isContributor();
       allow update, delete: if isAdmin();
 
       // RSVP
@@ -96,13 +108,13 @@ service cloud.firestore {
     // Allow access to old documents structure for migration/deletion
     match /documents/{docId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin() || isContributor();
+      allow write: if isAdmin();
     }
 
     // Allow access to new subcollection structure
     match /documents/{category}/items/{docId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin() || isContributor();
+      allow write: if isAdmin() || (category == 'referater' && (isSecretary() || isContributor()));
     }
   }
 }
