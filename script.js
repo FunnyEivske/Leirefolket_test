@@ -794,7 +794,7 @@ function updateUI(user, profile) {
     // Check for TOS Acceptance
     checkTOSAcceptance(profile);
 
-    // Publisering & Dokumenter Card
+    // Publisering & okumenter Card
     if (adminPublishCard) {
         // Alltid vis for innloggede (siden den inneholder Dokumenter)
         adminPublishCard.classList.toggle('hidden', !user);
@@ -803,7 +803,7 @@ function updateUI(user, profile) {
 
         // Oppdater tittel basert på rolle
         if (publishCardTitle) {
-            publishCardTitle.textContent = canPublish ? 'Publisering & Dokumenter' : 'Dokumenter';
+            publishCardTitle.textContent = canPublish ? 'Publisering & dokumenter' : 'Dokumenter';
         }
 
         // Vis/skjul knapper basert på tilgang
