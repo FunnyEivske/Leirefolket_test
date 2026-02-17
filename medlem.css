@@ -1791,6 +1791,10 @@ textarea {
   padding: 0.35rem 0.75rem;
   border-radius: var(--radius-full);
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
 }
 
 .rsvp-status.coming {
