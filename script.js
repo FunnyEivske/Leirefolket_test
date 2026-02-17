@@ -1041,12 +1041,14 @@ async function loadSidebarMembersList() {
             'styremedlem - økonomiansvarlig': 2,
             'styremedlem - sekretær': 3,
             'styremedlem': 4,
-            'medlem': 5
+            'medlem': 5,
+            'it administrator': 10,
+            'it administartor': 10
         };
 
         allMembers.sort((a, b) => {
-            const priorityA = rolePriority[a.organizationRole?.toLowerCase()] || 99;
-            const priorityB = rolePriority[b.organizationRole?.toLowerCase()] || 99;
+            const priorityA = rolePriority[a.organizationRole?.toLowerCase()] || 5;
+            const priorityB = rolePriority[b.organizationRole?.toLowerCase()] || 5;
 
             if (priorityA !== priorityB) {
                 return priorityA - priorityB;
@@ -1701,12 +1703,14 @@ async function loadMembersList() {
             'styremedlem - økonomiansvarlig': 2,
             'styremedlem - sekretær': 3,
             'styremedlem': 4,
-            'medlem': 5
+            'medlem': 5,
+            'it administrator': 10,
+            'it administartor': 10
         };
 
         allUsers.sort((a, b) => {
-            const priorityA = rolePriority[a.organizationRole?.toLowerCase()] || 99;
-            const priorityB = rolePriority[b.organizationRole?.toLowerCase()] || 99;
+            const priorityA = rolePriority[a.organizationRole?.toLowerCase()] || 5;
+            const priorityB = rolePriority[b.organizationRole?.toLowerCase()] || 5;
 
             if (priorityA !== priorityB) {
                 return priorityA - priorityB;
