@@ -643,6 +643,18 @@
                     <div class="form-group">
                         <label class="form-label">Bilde</label>
                         <input type="file" id="event-image" class="form-input" accept="image/*">
+                        <div id="event-image-preview-wrapper" class="hidden"
+                            style="margin-top: 1rem; border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden; background: var(--color-bg-subtle);">
+                            <div
+                                style="padding: 0.5rem; background: var(--color-primary); color: white; font-size: 0.75rem; text-align: center; cursor: default;">
+                                Dra bildet opp/ned for å justere utsnittet
+                            </div>
+                            <div id="event-image-preview-container"
+                                style="height: 200px; position: relative; cursor: ns-resize; overflow: hidden;">
+                                <img id="event-image-preview" src=""
+                                    style="width: 100%; position: absolute; top: 0; left: 0; user-select: none; pointer-events: none;">
+                            </div>
+                        </div>
                     </div>
                     <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
                         <button type="button" id="cancel-event-modal" class="btn btn-secondary">Avbryt</button>

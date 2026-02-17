@@ -97,8 +97,113 @@ async function compressImage(file, maxWidth = 1000, quality = 0.6) {
         reader.onerror = reject;
     });
 }
+async function cropAndCompressImage(file, offsetTop, targetWidth = 1000, targetHeight = 400, quality = 0.7) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
+                const ctx = canvas.getContext('2d');
+
+                // Finn ut hvor mye bildet er skalert i previewen
+                // I previewen er bredden alltid 100% av containeren
+                // Vi simulerer dette på canvaset
+
+                const scale = targetWidth / img.width;
+                const scaledImgHeight = img.height * scale;
+
+                // Beregn den faktiske offsetten basert på skaleringen
+                // I previewen er containeren 200px høy.
+                // Vi må skalere offsetten fra 200px-verdenen til targetHeight-verdenen.
+                const previewHeight = 200;
+                const offsetScale = targetHeight / previewHeight;
+                const finalOffset = offsetTop * offsetScale;
+
+                // Tegn bildet på canvaset med offset
+                ctx.drawImage(img, 0, finalOffset, targetWidth, scaledImgHeight);
+
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.onerror = reject;
+            img.src = e.target.result;
+        };
+        reader.onerror = reject;
+    });
+}
+// --- IMAGE ADJUSTMENT STATE ---
+let eventImageOffset = 0;
+let isDraggingEventImage = false;
+let startY = 0;
+let currentY = 0;
 
 // --- EVENT LOGIKK ---
+const eventImageInput = document.getElementById('event-image');
+const previewWrapper = document.getElementById('event-image-preview-wrapper');
+const previewContainer = document.getElementById('event-image-preview-container');
+const previewImg = document.getElementById('event-image-preview');
+
+if (eventImageInput) {
+    eventImageInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                previewImg.src = event.target.result;
+                previewWrapper.classList.remove('hidden');
+                eventImageOffset = 0;
+                previewImg.style.top = '0px';
+            };
+            reader.readAsDataURL(file);
+        } else {
+            previewWrapper.classList.add('hidden');
+        }
+    });
+}
+
+if (previewContainer) {
+    const startDrag = (e) => {
+        isDraggingEventImage = true;
+        startY = (e.touches ? e.touches[0].clientY : e.clientY) - eventImageOffset;
+        previewContainer.style.cursor = 'ns-resize';
+    };
+
+    const doDrag = (e) => {
+        if (!isDraggingEventImage) return;
+        e.preventDefault();
+
+        currentY = (e.touches ? e.touches[0].clientY : e.clientY);
+        let newOffset = currentY - startY;
+
+        // Begrens dragging slik at bildet ikke går utenfor
+        const containerHeight = previewContainer.offsetHeight;
+        const imgHeight = previewImg.offsetHeight;
+        const minOffset = containerHeight - imgHeight;
+
+        if (newOffset > 0) newOffset = 0;
+        if (newOffset < minOffset) newOffset = minOffset;
+
+        eventImageOffset = newOffset;
+        previewImg.style.top = `${eventImageOffset}px`;
+    };
+
+    const endDrag = () => {
+        isDraggingEventImage = false;
+        previewContainer.style.cursor = 'ns-resize';
+    };
+
+    previewContainer.addEventListener('mousedown', startDrag);
+    window.addEventListener('mousemove', doDrag);
+    window.addEventListener('mouseup', endDrag);
+
+    previewContainer.addEventListener('touchstart', startDrag, { passive: false });
+    window.addEventListener('touchmove', doDrag, { passive: false });
+    window.addEventListener('touchend', endDrag);
+}
+
 async function handleEventSubmit(e) {
     e.preventDefault();
     if ((authState.role !== 'admin' && authState.role !== 'contributor') || !authState.user) {
@@ -114,12 +219,13 @@ async function handleEventSubmit(e) {
     const description = document.getElementById('event-description').value;
     const dateVal = document.getElementById('event-date').value;
     const location = document.getElementById('event-location').value;
-    const imageFile = document.getElementById('event-image').files[0];
+    const imageFile = eventImageInput.files[0];
 
     try {
         let imageUrl = '';
         if (imageFile) {
-            imageUrl = await compressImage(imageFile);
+            // Bruk offset for å lage det ferdig besjærte bildet
+            imageUrl = await cropAndCompressImage(imageFile, eventImageOffset);
         }
 
         const eventsRef = collection(db, arrangementsPath);
@@ -135,6 +241,8 @@ async function handleEventSubmit(e) {
         });
 
         newEventForm.reset();
+        previewWrapper.classList.add('hidden');
+        previewImg.src = '';
         const eventModal = document.getElementById('event-modal');
         if (eventModal) toggleModal(eventModal, false);
         showCustomAlert("Arrangementet er publisert!");

@@ -794,10 +794,11 @@ function updateUI(user, profile) {
     // Check for TOS Acceptance
     checkTOSAcceptance(profile);
 
-    // Publisering & okumenter Card
+    // Publisering & Dokumenter Card
     if (adminPublishCard) {
         // Alltid vis for innloggede (siden den inneholder Dokumenter)
         adminPublishCard.classList.toggle('hidden', !user);
+        updateScrollLock();
 
         const canPublish = authState.role === 'admin' || authState.role === 'sekretær' || authState.role === 'contributor';
 
