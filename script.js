@@ -1104,18 +1104,21 @@ async function loadSidebarMembersList() {
             const moreBtn = document.createElement('button');
             moreBtn.className = 'btn btn-ghost btn-sm btn-full mt-2';
             moreBtn.style.fontSize = '0.75rem';
-
-            if (sidebarMembersLimit < 15 && allMembers.length > sidebarMembersLimit) {
-                moreBtn.textContent = 'Vis flere';
-                moreBtn.onclick = () => {
-                    sidebarMembersLimit = Math.min(15, allMembers.length);
-                    loadSidebarMembersList();
-                };
-            } else {
-                moreBtn.textContent = 'Se alle medlemmer';
-                moreBtn.onclick = () => openMembersModal();
-            }
+            moreBtn.textContent = 'Vis flere';
+            moreBtn.onclick = () => {
+                // Øk grensen med 10 av gangen
+                sidebarMembersLimit += 10;
+                loadSidebarMembersList();
+            };
             sidebarMembersList.appendChild(moreBtn);
+        } else {
+            // Alle er lastet inn i sidebaren, nå kan vi vise knappen for å se alle i modallen
+            const allBtn = document.createElement('button');
+            allBtn.className = 'btn btn-ghost btn-sm btn-full mt-2';
+            allBtn.style.fontSize = '0.75rem';
+            allBtn.textContent = 'Se alle medlemmer';
+            allBtn.onclick = () => openMembersModal();
+            sidebarMembersList.appendChild(allBtn);
         }
 
     } catch (error) {
