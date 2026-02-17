@@ -177,6 +177,7 @@ const createUserBtn = document.getElementById('create-user-btn');
 const userModalTitle = null; // Generic title now in members modal
 const editUserIdInput = document.getElementById('edit-user-id');
 const userMemberSinceInput = document.getElementById('new-user-member-since');
+const userOrganizationRoleInput = document.getElementById('new-user-organization-role');
 
 // Admin Member List
 const adminMembersModal = document.getElementById('admin-members-modal');
@@ -280,6 +281,7 @@ const addMorePointsBtn = document.getElementById('add-more-points-btn');
 const docContentHint = document.getElementById('doc-content-hint');
 const docContentLabel = document.getElementById('doc-content-label');
 const docQuillEditor = document.getElementById('doc-quill-editor');
+const docRichTextHint = document.getElementById('doc-rich-text-hint');
 
 // Initialize Quill
 let quill;
@@ -1029,11 +1031,32 @@ async function loadSidebarMembersList() {
 
         sidebarMembersList.innerHTML = '';
 
-        const allMembers = usersSnapshot.docs.filter(doc => doc.data().status !== 'pending_deletion');
+        const allMembers = usersSnapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .filter(userData => userData.status !== 'pending_deletion');
+
+        // Sort by role priority, then by name
+        const rolePriority = {
+            'styremedlem - leder': 1,
+            'styremedlem - økonomiansvarlig': 2,
+            'styremedlem - sekretær': 3,
+            'styremedlem': 4,
+            'medlem': 5
+        };
+
+        allMembers.sort((a, b) => {
+            const priorityA = rolePriority[a.organizationRole?.toLowerCase()] || 99;
+            const priorityB = rolePriority[b.organizationRole?.toLowerCase()] || 99;
+
+            if (priorityA !== priorityB) {
+                return priorityA - priorityB;
+            }
+            return (a.displayName || '').localeCompare(b.displayName || '');
+        });
+
         const visibleMembers = allMembers.slice(0, sidebarMembersLimit);
 
-        visibleMembers.forEach(userDoc => {
-            const userData = userDoc.data();
+        visibleMembers.forEach(userData => {
             const div = document.createElement('div');
             div.style.display = 'flex';
             div.style.alignItems = 'center';
@@ -1058,9 +1081,14 @@ async function loadSidebarMembersList() {
                 }
             }
 
+
+            let orgRoleStr = userData.organizationRole || 'Medlem';
+            orgRoleStr = orgRoleStr.charAt(0).toUpperCase() + orgRoleStr.slice(1);
+
             info.innerHTML = `
                 <p style="margin: 0; font-size: 0.85rem; font-weight: 600; line-height: 1.2;">${userData.displayName || 'Ukjent'}</p>
-                <p style="margin: 0; font-size: 0.75rem; color: var(--color-text-muted);">Siden: ${dateStr}</p>
+                <p style="margin: 0; font-size: 0.75rem; color: var(--color-text-muted);">medlem fra: ${dateStr}</p>
+                <p style="margin: 0; font-size: 0.70rem; color: var(--color-primary); font-weight: 500;">${orgRoleStr}</p>
             `;
 
             div.appendChild(img);
@@ -1663,14 +1691,31 @@ async function loadMembersList() {
         ));
         adminMembersList.innerHTML = '';
 
-        let activeCount = 0;
+        const allUsers = usersSnapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() }))
+            .filter(userData => userData.status !== 'pending_deletion');
 
-        usersSnapshot.forEach(userDoc => {
-            const userData = userDoc.data();
-            if (userData.status === 'pending_deletion') return; // Skip pending ones in the main list
-            activeCount++;
+        // Sort by role priority, then by name
+        const rolePriority = {
+            'styremedlem - leder': 1,
+            'styremedlem - økonomiansvarlig': 2,
+            'styremedlem - sekretær': 3,
+            'styremedlem': 4,
+            'medlem': 5
+        };
 
-            const userId = userDoc.id;
+        allUsers.sort((a, b) => {
+            const priorityA = rolePriority[a.organizationRole?.toLowerCase()] || 99;
+            const priorityB = rolePriority[b.organizationRole?.toLowerCase()] || 99;
+
+            if (priorityA !== priorityB) {
+                return priorityA - priorityB;
+            }
+            return (a.displayName || '').localeCompare(b.displayName || '');
+        });
+
+        allUsers.forEach(userData => {
+            const userId = userData.id;
 
             const div = document.createElement('div');
             div.className = 'admin-list-item';
@@ -1681,10 +1726,14 @@ async function loadMembersList() {
                 dateStr = date.toLocaleDateString('no-NO');
             }
 
+
+            let orgRoleStr = userData.organizationRole || 'Medlem';
+            orgRoleStr = orgRoleStr.charAt(0).toUpperCase() + orgRoleStr.slice(1);
+
             div.innerHTML = `
                 <div>
-                    <p class="font-semibold text-sm">${userData.displayName || 'Ukjent'}</p>
-                    <p class="text-xs text-muted">ID: ${userId} | Medlem siden: ${dateStr}</p>
+                    <p class="font-semibold text-sm">${userData.displayName || 'Ukjent'} (${orgRoleStr})</p>
+                    <p class="text-xs text-muted">ID: ${userId} | medlem fra: ${dateStr}</p>
                 </div>
                 ${authState.role === 'admin' ? `
                     <button class="btn btn-secondary btn-sm edit-member-btn" data-id="${userId}">Rediger</button>
@@ -1738,6 +1787,7 @@ async function openEditUserModal(userId) {
 
         document.getElementById('new-user-name').value = userData.displayName || '';
         document.getElementById('new-user-role').value = userData.role || 'member';
+        if (userOrganizationRoleInput) userOrganizationRoleInput.value = userData.organizationRole || 'medlem';
 
         if (userData.memberSince) {
             const date = userData.memberSince.toDate ? userData.memberSince.toDate() : new Date(userData.memberSince);
@@ -1765,6 +1815,7 @@ async function openEditUserModal(userId) {
 function resetAddMemberForm() {
     if (createUserForm) createUserForm.reset();
     if (editUserIdInput) editUserIdInput.value = '';
+    if (userOrganizationRoleInput) userOrganizationRoleInput.value = 'medlem';
 
     const emailInput = document.getElementById('new-user-email');
     const passInput = document.getElementById('new-user-password');
@@ -1829,6 +1880,7 @@ if (createUserForm) {
         const password = document.getElementById('new-user-password').value.trim();
         const name = document.getElementById('new-user-name').value.trim();
         const role = document.getElementById('new-user-role').value;
+        const orgRole = userOrganizationRoleInput ? userOrganizationRoleInput.value : 'medlem';
         const memberSince = userMemberSinceInput.value;
         const editingId = editUserIdInput.value;
 
@@ -1845,6 +1897,7 @@ if (createUserForm) {
                 await setDoc(doc(db, 'users', editingId), {
                     displayName: name,
                     role: role,
+                    organizationRole: orgRole,
                     memberSince: memberSinceDate, // Admin controlled display date
                     status: 'active'
                 }, { merge: true });
@@ -1870,6 +1923,7 @@ if (createUserForm) {
                     email: email, // Saved for archive purposes
                     photoURL: null,
                     role: role,
+                    organizationRole: orgRole,
                     memberSince: memberSinceDate, // Admin controlled display date
                     startDate: serverTimestamp(), // Actual account creation
                     status: 'active',
@@ -2497,9 +2551,11 @@ async function openDocEntryModal(id = null, data = null) {
         if (quill) {
             docEntryContentInput.classList.add('hidden');
             docContentHint.classList.add('hidden');
+            if (docRichTextHint) docRichTextHint.classList.remove('hidden');
             if (docQuillEditor) {
                 docQuillEditor.classList.remove('hidden');
-                docQuillEditor.parentElement.querySelector('.ql-toolbar')?.classList.remove('hidden');
+                const toolbar = docQuillEditor.parentElement.querySelector('.ql-toolbar');
+                if (toolbar) toolbar.classList.remove('hidden');
                 docQuillEditor.style.display = 'block';
             }
         }
@@ -2518,19 +2574,24 @@ async function openDocEntryModal(id = null, data = null) {
             // Rich Text for Referater/Vedtekter
             docEntryContentInput.classList.add('hidden');
             docContentHint.classList.add('hidden');
+            if (docRichTextHint) docRichTextHint.classList.remove('hidden');
             if (docQuillEditor) {
                 docQuillEditor.classList.remove('hidden');
-                docQuillEditor.parentElement.querySelector('.ql-toolbar')?.classList.remove('hidden');
+                // Ensure toolbar is visible
+                const toolbar = docQuillEditor.parentElement.querySelector('.ql-toolbar');
+                if (toolbar) toolbar.classList.remove('hidden');
                 docQuillEditor.style.display = 'block';
             }
             docEntryContentInput.required = false;
         } else {
-            // Normal fallback
+            // Normal fallback (Guidelines etc)
             docEntryContentInput.classList.remove('hidden');
             docContentHint.classList.remove('hidden');
+            if (docRichTextHint) docRichTextHint.classList.add('hidden');
             if (docQuillEditor) {
                 docQuillEditor.classList.add('hidden');
-                docQuillEditor.parentElement.querySelector('.ql-toolbar')?.classList.add('hidden');
+                const toolbar = docQuillEditor.parentElement.querySelector('.ql-toolbar');
+                if (toolbar) toolbar.classList.add('hidden');
             }
             docEntryContentInput.required = true;
         }
@@ -2604,8 +2665,14 @@ async function handleDocEntrySubmit(e) {
     if (isRetningslinje) {
         points = Array.from(document.querySelectorAll('.doc-point-input')).map(i => i.value.trim()).filter(v => v !== '');
     } else if (isReferatEllerVedtekt && quill) {
+        // For Referater and Vedtekter, we use the rich text content
         const html = quill.root.innerHTML.trim();
-        if (quill.getText().trim().length > 0) points = [html];
+        // Check if there is actual content (not just empty tags)
+        if (quill.getText().trim().length > 0) {
+            points = [html];
+        } else {
+            points = []; // Will trigger validation below
+        }
     } else {
         const val = docEntryContentInput.value.trim();
         if (val) points = [val];

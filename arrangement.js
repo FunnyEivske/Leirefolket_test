@@ -203,8 +203,8 @@ function renderUpcomingEvents(events) {
                 <p class="event-description">${sanitizeHTML(event.description).replace(/\n/g, '<br>')}</p>
                 
                 <div class="event-actions">
-                    <button class="btn btn-secondary btn-sm rsvp-btn" data-id="${event.id}" data-status="coming">Jeg kommer!</button>
-                    <button class="btn btn-secondary btn-sm rsvp-btn" data-id="${event.id}" data-status="not_coming">Kan ikke komme</button>
+                    <button class="btn btn-secondary btn-sm rsvp-btn" data-id="${event.id}" data-status="coming">Kommer!</button>
+                    <button class="btn btn-secondary btn-sm rsvp-btn" data-id="${event.id}" data-status="not_coming">Kommer ikke</button>
                     <div id="rsvp-status-${event.id}" class="rsvp-status"></div>
                 </div>
                 
@@ -301,7 +301,7 @@ function setupRSVPListener(eventId) {
 
             // check current user status
             if (data.userId === authState.user?.uid) {
-                statusEl.textContent = data.status === 'coming' ? '✓ Du kommer' : '✕ Du kommer ikke';
+                statusEl.textContent = data.status === 'coming' ? '✓ Kommer' : '✕ Kommer ikke';
                 statusEl.className = `rsvp-status ${data.status.replace('_', '-')}`;
 
                 // Highlight the active button

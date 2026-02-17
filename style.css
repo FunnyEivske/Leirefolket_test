@@ -83,6 +83,15 @@
   /* Darker than page bg (#292524) */
 }
 
+/* Ensure broad readability in dark mode for dynamic content */
+[data-theme="dark"] p,
+[data-theme="dark"] .feed-item-content,
+[data-theme="dark"] .feed-item-content *,
+[data-theme="dark"] #documents-list-container,
+[data-theme="dark"] #documents-list-container * {
+  color: var(--color-text-main) !important;
+}
+
 /* --- Theme Helpers --- */
 [data-theme="dark"] .logo-light-only {
   display: none !important;

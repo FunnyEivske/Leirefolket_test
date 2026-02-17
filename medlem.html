@@ -532,6 +532,17 @@
                             <label for="new-user-member-since" class="form-label">Medlem siden (Startdato)</label>
                             <input type="date" id="new-user-member-since" class="form-input">
                         </div>
+                        <div class="form-group">
+                            <label for="new-user-organization-role" class="form-label">Medlemstype (Vises i
+                                medlemsliste)</label>
+                            <select id="new-user-organization-role" class="form-input">
+                                <option value="medlem">Medlem</option>
+                                <option value="styremedlem">Styremedlem</option>
+                                <option value="styremedlem - sekretær">Styremedlem - sekretær</option>
+                                <option value="styremedlem - økonomiansvarlig">Styremedlem - økonomiansvarlig</option>
+                                <option value="styremedlem - leder">Styremedlem - leder</option>
+                            </select>
+                        </div>
                         <input type="hidden" id="edit-user-id">
 
                         <div
@@ -740,7 +751,11 @@
                             placeholder="Skriv reglene her (linje for linje)..."></textarea>
 
                         <!-- For Referater: Rich Text Editor -->
-                        <div id="doc-quill-editor" class="hidden" style="height: 220px; margin-bottom: 1rem;"></div>
+                        <div id="doc-rich-text-hint" class="text-xs text-muted mb-2 hidden">
+                            Tips: Du kan lime inn direkte fra Google Docs for å beholde formatering.
+                        </div>
+                        <div id="doc-quill-editor" class="hidden"
+                            style="height: 300px; margin-bottom: 1rem; background: var(--color-bg-surface);"></div>
 
                         <!-- For Retningslinjer: Dynamic inputs -->
                         <div id="doc-points-container" class="hidden"

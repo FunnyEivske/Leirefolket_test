@@ -152,7 +152,7 @@
 }
 
 [data-theme="dark"] .ql-snow.ql-toolbar .ql-picker-options {
-  background-color: var(--color-bg-card) !important;
+  background-color: var(--color-bg-surface) !important;
   border-color: var(--color-border) !important;
 }
 
@@ -182,6 +182,20 @@
 
 [data-theme="dark"] .ql-snow.ql-toolbar .ql-picker.ql-expanded .ql-picker-options .ql-picker-item:hover {
   color: var(--color-primary) !important;
+}
+
+[data-theme="dark"] .ql-editor {
+  color: var(--color-text-main) !important;
+}
+
+/* Very aggressive fix to ensure all text within content areas is readable in dark mode */
+[data-theme="dark"] .ql-editor,
+[data-theme="dark"] .ql-editor *,
+[data-theme="dark"] .feed-item-content,
+[data-theme="dark"] .feed-item-content *,
+[data-theme="dark"] #documents-list-container,
+[data-theme="dark"] #documents-list-container * {
+  color: var(--color-text-main) !important;
 }
 
 /*
