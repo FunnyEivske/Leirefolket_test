@@ -791,7 +791,7 @@ function updateUI(user, profile) {
 
 
 
-    // Check for TOS Acceptance
+    // Check for TOS Acceptance..
     checkTOSAcceptance(profile);
 
     // Publisering & okumenter Card
