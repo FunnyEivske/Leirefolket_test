@@ -1,5 +1,5 @@
 import { db, appId } from './firebase.js';
-import { authState, userReady, showCustomAlert, showCustomConfirm, toggleModal } from './script.js';
+import { authState, userReady, showCustomAlert, showCustomConfirm, toggleModal, setupImageAdjustment, cropAndCompressUniversal } from './script.js';
 import {
     collection,
     addDoc,
@@ -11,6 +11,7 @@ import {
     setDoc,
     deleteDoc,
     getDoc,
+    updateDoc,
     serverTimestamp,
     where
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -97,162 +98,173 @@ async function compressImage(file, maxWidth = 1000, quality = 0.6) {
         reader.onerror = reject;
     });
 }
-async function cropAndCompressImage(file, offsetTop, targetWidth = 1000, targetHeight = 400, quality = 0.7) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = targetWidth;
-                canvas.height = targetHeight;
-                const ctx = canvas.getContext('2d');
-
-                // Finn ut hvor mye bildet er skalert i previewen
-                // I previewen er bredden alltid 100% av containeren
-                // Vi simulerer dette på canvaset
-
-                const scale = targetWidth / img.width;
-                const scaledImgHeight = img.height * scale;
-
-                // Beregn den faktiske offsetten basert på skaleringen
-                // I previewen er containeren 200px høy.
-                // Vi må skalere offsetten fra 200px-verdenen til targetHeight-verdenen.
-                const previewHeight = 200;
-                const offsetScale = targetHeight / previewHeight;
-                const finalOffset = offsetTop * offsetScale;
-
-                // Tegn bildet på canvaset med offset
-                ctx.drawImage(img, 0, finalOffset, targetWidth, scaledImgHeight);
-
-                resolve(canvas.toDataURL('image/jpeg', quality));
-            };
-            img.onerror = reject;
-            img.src = e.target.result;
-        };
-        reader.onerror = reject;
-    });
-}
+// cropAndCompressImage function removed, now using shared cropAndCompressUniversal
 // --- IMAGE ADJUSTMENT STATE ---
 let eventImageOffset = 0;
-let isDraggingEventImage = false;
-let startY = 0;
-let currentY = 0;
+let resetEventAdjustment = null;
+let editingEventId = null; // Tracks which event is being edited
 
 // --- EVENT LOGIKK ---
 const eventImageInput = document.getElementById('event-image');
 const previewWrapper = document.getElementById('event-image-preview-wrapper');
-const previewContainer = document.getElementById('event-image-preview-container');
 const previewImg = document.getElementById('event-image-preview');
 
+// Initialisering for Universal Cropping
 if (eventImageInput) {
+    eventImageInput.addEventListener('cropComplete', (e) => {
+        eventImageOffset = e.detail.offset;
+        console.log("Event crop complete. Offset:", eventImageOffset);
+    });
+
     eventImageInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                previewImg.src = event.target.result;
-                previewWrapper.classList.remove('hidden');
-                eventImageOffset = 0;
-                previewImg.style.top = '0px';
-            };
-            reader.readAsDataURL(file);
-        } else {
-            previewWrapper.classList.add('hidden');
+        if (!e.target.files[0]) {
+            eventImageOffset = 0;
         }
     });
 }
 
-if (previewContainer) {
-    const startDrag = (e) => {
-        isDraggingEventImage = true;
-        startY = (e.touches ? e.touches[0].clientY : e.clientY) - eventImageOffset;
-        previewContainer.style.cursor = 'ns-resize';
-    };
+async function handleEditEvent(eventId) {
+    try {
+        const eventDoc = await getDoc(doc(db, arrangementsPath, eventId));
+        if (!eventDoc.exists()) {
+            showCustomAlert("Arrangementet finnes ikke lenger.");
+            return;
+        }
 
-    const doDrag = (e) => {
-        if (!isDraggingEventImage) return;
-        e.preventDefault();
+        const eventData = eventDoc.data();
+        editingEventId = eventId;
 
-        currentY = (e.touches ? e.touches[0].clientY : e.clientY);
-        let newOffset = currentY - startY;
+        // Fyll ut skjemaet
+        document.getElementById('event-title').value = eventData.title || '';
+        document.getElementById('event-description').value = eventData.description || '';
+        document.getElementById('event-location').value = eventData.location || '';
 
-        // Begrens dragging slik at bildet ikke går utenfor
-        const containerHeight = previewContainer.offsetHeight;
-        const imgHeight = previewImg.offsetHeight;
-        const minOffset = containerHeight - imgHeight;
+        if (eventData.date) {
+            const date = eventData.date.toDate();
+            // Format for datetime-local input: YYYY-MM-DDThh:mm
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            document.getElementById('event-date').value = `${year}-${month}-${day}T${hours}:${minutes}`;
+        }
 
-        if (newOffset > 0) newOffset = 0;
-        if (newOffset < minOffset) newOffset = minOffset;
+        const modalTitle = document.getElementById('event-modal')?.querySelector('h3');
+        if (modalTitle) modalTitle.textContent = 'Rediger arrangement';
+        if (eventSubmitButton) eventSubmitButton.textContent = 'Lagre endringer';
 
-        eventImageOffset = newOffset;
-        previewImg.style.top = `${eventImageOffset}px`;
-    };
+        // Håndter bilde
+        if (eventData.imageUrl) {
+            if (previewImg) previewImg.src = eventData.imageUrl;
+            if (previewWrapper) previewWrapper.classList.remove('hidden');
+            const dropZone = document.getElementById('event-upload-drop-zone');
+            if (dropZone) dropZone.classList.add('hidden');
+            eventImageOffset = eventData.imageOffset || 0;
+            if (resetEventAdjustment) resetEventAdjustment(eventImageOffset);
+        } else {
+            if (previewWrapper) previewWrapper.classList.add('hidden');
+            const dropZone = document.getElementById('event-upload-drop-zone');
+            if (dropZone) dropZone.classList.remove('hidden');
+            eventImageOffset = 0;
+        }
 
-    const endDrag = () => {
-        isDraggingEventImage = false;
-        previewContainer.style.cursor = 'ns-resize';
-    };
-
-    previewContainer.addEventListener('mousedown', startDrag);
-    window.addEventListener('mousemove', doDrag);
-    window.addEventListener('mouseup', endDrag);
-
-    previewContainer.addEventListener('touchstart', startDrag, { passive: false });
-    window.addEventListener('touchmove', doDrag, { passive: false });
-    window.addEventListener('touchend', endDrag);
+        const eventModal = document.getElementById('event-modal');
+        if (eventModal) toggleModal(eventModal, true);
+    } catch (error) {
+        console.error("Error fetching event for edit:", error);
+        showCustomAlert("Kunne ikke hente arrangementet: " + error.message);
+    }
 }
 
 async function handleEventSubmit(e) {
     e.preventDefault();
     if ((authState.role !== 'admin' && authState.role !== 'contributor') || !authState.user) {
-        eventError.textContent = 'Du har ikke tilgang til å publisere.';
+        if (eventError) eventError.textContent = 'Du har ikke tilgang til å publisere.';
         return;
     }
 
-    eventError.textContent = '';
-    eventSubmitButton.disabled = true;
-    eventSubmitButton.textContent = 'Publiserer...';
+    if (eventError) eventError.textContent = '';
+    const originalBtnText = editingEventId ? 'Lagre endringer' : 'Publiser arrangement';
+    if (eventSubmitButton) {
+        eventSubmitButton.disabled = true;
+        eventSubmitButton.textContent = editingEventId ? 'Lagrer endringer...' : 'Publiserer...';
+    }
 
     const title = document.getElementById('event-title').value;
     const description = document.getElementById('event-description').value;
     const dateVal = document.getElementById('event-date').value;
     const location = document.getElementById('event-location').value;
-    const imageFile = eventImageInput.files[0];
+    const imageFile = eventImageInput ? eventImageInput.files[0] : null;
 
     try {
         let imageUrl = '';
-        if (imageFile) {
-            // Bruk offset for å lage det ferdig besjærte bildet
-            imageUrl = await cropAndCompressImage(imageFile, eventImageOffset);
+        let imageOffset = eventImageOffset;
+
+        // Hvis vi redigerer og mangler ny fil, behold gammelt bilde
+        if (editingEventId && !imageFile) {
+            const eventDoc = await getDoc(doc(db, arrangementsPath, editingEventId));
+            if (eventDoc.exists()) {
+                imageUrl = eventDoc.data().imageUrl || '';
+                imageOffset = eventDoc.data().imageOffset || 0;
+            }
         }
 
-        const eventsRef = collection(db, arrangementsPath);
-        await addDoc(eventsRef, {
+        if (imageFile) {
+            // Bruk universell contextual cropping (offset i %)
+            imageUrl = await cropAndCompressUniversal(imageFile, eventImageOffset, {
+                targetWidth: 1000,
+                targetHeight: 400
+            });
+            imageOffset = 0;
+        }
+
+        const eventData = {
             title,
             description,
             date: Timestamp.fromDate(new Date(dateVal)),
             location: location || 'Ikke oppgitt',
             imageUrl,
-            authorId: authState.user.uid,
-            authorName: authState.profile?.displayName || 'Admin',
-            createdAt: serverTimestamp()
-        });
+            imageOffset: imageOffset,
+            updatedAt: serverTimestamp()
+        };
+
+        if (editingEventId) {
+            await updateDoc(doc(db, arrangementsPath, editingEventId), eventData);
+            showCustomAlert("Arrangementet ble oppdatert!");
+        } else {
+            eventData.authorId = authState.user.uid;
+            eventData.authorName = authState.profile?.displayName || 'Admin';
+            eventData.createdAt = serverTimestamp();
+
+            const eventsRef = collection(db, arrangementsPath);
+            await addDoc(eventsRef, eventData);
+            showCustomAlert("Arrangementet ble publisert!");
+        }
 
         newEventForm.reset();
-        previewWrapper.classList.add('hidden');
-        previewImg.src = '';
+        if (previewWrapper) previewWrapper.classList.add('hidden');
+        if (previewImg) previewImg.src = '';
+        const dropZone = document.getElementById('event-upload-drop-zone');
+        if (dropZone) dropZone.classList.remove('hidden');
+        eventImageOffset = 0;
+        if (resetEventAdjustment) resetEventAdjustment(0);
+
+        editingEventId = null;
+        const modalTitle = document.getElementById('event-modal')?.querySelector('h3');
+        if (modalTitle) modalTitle.textContent = 'Nytt arrangement';
+
         const eventModal = document.getElementById('event-modal');
         if (eventModal) toggleModal(eventModal, false);
-        showCustomAlert("Arrangementet er publisert!");
 
     } catch (error) {
-        console.error("Error creating event:", error);
-        eventError.textContent = 'En feil oppstod. Kunne ikke publisere.';
+        console.error("Error saving event:", error);
+        if (eventError) eventError.textContent = 'En feil oppstod. Kunne ikke lagre arrangementet.';
     } finally {
-        eventSubmitButton.disabled = false;
-        eventSubmitButton.textContent = 'Publiser arrangement';
+        if (eventSubmitButton) {
+            eventSubmitButton.disabled = false;
+            eventSubmitButton.textContent = 'Publiser arrangement';
+        }
     }
 }
 
@@ -317,8 +329,9 @@ function renderUpcomingEvents(events) {
                 </div>
                 
                 ${authState.role === 'admin' ? `
-                <div style="margin-top: 1rem; text-align: right;">
-                    <button class="btn btn-ghost text-sm delete-event-btn" data-id="${event.id}" style="color: var(--color-error);">Slett arrangement</button>
+                <div style="margin-top: 1rem; text-align: right; display: flex; justify-content: flex-end; gap: 0.5rem;">
+                    <button class="btn btn-ghost btn-sm edit-event-btn" data-id="${event.id}">✏️ Rediger</button>
+                    <button class="btn btn-ghost btn-sm delete-event-btn" data-id="${event.id}" style="color: var(--color-error);">🗑️ Slett</button>
                 </div>
                 ` : ''}
                 
@@ -453,6 +466,11 @@ async function handleDeleteEvent(eventId) {
 
 // --- INITIALISERING ---
 userReady.then(() => {
+    // Initialiser premium opplastingssone for arrangementer
+    if (typeof window.setupUploadZone === 'function') {
+        window.setupUploadZone('event-image', 'event-upload-drop-zone', 'event-image-preview', 'event-image-preview-wrapper');
+    }
+
     // Tab event listeners
     tabPosts.addEventListener('click', () => switchTab('posts'));
     tabEvents.addEventListener('click', () => switchTab('events'));
@@ -480,6 +498,12 @@ userReady.then(() => {
         const rsvpBtn = e.target.closest('.rsvp-btn');
         if (rsvpBtn) {
             handleRSVP(rsvpBtn.dataset.id, rsvpBtn.dataset.status);
+            return;
+        }
+
+        const editBtn = e.target.closest('.edit-event-btn');
+        if (editBtn) {
+            handleEditEvent(editBtn.dataset.id);
             return;
         }
 

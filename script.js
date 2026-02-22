@@ -23,6 +23,9 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- GLOBAL STATE --- //
+let profileImageOffset = 0;
+let resetProfileAdjustment = null;
+
 export let authState = {
     user: null,
     role: null, // 'member', 'admin', eller null
@@ -136,6 +139,20 @@ const postModal = document.getElementById('post-modal');
 const postModalOverlay = document.getElementById('post-modal-overlay');
 const closePostModalBtn = document.getElementById('close-post-modal');
 const cancelPostModalBtn = document.getElementById('cancel-post-modal');
+
+// Universal Crop Modal Elements
+const universalCropModal = document.getElementById('universal-crop-modal');
+const universalCropOverlay = document.getElementById('universal-crop-overlay');
+const closeUniversalCropBtn = document.getElementById('close-universal-crop');
+const cancelUniversalCropBtn = document.getElementById('cancel-universal-crop');
+const applyUniversalCropBtn = document.getElementById('apply-universal-crop');
+const modalCropImage = document.getElementById('modal-crop-image');
+const modalCropViewport = document.getElementById('modal-crop-viewport');
+const modalCropPreviewWrapper = document.getElementById('modal-crop-preview-wrapper');
+
+let currentCropCallback = null;
+let currentCropReset = null;
+let currentCropOffset = 0;
 
 const eventModal = document.getElementById('event-modal');
 const eventModalOverlay = document.getElementById('event-modal-overlay');
@@ -299,6 +316,59 @@ if (typeof Quill !== 'undefined' && docQuillEditor) {
     });
 }
 
+// --- UNIVERSAL CROP MODAL LOGIC ---
+
+export function openUniversalCropModal(file, aspectRatioClass, callback) {
+    if (!file || !universalCropModal || !modalCropImage) return;
+
+    currentCropCallback = callback;
+    currentCropOffset = 0;
+
+    // Set aspect ratio class
+    modalCropViewport.className = 'crop-viewport ' + aspectRatioClass;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        modalCropImage.src = e.target.result;
+        toggleModal(universalCropModal, true);
+
+        // Initialize adjustment for the modal
+        // We use a small timeout to ensure modal is visible and dimensions are correct
+        setTimeout(() => {
+            currentCropReset = setupImageAdjustment('modal-crop-preview-wrapper', 'modal-crop-image', (offset) => {
+                currentCropOffset = offset;
+            });
+            if (currentCropReset) currentCropReset(0);
+        }, 300);
+    };
+    reader.readAsDataURL(file);
+}
+window.openUniversalCropModal = openUniversalCropModal;
+
+// Modal button listeners
+if (applyUniversalCropBtn) {
+    applyUniversalCropBtn.addEventListener('click', () => {
+        if (currentCropCallback) {
+            currentCropCallback(currentCropOffset);
+        }
+        toggleModal(universalCropModal, false);
+    });
+}
+
+if (cancelUniversalCropBtn || closeUniversalCropBtn) {
+    [cancelUniversalCropBtn, closeUniversalCropBtn].forEach(btn => {
+        if (btn) btn.addEventListener('click', () => {
+            toggleModal(universalCropModal, false);
+        });
+    });
+}
+
+if (universalCropOverlay) {
+    universalCropOverlay.addEventListener('click', () => {
+        toggleModal(universalCropModal, false);
+    });
+}
+
 // --- HJELPEFUNKSJONER ---
 
 export function updateScrollLock() {
@@ -380,7 +450,7 @@ export function showCustomConfirm(message) {
 /**
  * Konverterer en fil til en Base64-streng og endrer størrelsen.
  */
-function resizeAndConvertToBase64(file, maxWidth = 800) {
+export function resizeAndConvertToBase64(file, maxWidth = 800) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
@@ -414,6 +484,245 @@ function resizeAndConvertToBase64(file, maxWidth = 800) {
         reader.onerror = (error) => reject(error);
     });
 }
+
+/**
+ * Hjelpefunksjon for å sette opp en premium "opplastingssone".
+ * Håndterer både klikk og drag-and-drop.
+ */
+export function setupUploadZone(inputId, dropZoneId, previewImgId, previewWrapperId) {
+    const input = document.getElementById(inputId);
+    const dropZone = document.getElementById(dropZoneId);
+    const previewImg = document.getElementById(previewImgId);
+    const previewWrapper = document.getElementById(previewWrapperId);
+
+    if (!input || !dropZone) return;
+
+    // Klikk på sonen trigger input (unntatt hvis man klikket direkte på den usynlige inputen)
+    dropZone.addEventListener('click', (e) => {
+        if (e.target !== input) {
+            input.click();
+        }
+    });
+
+    // Drag and drop events
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+        }, false);
+    });
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
+    });
+
+    const handleFiles = (files) => {
+        if (files.length > 0) {
+            const file = files[0];
+            if (!file.type.startsWith('image/')) {
+                showCustomAlert("Vennligst velg et bilde (JPG/PNG).");
+                return;
+            }
+
+            // Trigger standard input change for compatibility
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(file);
+            input.files = dataTransfer.files;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    };
+
+    dropZone.addEventListener('drop', (e) => {
+        handleFiles(e.dataTransfer.files);
+    });
+
+    input.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file && previewImg && previewWrapper) {
+            // Bestem aspect ratio basert på wrapper (eller send det som argument)
+            let aspectClass = 'square';
+            if (previewWrapper.classList.contains('banner')) aspectClass = 'banner';
+            if (previewWrapper.classList.contains('post')) aspectClass = 'post';
+
+            openUniversalCropModal(file, aspectClass, (offset) => {
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    previewImg.src = event.target.result;
+                    previewWrapper.classList.remove('hidden');
+                    // We don't need to manually set top anymore because we use the offset during cropAndCompress
+                    // But for visual feedback in the tiny preview, we COULD show a thumbnail or similar
+                };
+                reader.readAsDataURL(file);
+
+                // Trigger en custom event eller callback så komponenten vet om offsetten
+                input.dataset.cropOffset = offset;
+                input.dispatchEvent(new CustomEvent('cropComplete', { detail: { offset } }));
+            });
+        }
+    });
+}
+window.setupUploadZone = setupUploadZone;
+
+/**
+ * Oppsett for dra-for-å-justere utsnitt (vertikal offset)
+ */
+export function setupImageAdjustment(previewWrapperId, previewImgId, onOffsetChange) {
+    const wrapper = document.getElementById(previewWrapperId);
+    if (!wrapper) return;
+
+    const img = wrapper.querySelector('img');
+    const viewport = wrapper.querySelector('.crop-viewport');
+    const overlay = wrapper.querySelector('.crop-overlay');
+
+    if (!wrapper || !img || !viewport) return;
+
+    let isDragging = false;
+    let startY = 0;
+    let currentTopPercent = 0; // Top position of viewport in % of image height
+
+    const updateUI = () => {
+        // Enforce bounds: viewport must stay within image
+        const wrapperHeight = wrapper.offsetHeight;
+        const imgHeight = img.offsetHeight;
+        const viewportHeight = viewport.offsetHeight;
+
+        // Max top in pixels relative to image top (but wrapper might scroll or be bigger)
+        // Actually, viewport is absolute in wrapper.
+        const maxTopPx = imgHeight - viewportHeight;
+        const topPx = (currentTopPercent / 100) * imgHeight;
+
+        let finalTopPx = Math.max(0, Math.min(topPx, maxTopPx));
+
+        // Update viewport position
+        viewport.style.top = `${finalTopPx}px`;
+
+        // Update overlay mask (clip-path)
+        const vTop = finalTopPx;
+        const vBottom = finalTopPx + viewportHeight;
+        const vLeft = 0;
+        const vRight = wrapper.offsetWidth;
+
+        // SVG-like path for clip-path: outer rectangle, then inner hole (viewport)
+        // clip-path: polygon(0% 0%, 0% 100%, 100% 100%, 100% 0%, 0% 0%, [hole starts here])
+        // To make a hole, we need to draw the inner rectangle as well.
+        // Simplified: using percentages for better responsiveness
+        const topPct = (vTop / imgHeight) * 100;
+        const bottomPct = (vBottom / imgHeight) * 100;
+
+        overlay.style.clipPath = `polygon(
+            0% 0%, 0% 100%, 100% 100%, 100% 0%, 0% 0%, 
+            0% ${topPct}%, 100% ${topPct}%, 100% ${bottomPct}%, 0% ${bottomPct}%, 0% ${topPct}%
+        )`;
+
+        if (onOffsetChange) onOffsetChange(currentTopPercent);
+    };
+
+    const startDrag = (e) => {
+        if (e.target !== viewport) return; // Only drag the viewport
+        isDragging = true;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const rect = viewport.getBoundingClientRect();
+        startY = clientY - rect.top;
+        wrapper.style.cursor = 'grabbing';
+    };
+
+    const doDrag = (e) => {
+        if (!isDragging) return;
+        e.preventDefault();
+
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const wrapperRect = img.getBoundingClientRect(); // Relative to image
+
+        let newTopPx = clientY - wrapperRect.top - startY;
+
+        const maxTopPx = img.offsetHeight - viewport.offsetHeight;
+        newTopPx = Math.max(0, Math.min(newTopPx, maxTopPx));
+
+        currentTopPercent = (newTopPx / img.offsetHeight) * 100;
+        updateUI();
+    };
+
+    const endDrag = () => {
+        isDragging = false;
+        wrapper.style.cursor = 'default';
+    };
+
+    viewport.addEventListener('mousedown', startDrag);
+    window.addEventListener('mousemove', doDrag);
+    window.addEventListener('mouseup', endDrag);
+
+    viewport.addEventListener('touchstart', startDrag, { passive: false });
+    window.addEventListener('touchmove', doDrag, { passive: false });
+    window.addEventListener('touchend', endDrag);
+
+    // Initial setup when image loads
+    img.onload = () => {
+        setTimeout(updateUI, 100); // Small delay to ensure layout
+    };
+
+    // Reset function
+    return (topPercent = 0) => {
+        currentTopPercent = topPercent;
+        updateUI();
+    };
+}
+window.setupImageAdjustment = setupImageAdjustment;
+
+/**
+ * Universell beskjæring og komprimering basert på vertikal offset
+ */
+export async function cropAndCompressUniversal(file, topPercent, options = {}) {
+    const {
+        targetWidth = 1000,
+        targetHeight = 400,
+        quality = 0.8
+    } = options;
+
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
+                const ctx = canvas.getContext('2d');
+
+                // The logic: 
+                // topPercent is where the TOP of the viewport is relative to the image height.
+                // We want to crop from that Y-coordinate.
+
+                // First, imagine the image is resized to targetWidth.
+                const scale = targetWidth / img.width;
+                const scaledImgHeight = img.height * scale;
+
+                // The source Y coordinate in original image pixels
+                const sourceY = (topPercent / 100) * img.height;
+
+                // The source height in original image pixels (maintaining aspect ratio)
+                // targetHeight / targetWidth = sourceHeight / img.width
+                const sourceHeight = (targetHeight / targetWidth) * img.width;
+
+                ctx.drawImage(
+                    img,
+                    0, sourceY, img.width, sourceHeight, // Source rect
+                    0, 0, targetWidth, targetHeight     // Target rect
+                );
+
+                resolve(canvas.toDataURL('image/jpeg', quality));
+            };
+            img.onerror = reject;
+            img.src = e.target.result;
+        };
+        reader.onerror = reject;
+    });
+}
+window.cropAndCompressUniversal = cropAndCompressUniversal;
 
 // --- KJERNEFUNKSJONER ---
 
@@ -609,7 +918,7 @@ function resetUploadForm() {
 }
 
 // Lightbox
-function openLightbox(url, description) {
+export function openLightbox(url, description) {
     if (!imageLightbox || !lightboxImg) return;
     lightboxImg.src = url;
     if (lightboxDescription) {
@@ -617,6 +926,7 @@ function openLightbox(url, description) {
     }
     toggleModal(imageLightbox, true);
 }
+window.openLightbox = openLightbox;
 
 function closeLightbox() {
     if (!imageLightbox) return;
@@ -974,16 +1284,21 @@ async function handleProfileSave(e) {
     try {
         if (!authState.user) throw new Error("Ingen bruker er logget inn.");
 
-        // 1. Behandle bilde (Base64)
+        // 1. Behandle bilde (Base64 med universell beskjæring)
         if (file) {
             const allowedTypes = ['image/jpeg', 'image/png'];
             if (!allowedTypes.includes(file.type)) {
                 throw new Error("Kun JPG og PNG-filer er tillatt.");
             }
-            console.log("Processing file...");
+            console.log("Processing file with offset:", profileImageOffset);
             statusMsg.textContent = 'Behandler bilde...';
-            newPhotoURL = await resizeAndConvertToBase64(file);
-            console.log("Image converted to Base64");
+
+            newPhotoURL = await cropAndCompressUniversal(file, profileImageOffset, {
+                targetWidth: 400,
+                targetHeight: 400, // Profilbilde er kvadratisk
+                previewHeight: 200
+            });
+            console.log("Image adjusted and converted");
         }
 
         // 2. Lagre profilinfo til Firestore
@@ -1001,13 +1316,20 @@ async function handleProfileSave(e) {
             statusMsg.style.color = 'var(--color-success)';
         }
 
+        // Tøm preview
+        const profilePreviewContainer = document.getElementById('profile-preview-container');
+        const profilePreviewImg = document.getElementById('profile-image-preview');
         setTimeout(() => {
             closeModal();
             saveButton.textContent = originalButtonText;
             saveButton.disabled = false;
             if (statusMsg) statusMsg.textContent = '';
-            // Reset input
+            // Reset input og preview
             profileImageFileInput.value = '';
+            if (profilePreviewContainer) profilePreviewContainer.classList.add('hidden');
+            if (profilePreviewImg) profilePreviewImg.src = '';
+            profileImageOffset = 0;
+            if (resetProfileAdjustment) resetProfileAdjustment(0);
         }, 1500);
 
     } catch (error) {
@@ -2889,3 +3211,22 @@ eventModalOverlay?.addEventListener('click', () => toggleModal(eventModal, false
 
 
 
+// --- INITIALISERING AV OPPLASTINGSSONER ---
+document.addEventListener('DOMContentLoaded', () => {
+    // Profilbilde
+    setupUploadZone('profile-image-file-input', 'profile-upload-drop-zone', 'profile-image-preview', 'profile-preview-container');
+
+    const profileInput = document.getElementById('profile-image-file-input');
+    if (profileInput) {
+        profileInput.addEventListener('cropComplete', (e) => {
+            profileImageOffset = e.detail.offset;
+            console.log("Profile crop complete. Offset:", profileImageOffset);
+        });
+
+        profileInput.addEventListener('change', (e) => {
+            if (!profileInput.files[0]) {
+                profileImageOffset = 0;
+            }
+        });
+    }
+});

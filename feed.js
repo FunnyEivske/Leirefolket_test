@@ -1,6 +1,5 @@
-// Importer nødvendige funksjoner
 import { db, appId } from './firebase.js';
-import { authState, userReady, toggleModal, showCustomAlert, showCustomConfirm } from './script.js';
+import { authState, userReady, toggleModal, showCustomAlert, showCustomConfirm, setupImageAdjustment, cropAndCompressUniversal } from './script.js';
 import {
     collection,
     addDoc,
@@ -14,6 +13,7 @@ import {
     deleteDoc,
     getDoc,
     getDocs,
+    updateDoc,
     serverTimestamp
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -36,8 +36,31 @@ const postDetailComments = document.getElementById('post-detail-comments');
 const detailCommentInput = document.getElementById('detail-comment-input');
 const sendDetailCommentBtn = document.getElementById('send-detail-comment');
 
+// Post Image Elements
+const postImageInput = document.getElementById('post-image-input');
+const postImagePreviewContainer = document.getElementById('post-image-preview-container');
+const postImagePreview = document.getElementById('post-image-preview');
+const removePostImageBtn = document.getElementById('remove-post-image');
+const postUploadDropZone = document.getElementById('post-upload-drop-zone');
+const postModal = document.getElementById('post-modal');
+
 let currentLimit = 5;
 let feedUnsubscribe = null;
+
+// Image Offset State for Posts
+let postImageOffset = 0;
+let resetPostAdjustment = null;
+let editingPostId = null; // Tracks which post is being edited
+
+// Initialisering for Universal Cropping
+userReady.then(() => {
+    if (postImageInput) {
+        postImageInput.addEventListener('cropComplete', (e) => {
+            postImageOffset = e.detail.offset;
+            console.log("Post crop complete. Offset:", postImageOffset);
+        });
+    }
+});
 
 // Sti til feed-databasen
 const feedCollectionPath = `/artifacts/${appId}/public/data/feed`;
@@ -109,6 +132,7 @@ function renderFeed(posts) {
         const safeAuthorName = sanitizeHTML(post.authorName || 'Medlem');
         const safeContentHtml = sanitizeHTML(post.content).replace(/\n/g, '<br>');
         const safePhotoURL = post.authorPhotoURL ? sanitizeHTML(post.authorPhotoURL) : null;
+        const postImageUrl = post.imageUrl || null;
 
         const displayDate = post.createdAt?.seconds
             ? formatTimestamp({ toDate: () => new Date(post.createdAt.seconds * 1000) })
@@ -128,10 +152,20 @@ function renderFeed(posts) {
                     <p style="font-weight: 600; margin: 0; color: var(--color-secondary);">${safeAuthorName}</p>
                     <p style="font-size: 0.85rem; margin: 0; color: var(--color-text-muted);">${displayDate}</p>
                 </div>
-                ${authState.role === 'admin' ? `<button class="post-delete-btn" data-id="${post.id}" title="Slett innlegg">🗑️</button>` : ''}
+                ${authState.role === 'admin' ? `
+                    <div style="margin-left: auto; display: flex; gap: 0.25rem;">
+                        <button class="btn btn-ghost btn-sm post-edit-btn" data-id="${post.id}" title="Rediger innlegg" style="padding: 0.25rem; font-size: 1.1rem; line-height: 1;">✏️</button>
+                        <button class="btn btn-ghost btn-sm post-delete-btn" data-id="${post.id}" title="Slett innlegg" style="padding: 0.25rem; font-size: 1.1rem; line-height: 1;">🗑️</button>
+                    </div>
+                ` : ''}
             </div>
             <h3 style="margin-top: 0;">${safeTitle}</h3>
             <div class="feed-item-content">${safeContentHtml}</div>
+            ${postImageUrl ? `
+                <div class="feed-item-image" style="margin-top: 1rem; border-radius: var(--radius-md); overflow: hidden; cursor: pointer;">
+                    <img src="${postImageUrl}" alt="${safeTitle}" style="width: 100%; display: block; object-fit: cover; max-height: 500px;" onclick="window.openLightbox('${postImageUrl}', '${safeTitle}')">
+                </div>
+            ` : ''}
 
             <!-- Actions -->
             <div class="post-actions">
@@ -190,6 +224,13 @@ function setupFeedEventListeners() {
         const toggleBtn = target.closest('.comment-btn') || target.closest('.show-more-comments');
         if (toggleBtn) {
             toggleComments(toggleBtn.dataset.id);
+            return;
+        }
+
+        // Edit Post (Admin)
+        const editPostBtn = target.closest('.post-edit-btn');
+        if (editPostBtn) {
+            handleEditPost(editPostBtn.dataset.id);
             return;
         }
 
@@ -273,49 +314,140 @@ function setupFeedListener(limitCount = 5) {
 }
 
 /**
+ * Håndterer redigering av et eksisterende innlegg.
+ */
+async function handleEditPost(postId) {
+    try {
+        const postDoc = await getDoc(doc(db, feedCollectionPath, postId));
+        if (!postDoc.exists()) {
+            showCustomAlert("Innlegget finnes ikke lenger.");
+            return;
+        }
+
+        const postData = postDoc.data();
+        editingPostId = postId;
+
+        // Fyll ut skjemaet
+        document.getElementById('post-title').value = postData.title || '';
+        document.getElementById('post-content').value = postData.content || '';
+
+        const modalTitle = postModal ? postModal.querySelector('h3') : null;
+        if (modalTitle) modalTitle.textContent = 'Rediger innlegg';
+        if (postSubmitButton) postSubmitButton.textContent = 'Lagre endringer';
+
+        // Håndter bilde-forhåndsvisning hvis det finnes
+        if (postData.imageUrl) {
+            if (postImagePreview) postImagePreview.src = postData.imageUrl;
+            if (postImagePreviewContainer) postImagePreviewContainer.classList.remove('hidden');
+            if (postUploadDropZone) postUploadDropZone.classList.add('hidden');
+            postImageOffset = postData.imageOffset || 0;
+            if (resetPostAdjustment) resetPostAdjustment(postImageOffset);
+        } else {
+            if (postImagePreviewContainer) postImagePreviewContainer.classList.add('hidden');
+            if (postUploadDropZone) postUploadDropZone.classList.remove('hidden');
+            postImageOffset = 0;
+        }
+
+        if (postModal) toggleModal(postModal, true);
+    } catch (error) {
+        console.error("Error fetching post for edit:", error);
+        showCustomAlert("Kunne ikke hente innlegget: " + error.message);
+    }
+}
+
+/**
  * Håndterer publisering av nytt innlegg.
  */
 async function handlePostSubmit(e) {
     e.preventDefault();
     if ((authState.role !== 'admin' && authState.role !== 'contributor') || !authState.user) {
-        postError.textContent = 'Du har ikke tilgang til å publisere.';
+        if (postError) postError.textContent = 'Du har ikke tilgang til å publisere.';
         return;
     }
 
-    postError.textContent = '';
-    postSubmitButton.disabled = true;
-    postSubmitButton.textContent = 'Publiserer...';
+    if (postError) postError.textContent = '';
+    const originalBtnText = editingPostId ? 'Lagre endringer' : 'Publiser';
+    if (postSubmitButton) {
+        postSubmitButton.disabled = true;
+        postSubmitButton.textContent = editingPostId ? 'Lagrer endringer...' : 'Publiserer...';
+    }
 
     const title = document.getElementById('post-title').value;
     const content = document.getElementById('post-content').value;
+    const imageFile = postImageInput ? postImageInput.files[0] : null;
 
     // Hent oppdatert profilinfo fra authState
     const authorName = authState.profile?.displayName || (authState.user?.email ? authState.user.email.split('@')[0] : 'Medlem');
     const authorPhotoURL = authState.profile?.photoURL || null;
 
     try {
-        const feedCollectionRef = collection(db, feedCollectionPath);
-        await addDoc(feedCollectionRef, {
+        let imageUrl = null;
+        let imageOffset = postImageOffset;
+
+        // Hvis vi redigerer og ikke har ny fil, behold gammelt bilde
+        if (editingPostId && !imageFile) {
+            const postDoc = await getDoc(doc(db, feedCollectionPath, editingPostId));
+            if (postDoc.exists()) {
+                imageUrl = postDoc.data().imageUrl || null;
+                imageOffset = postDoc.data().imageOffset || 0;
+            }
+        }
+
+        if (imageFile) {
+            // Bruk universell contextual cropping (offset i %)
+            imageUrl = await cropAndCompressUniversal(imageFile, postImageOffset, {
+                targetWidth: 1000,
+                targetHeight: 500 // 2:1 ratio for posts
+            });
+            imageOffset = 0; // Resettes hvis bildet er nytt (offset er bakt inn)
+        }
+
+        const postData = {
             title: title,
             content: content,
-            authorId: authState.user.uid,
-            authorName: authorName,
-            authorPhotoURL: authorPhotoURL,
-            createdAt: serverTimestamp() // Use serverTimestamp for consistency
-        });
+            imageUrl: imageUrl,
+            imageOffset: imageOffset,
+            updatedAt: serverTimestamp()
+        };
 
-        // Tøm skjemaet
+        if (editingPostId) {
+            await updateDoc(doc(db, feedCollectionPath, editingPostId), postData);
+            showCustomAlert("Innlegget ble oppdatert!");
+        } else {
+            postData.authorId = authState.user.uid;
+            postData.authorName = authorName;
+            postData.authorPhotoURL = authorPhotoURL;
+            postData.createdAt = serverTimestamp();
+            postData.likesCount = 0;
+            postData.commentsCount = 0;
+
+            const feedCollectionRef = collection(db, feedCollectionPath);
+            await addDoc(feedCollectionRef, postData);
+            showCustomAlert("Innlegget ble publisert!");
+        }
+
+        // Tøm skjemaet og tilbakestill
         newPostForm.reset();
-        const postModal = document.getElementById('post-modal');
+        if (postImagePreviewContainer) postImagePreviewContainer.classList.add('hidden');
+        if (postImagePreview) postImagePreview.src = '';
+        if (postUploadDropZone) postUploadDropZone.classList.remove('hidden');
+        postImageOffset = 0;
+        if (resetPostAdjustment) resetPostAdjustment(0);
+
+        editingPostId = null;
+        const modalTitle = postModal ? postModal.querySelector('h3') : null;
+        if (modalTitle) modalTitle.textContent = 'Nytt innlegg';
+
         if (postModal) toggleModal(postModal, false);
-        showCustomAlert("Innlegget er publisert!");
 
     } catch (error) {
-        console.error("Error creating new post:", error);
-        postError.textContent = 'En feil oppstod. Kunne ikke publisere.';
+        console.error("Error saving post:", error);
+        showCustomAlert("Det oppsto en feil: " + error.message);
     } finally {
-        postSubmitButton.disabled = false;
-        postSubmitButton.textContent = 'Publiser Innlegg';
+        if (postSubmitButton) {
+            postSubmitButton.disabled = false;
+            postSubmitButton.textContent = 'Publiser';
+        }
     }
 }
 
@@ -513,6 +645,31 @@ if (document.getElementById('feed-container')) {
 
         if (newPostForm) {
             newPostForm.addEventListener('submit', handlePostSubmit);
+        }
+
+        // --- NEW POST IMAGE HANDLING ---
+        if (typeof window.setupUploadZone === 'function') {
+            window.setupUploadZone('post-image-input', 'post-upload-drop-zone', 'post-image-preview', 'post-image-preview-container');
+        }
+
+        // Hide drop zone when preview is shown
+        if (postImageInput) {
+            postImageInput.addEventListener('change', (e) => {
+                if (e.target.files[0] && postUploadDropZone) {
+                    postUploadDropZone.classList.add('hidden');
+                }
+            });
+        }
+
+        if (removePostImageBtn) {
+            removePostImageBtn.onclick = (e) => {
+                e.preventDefault();
+                postImageInput.value = '';
+                if (postImagePreviewContainer) postImagePreviewContainer.classList.add('hidden');
+                if (postImagePreview) postImagePreview.src = '';
+                if (postUploadDropZone) postUploadDropZone.classList.remove('hidden');
+                postImageOffset = 0;
+            };
         }
 
     }).catch(error => {
