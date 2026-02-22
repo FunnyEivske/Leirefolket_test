@@ -1365,8 +1365,7 @@ async function loadSidebarMembersList() {
             'styremedlem - sekretær': 3,
             'styremedlem': 4,
             'medlem': 5,
-            'it administrator': 10,
-            'it administartor': 10
+            'it administrator': 10
         };
 
         allMembers.sort((a, b) => {
@@ -1408,7 +1407,11 @@ async function loadSidebarMembersList() {
 
 
             let orgRoleStr = userData.organizationRole || 'Medlem';
-            orgRoleStr = orgRoleStr.charAt(0).toUpperCase() + orgRoleStr.slice(1);
+            if (orgRoleStr.toLowerCase().startsWith('it ')) {
+                orgRoleStr = 'IT ' + orgRoleStr.slice(3).charAt(0).toUpperCase() + orgRoleStr.slice(4).toLowerCase();
+            } else {
+                orgRoleStr = orgRoleStr.split(' - ').map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join(' - ');
+            }
 
             info.innerHTML = `
                 <p style="margin: 0; font-size: 0.85rem; font-weight: 600; line-height: 1.2;">${userData.displayName || 'Ukjent'}</p>
@@ -2030,8 +2033,7 @@ async function loadMembersList() {
             'styremedlem - sekretær': 3,
             'styremedlem': 4,
             'medlem': 5,
-            'it administrator': 10,
-            'it administartor': 10
+            'it administrator': 10
         };
 
         allUsers.sort((a, b) => {
@@ -2058,7 +2060,11 @@ async function loadMembersList() {
 
 
             let orgRoleStr = userData.organizationRole || 'Medlem';
-            orgRoleStr = orgRoleStr.charAt(0).toUpperCase() + orgRoleStr.slice(1);
+            if (orgRoleStr.toLowerCase().startsWith('it ')) {
+                orgRoleStr = 'IT ' + orgRoleStr.slice(3).charAt(0).toUpperCase() + orgRoleStr.slice(4).toLowerCase();
+            } else {
+                orgRoleStr = orgRoleStr.split(' - ').map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join(' - ');
+            }
 
             div.innerHTML = `
                 <div>
