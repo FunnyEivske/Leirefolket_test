@@ -1811,6 +1811,7 @@ if (lightboxOverlay) lightboxOverlay.addEventListener('click', closeLightbox);
 // Admin Gallery Modals (Selection)
 if (closeAdminModalBtn) closeAdminModalBtn.addEventListener('click', () => toggleModal(adminImageModal, false));
 if (cancelAdminModalBtn) cancelAdminModalBtn.addEventListener('click', () => toggleModal(adminImageModal, false));
+if (saveAdminSelectionBtn) saveAdminSelectionBtn.addEventListener('click', saveAdminSelection);
 if (adminImageModalOverlay) adminImageModalOverlay.addEventListener('click', () => toggleModal(adminImageModal, false));
 
 // Admin Status Modal
