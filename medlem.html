@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="no" style="overflow-x: hidden;">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Min side - Leirefolket</title>
+    <link rel="stylesheet" href="medlem.css">
+    <!-- Quill.js for Rich Text Editing -->
+    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+    <!-- Tema-veksler (Laster tidlig for å unngå flash) -->
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+    <script src="theme-switcher.js"></script>
+</head>
+
+<body>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="container header-inner">
+            <a href="index.html" class="logo">
+                <img src="Media/Logo/Sort.png" alt="Leirefolket Logo" class="logo-light-only">
+                <img src="Media/Logo/Hvit.png" alt="Leirefolket Logo" class="logo-dark-only hidden">
+                <span>Leirefolket</span>
+            </a>
+
+            <nav class="nav-desktop">
+                <a href="om-oss.html" class="nav-link">Om oss</a>
+                <a href="hva-skjer.html" class="nav-link">Hva skjer</a>
+                <a href="galleri.html" class="nav-link">Galleri</a>
+                <a href="kontakt.html" class="nav-link">Kontakt</a>
+                <a href="medlem.html" class="nav-link active">Min side</a>
+                <button id="dropdown-logout-button" class="btn btn-ghost text-sm">Logg ut</button>
+
+            </nav>
+
+            <button id="mobile-menu-button" class="mobile-toggle" aria-label="Meny">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 12h18M3 6h18M3 18h18" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+            </button>
+        </div>
+
+        <!-- Mobilmeny -->
+        <div id="mobile-menu" class="mobile-menu">
+            <a href="om-oss.html">Om oss</a>
+            <a href="medlem.html" id="mobile-member-link" class="mobile-nav-link hidden"
+                style="color: var(--color-primary); font-weight: 600;">Min side</a>
+
+            <div id="mobile-notifications-wrapper" class="mobile-nav-link hidden"
+                style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+                <span>Varsler</span>
+                <div style="position: relative;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                    </svg>
+                    <div id="mobile-notifications-badge" class="hidden"
+                        style="position: absolute; top: -5px; right: -5px; background: var(--color-error); color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                        0</div>
+                </div>
+            </div>
+            <a href="hva-skjer.html">Hva skjer</a>
+            <a href="galleri.html">Galleri</a>
+            <a href="kontakt.html">Kontakt</a>
+            <a href="medlem.html" class="active">Min side</a>
+            <button id="mobile-logout-button" class="btn btn-ghost"
+                style="width: 100%; justify-content: flex-start; padding: 0.75rem 0;">Logg ut</button>
+
+        </div>
+    </header>
+
+    <main class="container">
+        <div class="dashboard-grid">
+
+            <!-- Sidebar: Profil -->
+            <aside class="dashboard-sidebar">
+                <div class="card profile-card">
+                    <div class="card-body">
+                        <img id="profile-img" src="https://ui-avatars.com/api/?name=Medlem&background=random"
+                            alt="Profilbilde" class="profile-avatar">
+                        <h3 id="profile-name" class="text-lg font-semibold">Laster...</h3>
+                        <p id="profile-role-text" class="text-sm text-muted">Medlem</p>
+
+                        <div class="profile-stats">
+                            <div class="stat-item">
+                                <span id="member-duration-value" class="stat-value">0 mnd</span>
+                                <span class="stat-label">Medlemstid</span>
+                            </div>
+                            <div class="stat-item">
+                                <span id="gallery-count-value" class="stat-value">0</span>
+                                <span class="stat-label">Bilder</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-6">
+                            <button id="open-profile-modal" class="btn btn-primary btn-full text-sm">Rediger
+                                profil</button>
+                        </div>
+                        <div id="admin-trigger-container" class="admin-trigger-container hidden">
+                            <button id="open-admin-control-btn" class="btn btn-secondary btn-full text-xs"
+                                style="gap: 0.4rem;">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                    stroke-width="2">
+                                    <circle cx="12" cy="12" r="3" />
+                                    <path
+                                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                                </svg>
+                                Administrasjon
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="admin-publish-card" class="card hidden">
+                    <div class="card-header">
+                        <h4 id="publish-card-title" class="text-lg">Nytt innlegg/arrangement</h4>
+                    </div>
+                    <div class="card-body">
+                        <button id="new-post-btn" class="btn btn-primary btn-full text-sm mb-2">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M12 5v14M5 12h14" />
+                            </svg>
+                            Nytt innlegg
+                        </button>
+                        <button id="new-event-btn" class="btn btn-primary btn-full text-sm mb-2">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M12 5v14M5 12h14" />
+                            </svg>
+                            Nytt arrangement
+                        </button>
+                        <hr id="admin-publish-separator" class="hidden"
+                            style="margin: 1rem 0; border: 0; border-top: 1px solid var(--color-border);">
+                        <!-- Referater Button -->
+                        <button id="btn-referater" class="btn btn-secondary btn-full text-sm mb-2">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" style="margin-right: 0.5rem;">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                                <polyline points="10 9 9 9 8 9"></polyline>
+                            </svg>
+                            Referater
+                        </button>
+                        <!-- Retningslinjer Button -->
+                        <button id="btn-retningslinjer" class="btn btn-secondary btn-full text-sm mb-2">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" style="margin-right: 0.5rem;">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                            </svg>
+                            Retningslinjer
+                        </button>
+                        <!-- Vedtekter Button -->
+                        <button id="btn-vedtekter" class="btn btn-secondary btn-full text-sm">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2" style="margin-right: 0.5rem;">
+                                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+                                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+                            </svg>
+                            Vedtekter
+                        </button>
+                    </div>
+                </div>
+
+
+
+                <!-- Info-kort -->
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="text-lg">Verkstedstatus</h4>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-4">
+                            <p id="workshop-custom-status" class="text-sm font-semibold text-primary mb-2"></p>
+                            <p class="text-sm font-medium">Åpningstider denne uken:</p>
+                            <div id="workshop-hours-display" class="text-sm text-muted">
+                                <!-- Dynamisk innhold -->
+                                <p>Man-Fre: 10-20<br>Lør-Søn: 12-18</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </aside>
+            <div class="dashboard-main">
+                <div class="card mb-6">
+                    <div class="card-body" style="padding: 0.75rem;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                            <button id="tab-posts" class="btn btn-primary text-sm">Innlegg</button>
+                            <button id="tab-events" class="btn btn-secondary text-sm">Arrangementer</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Velkomst / Feed -->
+                <section id="posts-section">
+
+
+
+                    <!-- Feed Container -->
+                    <div id="feed-container"
+                        style="display: flex; flex-direction: column; gap: 1.5rem; margin-top: 1.5rem;">
+                        <div id="feed-loading" class="text-center py-10 text-muted">Laster oppdateringer...</div>
+                    </div>
+
+                    <!-- Load More Button -->
+                    <div id="load-more-container" class="text-center mt-6 hidden">
+                        <button id="load-more-btn" class="btn btn-secondary text-sm">Last flere</button>
+                    </div>
+                </section>
+
+                <!-- Arrangementer Section -->
+                <section id="events-section" class="hidden">
+
+
+                    <div id="upcoming-events-container"
+                        style="display: flex; flex-direction: column; gap: 1.5rem; margin-top: 1.5rem;">
+                        <div class="text-center py-10 text-muted">Laster arrangementer...</div>
+                    </div>
+
+                    <!-- Past Events (Archived) -->
+                    <div id="past-events-wrapper" class="mt-10">
+                        <button id="toggle-past-events" class="btn btn-ghost text-sm mb-4"
+                            style="width: 100%; justify-content: space-between;">
+                            <span>Tidligere arrangementer</span>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M19 9l-7 7-7-7" />
+                            </svg>
+                        </button>
+                        <div id="past-events-container" class="hidden"
+                            style="display: flex; flex-direction: column; gap: 1rem; opacity: 0.7;">
+                            <!-- Tidligere arrangementer her -->
+                        </div>
+                    </div>
+                </section>
+
+            </div>
+            <aside class="dashboard-sidebar-right">
+                <div class="card mb-6">
+                    <div class="card-header">
+                        <h4 class="text-lg">Medlemmer</h4>
+                    </div>
+                    <div class="card-body">
+                        <div id="sidebar-members-list" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                            <p class="text-muted text-sm">Laster medlemmer...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mitt Galleri (Flyttet hit) -->
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="text-lg">Mitt galleri</h4>
+                    </div>
+                    <div class="card-body">
+                        <div id="dashboard-gallery-preview" class="gallery-preview-grid mb-4"
+                            style="grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
+                            <p class="text-muted text-sm" style="grid-column: 1/-1;">Laster...</p>
+                        </div>
+                        <p class="text-sm text-muted mb-4">Administrer og last opp bilder til ditt galleri.</p>
+                        <button id="upload-gallery-btn" class="btn btn-primary btn-full text-sm">Administrer
+                            bilder</button>
+                    </div>
+                </div>
+
+            </aside>
+
+        </div>
+    </main>
+
+    <!-- Profil Modal -->
+    <div id="profile-modal" class="hidden"
+        style="position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;">
+        <div id="profile-modal-overlay"
+            style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px);"></div>
+        <div class="card" style="position: relative; width: 100%; max-width: 500px; margin: 1rem; z-index: 10;">
+            <div class="card-header">
+                <h3>Rediger profil</h3>
+            </div>
+            <form id="profile-form">
+                <div class="card-body">
+                    <div class="form-group">
+                        <label for="display-name-input" class="form-label">Visningsnavn</label>
+                        <input type="text" id="display-name-input" class="form-input" placeholder="Ditt navn">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Profilbilde</label>
+                        <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                            <!-- Premium Drop Zone for Profile -->
+                            <div id="profile-upload-drop-zone" class="upload-drop-zone"
+                                style="min-height: 100px; padding: 1rem;">
+                                <div class="drop-zone-content">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+                                        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" class="mb-2" style="opacity: 0.5;">
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                        <polyline points="17 8 12 3 7 8"></polyline>
+                                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                                    </svg>
+                                    <p class="text-xs font-semibold mb-1">Dra bilde hit</p>
+                                    <p class="text-xs text-muted">eller klikk for å velge</p>
+                                </div>
+                                <input type="file" id="profile-image-file-input" accept="image/png, image/jpeg">
+                            </div>
+
+                            <!-- Profile Image Preview -->
+                            <div id="profile-preview-container" class="hidden crop-preview-wrapper"
+                                style="aspect-ratio: 1/1; overflow: hidden;">
+                                <img id="profile-image-preview" src=""
+                                    style="width: 100%; height: 100%; object-fit: cover;">
+                            </div>
+
+                            <p class="text-xs text-muted">Støtter kun JPG og PNG.</p>
+                            <p class="text-sm text-muted">Eller lim inn en URL:</p>
+                            <input type="text" id="profile-image-url-input" class="form-input"
+                                placeholder="https://...">
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer" style="display: flex; justify-content: flex-end; gap: 1rem;">
+                    <button type="button" id="close-profile-modal" class="btn btn-secondary">Avbryt</button>
+                    <button type="submit" id="save-profile-button" class="btn btn-primary">Lagre</button>
+                </div>
+                <p id="profile-save-status" class="text-center mb-4 text-sm"></p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Upload/Manage Gallery Modal -->
+    <div id="upload-modal" class="hidden"
+        style="position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;">
+        <div id="upload-modal-overlay"
+            style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px);"></div>
+        <div class="card"
+            style="position: relative; width: 100%; max-width: 800px; height: 80vh; margin: 1rem; z-index: 10; display: flex; flex-direction: column;">
+            <div class="card-header">
+                <h3>Administrer bilder</h3>
+            </div>
+
+            <div class="card-body" style="overflow-y: auto; flex: 1;">
+                <!-- Upload Section -->
+                <form id="upload-form" class="mb-6">
+                    <div class="form-group">
+                        <label class="form-label" style="display: block; margin-bottom: 1rem;">Last opp nye
+                            bilder</label>
+
+                        <!-- Premium Drop Zone -->
+                        <div id="upload-drop-zone" class="upload-drop-zone">
+                            <div class="drop-zone-content">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" class="mb-2" style="opacity: 0.5;">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
+                                <p class="text-sm font-semibold mb-1">Dra og slipp bilder her</p>
+                                <p class="text-xs text-muted">eller klikk for å velge filer</p>
+                            </div>
+                            <input type="file" id="upload-files-input" accept="image/png, image/jpeg" multiple required>
+                        </div>
+                        <p class="text-xs text-muted mt-2">Kun JPG og PNG er tillatt. Video og RAW støttes ikke.</p>
+                    </div>
+
+                    <!-- Pending Uploads Grid -->
+                    <div id="pending-uploads-container" class="pending-uploads-grid hidden">
+                        <!-- Preview cards with description fields will be added here -->
+                    </div>
+
+                    <div id="upload-actions" class="hidden"
+                        style="margin-top: 2rem; border-top: 1px solid var(--color-border); padding-top: 1rem; display: flex; justify-content: flex-end;">
+                        <button type="submit" id="confirm-upload-btn" class="btn btn-primary">Last opp alle valgte
+                            bilder</button>
+                    </div>
+                </form>
+
+                <hr style="border: 0; border-top: 1px solid var(--color-border); margin: 1.5rem 0;">
+
+                <!-- Existing Gallery Section -->
+                <div>
+                    <h4 class="text-sm font-semibold mb-3">Dine bilder</h4>
+                    <div id="modal-gallery-container" class="gallery-preview-grid">
+                        <p class="text-muted text-sm" style="grid-column: 1/-1;">Laster ditt galleri...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-footer" style="display: flex; justify-content: flex-end; gap: 1rem;">
+                <button type="button" id="close-upload-modal" class="btn btn-secondary">Lukk</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Image Selection Modal (Gallery Management) -->
+    <div id="admin-image-modal" class="hidden modal-container">
+        <div id="admin-image-modal-overlay" class="modal-overlay"></div>
+        <div class="card modal-content maxWidth-800">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 id="admin-modal-title" class="text-lg">Velg bilder til galleri</h3>
+                <button id="close-admin-modal" class="btn btn-ghost" style="padding: 0.5rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="card-body" style="overflow-y: auto; flex: 1; min-height: 400px;">
+                <!-- User List Container -->
+                <div id="admin-user-list" style="display: flex; flex-direction: column; gap: 1.5rem;">
+                    <p class="text-muted text-center">Laster brukere og bilder...</p>
+                </div>
+            </div>
+            <div class="card-footer" style="display: flex; justify-content: flex-end; gap: 1rem;">
+                <button type="button" id="cancel-admin-modal" class="btn btn-secondary">Avbryt</button>
+                <button type="button" id="save-admin-selection" class="btn btn-primary">Lagre valg</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Status/Hours Modal -->
+    <div id="admin-status-modal" class="hidden modal-container">
+        <div id="admin-status-modal-overlay" class="modal-overlay"></div>
+        <div class="card modal-content maxWidth-600">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 class="text-lg">Status & åpningstider</h3>
+                <button id="close-status-modal" class="btn btn-ghost" style="padding: 0.5rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="card-body" style="overflow-y: auto; flex: 1;">
+                <form id="status-hours-form">
+                    <div class="form-group">
+                        <label class="form-label">Egendefinert status (f.eks. "Stengt pga oppussing")</label>
+                        <input type="text" id="custom-status-input" class="form-input"
+                            placeholder="La stå tom for standard">
+                    </div>
+
+                    <h4 class="text-sm font-semibold mb-3 mt-6">Ukentlige åpningstider</h4>
+                    <div id="opening-hours-inputs" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                        <div style="display: grid; grid-template-columns: 100px 1fr; align-items: center; gap: 1rem;">
+                            <label class="text-xs font-semibold">Mandag</label>
+                            <input type="text" class="form-input text-sm opening-day-input" data-day="Mandag"
+                                placeholder="f.eks. 10-20 eller Stengt">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 100px 1fr; align-items: center; gap: 1rem;">
+                            <label class="text-xs font-semibold">Tirsdag</label>
+                            <input type="text" class="form-input text-sm opening-day-input" data-day="Tirsdag"
+                                placeholder="f.eks. 10-20 eller Stengt">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 100px 1fr; align-items: center; gap: 1rem;">
+                            <label class="text-xs font-semibold">Onsdag</label>
+                            <input type="text" class="form-input text-sm opening-day-input" data-day="Onsdag"
+                                placeholder="f.eks. 10-20 eller Stengt">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 100px 1fr; align-items: center; gap: 1rem;">
+                            <label class="text-xs font-semibold">Torsdag</label>
+                            <input type="text" class="form-input text-sm opening-day-input" data-day="Torsdag"
+                                placeholder="f.eks. 10-20 eller Stengt">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 100px 1fr; align-items: center; gap: 1rem;">
+                            <label class="text-xs font-semibold">Fredag</label>
+                            <input type="text" class="form-input text-sm opening-day-input" data-day="Fredag"
+                                placeholder="f.eks. 10-20 eller Stengt">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 100px 1fr; align-items: center; gap: 1rem;">
+                            <label class="text-xs font-semibold">Lørdag</label>
+                            <input type="text" class="form-input text-sm opening-day-input" data-day="Lørdag"
+                                placeholder="f.eks. 12-18 eller Stengt">
+                        </div>
+                        <div style="display: grid; grid-template-columns: 100px 1fr; align-items: center; gap: 1rem;">
+                            <label class="text-xs font-semibold">Søndag</label>
+                            <input type="text" class="form-input text-sm opening-day-input" data-day="Søndag"
+                                placeholder="f.eks. 12-18 eller Stengt">
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="card-footer" style="display: flex; justify-content: flex-end; gap: 1rem;">
+                <button type="button" id="cancel-status-modal" class="btn btn-secondary">Avbryt</button>
+                <button type="button" id="save-status-btn" class="btn btn-primary">Lagre endringer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Add/Edit User form is now part of the unified members modal -->
+
+
+    <!-- Admin Manage Members Modal -->
+    <div id="admin-members-modal" class="hidden modal-container">
+        <div id="admin-members-modal-overlay" class="modal-overlay"></div>
+        <div class="card modal-content maxWidth-800">
+            <div class="card-header" style="flex-direction: column; align-items: flex-start; padding-bottom: 0;">
+                <div
+                    style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-bottom: 1rem;">
+                    <h3 class="text-lg">Medlemsadministrasjon</h3>
+                    <button id="close-members-modal" class="btn btn-ghost" style="padding: 0.5rem;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M18 6L6 18M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <!-- Tabs -->
+                <div class="modal-tabs-container">
+                    <button id="tab-active-members" class="btn btn-primary text-sm tab-btn active">Aktive
+                        medlemmer</button>
+                    <button id="tab-pending-deletions" class="btn btn-secondary text-sm tab-btn">Sletting
+                        forespurt</button>
+                    <button id="tab-archive" class="btn btn-secondary text-sm tab-btn">Arkiv</button>
+                    <button id="tab-add-member" class="btn btn-secondary text-sm tab-btn">+ Legg til / Rediger</button>
+                </div>
+            </div>
+            <div class="card-body" style="overflow-y: auto; flex: 1;">
+                <!-- Active Members Tab -->
+                <div id="active-members-section">
+                    <div id="admin-members-list" style="display: flex; flex-direction: column; gap: 1rem;">
+                        <p class="text-muted text-center">Laster medlemmer...</p>
+                    </div>
+                </div>
+
+                <!-- Pending Deletions Tab -->
+                <div id="pending-deletions-section" class="hidden">
+                    <div id="admin-pending-list" style="display: flex; flex-direction: column; gap: 1rem;">
+                        <p class="text-muted text-center">Ingen forespørsler om sletting.</p>
+                    </div>
+                </div>
+
+                <!-- Archive Tab -->
+                <div id="archive-section" class="hidden">
+                    <div id="admin-archive-list"
+                        style="display: flex; flex-direction: column; gap: 1rem; padding: 1.5rem;">
+                        <p class="text-muted text-center">Laster arkiv...</p>
+                    </div>
+                </div>
+
+                <!-- Add/Edit Member Tab -->
+                <div id="add-member-section" class="hidden">
+                    <form id="admin-create-user-form">
+                        <div class="form-group">
+                            <label for="new-user-email" class="form-label">E-postadresse</label>
+                            <input type="email" id="new-user-email" class="form-input" placeholder="bruker@epost.no"
+                                required>
+                        </div>
+                        <div class="form-group">
+                            <label for="new-user-password" class="form-label">Passord</label>
+                            <input type="text" id="new-user-password" class="form-input"
+                                placeholder="La stå tomt for å beholde eksisterende">
+                            <p class="text-xs text-muted mt-1" id="password-hint">Minst 6 tegn for nye brukere.</p>
+                        </div>
+                        <div class="form-group">
+                            <label for="new-user-name" class="form-label">Fullt navn</label>
+                            <input type="text" id="new-user-name" class="form-input" placeholder="Navn Navnesen"
+                                required>
+                        </div>
+                        <div class="form-group">
+                            <label for="new-user-role" class="form-label">Rolle</label>
+                            <select id="new-user-role" class="form-input">
+                                <option value="member">Medlem</option>
+                                <option value="styremedlem">Styremedlem</option>
+                                <option value="sekretær">Sekretær</option>
+                                <option value="admin">Administrator</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="new-user-member-since" class="form-label">Medlem siden (Startdato)</label>
+                            <input type="date" id="new-user-member-since" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label for="new-user-organization-role" class="form-label">Medlemstype (Vises i
+                                medlemsliste)</label>
+                            <select id="new-user-organization-role" class="form-input">
+                                <option value="medlem">Medlem</option>
+                                <option value="styremedlem">Styremedlem</option>
+                                <option value="styremedlem - sekretær">Styremedlem - Sekretær</option>
+                                <option value="styremedlem - økonomiansvarlig">Styremedlem - Økonomiansvarlig</option>
+                                <option value="styremedlem - leder">Styremedlem - Leder</option>
+                                <option value="it administrator">IT Administrator</option>
+                            </select>
+                        </div>
+                        <input type="hidden" id="edit-user-id">
+
+                        <div
+                            style="display: flex; justify-content: space-between; align-items: center; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid var(--color-border);">
+                            <button type="button" id="admin-soft-delete-btn" class="btn btn-ghost hidden"
+                                style="color: var(--color-error); padding-left: 0;">Slett konto...</button>
+                            <button type="submit" id="create-user-btn" class="btn btn-primary">Lagre endringer</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="card-footer" style="display: flex; justify-content: flex-end;">
+                <button type="button" id="close-members-footer-btn" class="btn btn-secondary">Lukk</button>
+            </div>
+        </div>
+    </div>
+    <!-- Custom Alert/Message Modal -->
+    <div id="message-modal" class="hidden modal-container" style="z-index: 3000;">
+        <div id="message-modal-overlay" class="modal-overlay"></div>
+        <div class="card modal-content"
+            style="max-width: 400px; border: 2px solid var(--color-primary); overflow: hidden;">
+            <div class="card-body text-center" style="padding: 2.5rem 2rem;">
+                <p id="message-modal-text" class="mb-8 text-lg" style="line-height: 1.5;"></p>
+                <div style="display: flex; justify-content: center;">
+                    <button id="message-modal-close" class="btn btn-primary"
+                        style="min-width: 120px; padding: 0.8rem 2rem;">Lukk</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nytt innlegg Modal -->
+    <div id="post-modal" class="hidden modal-container">
+        <div id="post-modal-overlay" class="modal-overlay"></div>
+        <div class="card modal-content maxWidth-600">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 class="text-lg" style="margin-bottom: 0;">Nytt innlegg</h3>
+                <button id="close-post-modal" class="btn btn-ghost" style="padding: 0.5rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="card-body">
+                <form id="new-post-form">
+                    <div class="form-group">
+                        <label class="form-label">Tittel</label>
+                        <input type="text" id="post-title" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Innhold</label>
+                        <textarea id="post-content" class="form-input" style="min-height: 150px;" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Legg til bilde (Valgfritt)</label>
+                        <div id="post-upload-drop-zone" class="upload-drop-zone"
+                            style="min-height: 120px; padding: 1rem;">
+                            <div class="drop-zone-content">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" class="mb-2" style="opacity: 0.5;">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                    <circle cx="8.5" cy="8.5" r="1.5" />
+                                    <polyline points="21 15 16 10 5 21" />
+                                </svg>
+                                <p class="text-sm font-semibold mb-1">Last opp bilde</p>
+                                <p class="text-xs text-muted">Dra hit eller klikk</p>
+                            </div>
+                            <input type="file" id="post-image-input" accept="image/png, image/jpeg">
+                        </div>
+                        <div id="post-image-preview-container" class="hidden crop-preview-wrapper post"
+                            style="margin-top: 1rem; max-height: 250px; overflow: hidden; border-radius: var(--radius-md);">
+                            <img id="post-image-preview" src="" style="width: 100%; height: 100%; object-fit: contain;">
+                            <button type="button" id="remove-post-image"
+                                style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 40;">&times;</button>
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
+                        <button type="button" id="cancel-post-modal" class="btn btn-secondary">Avbryt</button>
+                        <button type="submit" id="post-submit-button" class="btn btn-primary">Publiser innlegg</button>
+                    </div>
+                    <p id="post-error" class="form-error"></p>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nytt Arrangement Modal -->
+    <div id="event-modal" class="hidden modal-container">
+        <div id="event-modal-overlay" class="modal-overlay"></div>
+        <div class="card modal-content maxWidth-600">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 class="text-lg" style="margin-bottom: 0;">Opprett nytt arrangement</h3>
+                <button id="close-event-modal" class="btn btn-ghost" style="padding: 0.5rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="card-body">
+                <form id="new-event-form">
+                    <div class="form-group">
+                        <label class="form-label">Tittel</label>
+                        <input type="text" id="event-title" class="form-input" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Beskrivelse</label>
+                        <textarea id="event-description" class="form-input" style="min-height: 100px;"
+                            required></textarea>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="form-group">
+                            <label class="form-label">Dato og tid</label>
+                            <input type="datetime-local" id="event-date" class="form-input" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Sted (Valgfritt)</label>
+                            <input type="text" id="event-location" class="form-input" placeholder="f.eks. Verkstedet">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Synlighet</label>
+                        <select id="event-visibility" class="form-input" required>
+                            <option value="internal">Kun for medlemmer (Intern)</option>
+                            <option value="public">Offentlig (Vis på forsiden)</option>
+                        </select>
+                        <p class="text-xs text-muted mt-1">Offentlige arrangementer vises både her og på hovedsiden.</p>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Bilde</label>
+                        <div id="event-upload-drop-zone" class="upload-drop-zone"
+                            style="min-height: 120px; padding: 1rem;">
+                            <div class="drop-zone-content">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
+                                    fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                    stroke-linejoin="round" class="mb-2" style="opacity: 0.5;">
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <polyline points="17 8 12 3 7 8"></polyline>
+                                    <line x1="12" y1="3" x2="12" y2="15"></line>
+                                </svg>
+                                <p class="text-sm font-semibold mb-1">Velg bilde til arrangementet</p>
+                                <p class="text-xs text-muted">Dra og slipp eller klikk</p>
+                            </div>
+                            <input type="file" id="event-image" accept="image/*">
+                        </div>
+                        <div id="event-image-preview-wrapper" class="hidden crop-preview-wrapper banner"
+                            style="margin-top: 1rem; max-height: 200px; overflow: hidden; border-radius: var(--radius-md);">
+                            <img id="event-image-preview" src=""
+                                style="width: 100%; height: 100%; object-fit: contain;">
+                        </div>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
+                        <button type="button" id="cancel-event-modal" class="btn btn-secondary">Avbryt</button>
+                        <button type="submit" id="event-submit-button" class="btn btn-primary">Publiser
+                            arrangement</button>
+                    </div>
+                    <p id="event-error" class="form-error"></p>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- View Documents Modal -->
+    <div id="view-documents-modal" class="hidden modal-container">
+        <div id="view-documents-modal-overlay" class="modal-overlay"></div>
+        <div class="card modal-content"
+            style="max-height: 90vh; display: flex; flex-direction: column; width: 100%; max-width: 800px;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="var(--color-primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                    <h3 id="documents-modal-title" class="text-lg" style="margin-bottom: 0;">Dokumenter</h3>
+                </div>
+                <button id="close-documents-modal" class="btn btn-ghost" style="padding: 0.5rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="card-body" style="display: flex; flex-direction: column;">
+                <div id="documents-header-controls"
+                    style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; width: 100%; border-bottom: 1px solid var(--color-border); margin-bottom: 1rem; padding-bottom: 0.5rem;">
+
+                    <!-- Left: Empty for now (indexes/filters could go here) -->
+                    <div></div>
+
+                    <!-- Center: Retningslinjer Sub-tabs -->
+                    <div id="retningslinjer-tabs" class="hidden"
+                        style="display: flex; gap: 0.5rem; justify-content: center;">
+                        <button id="tab-fire" class="tab-btn active">Brann</button>
+                        <button id="tab-glaze" class="tab-btn">Glasur</button>
+                        <button id="tab-workshop" class="tab-btn">Verksted</button>
+                    </div>
+
+                    <!-- Right: Add Button -->
+                    <div style="display: flex; justify-content: flex-end;">
+                        <button id="admin-add-doc-btn" class="btn btn-primary btn-sm hidden">+ Nytt dokument</button>
+                    </div>
+                </div>
+                <div id="documents-list-container"
+                    style="flex: 1; display: flex; flex-direction: column; gap: 1.25rem;">
+                    <p class="text-muted text-center">Laster dokumenter...</p>
+                </div>
+            </div>
+            <div class="card-footer" style="display: flex; justify-content: flex-end;">
+                <button type="button" id="close-documents-footer-btn" class="btn btn-secondary">Lukk</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Document Entry Form Modal (Admin/Contributor) -->
+    <div id="doc-entry-modal" class="hidden modal-container">
+        <div id="doc-entry-modal-overlay" class="modal-overlay"></div>
+        <div class="card modal-content maxWidth-600">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 id="doc-entry-title" class="text-lg" style="margin-bottom: 0;">Nytt dokument</h3>
+                <button id="close-doc-entry-modal" class="btn btn-ghost" style="padding: 0.5rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="card-body">
+                <form id="doc-entry-form">
+                    <input type="hidden" id="doc-entry-id">
+                    <input type="hidden" id="doc-entry-category">
+                    <div class="form-group" id="doc-entry-name-group">
+                        <label class="form-label">Tittel</label>
+                        <input type="text" id="doc-entry-name" class="form-input" required
+                            placeholder="f.eks. Årsmøte 2024">
+                    </div>
+                    <div class="form-group" id="doc-entry-date-group">
+                        <label class="form-label">Dato</label>
+                        <input type="date" id="doc-entry-date" class="form-input" required>
+                    </div>
+                    <div id="doc-entry-type-group" class="form-group hidden">
+                        <label class="form-label">Type retningslinje</label>
+                        <p id="doc-type-display" class="font-semibold text-primary"
+                            style="text-transform: capitalize; margin-bottom: 0.5rem;"></p>
+                        <select id="doc-entry-type" class="form-input hidden">
+                            <option value="verksted">Verksted</option>
+                            <option value="glasur">Glasur</option>
+                            <option value="brann">Brann</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="doc-content-group">
+                        <label class="form-label" id="doc-content-label">Innhold</label>
+                        <p class="text-xs text-muted mb-2" id="doc-content-hint">Tips: Hver linje blir et eget punkt i
+                            en liste.</p>
+                        <textarea id="doc-entry-content" class="form-input" style="min-height: 200px;" required
+                            placeholder="Skriv reglene her (linje for linje)..."></textarea>
+
+                        <!-- For Referater: Rich Text Editor -->
+                        <div id="doc-rich-text-hint" class="text-xs text-muted mb-2 hidden">
+                            Tips: Du kan lime inn direkte fra Google Docs for å beholde formatering.
+                        </div>
+                        <div id="doc-quill-editor" class="hidden"
+                            style="height: 300px; margin-bottom: 1rem; background: var(--color-bg-surface);"></div>
+
+                        <!-- For Retningslinjer: Dynamic inputs -->
+                        <div id="doc-points-container" class="hidden"
+                            style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.5rem;">
+                            <!-- Input fields will be added here via JS -->
+                        </div>
+                        <button type="button" id="add-more-points-btn" class="btn btn-ghost btn-xs mt-3 hidden"
+                            style="width: fit-content; opacity: 0.8;">
+                            + Legg til flere felt
+                        </button>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; gap: 1rem; margin-top: 2rem;">
+                        <button type="button" id="delete-doc-entry-btn" class="btn btn-ghost hidden"
+                            style="color: var(--color-error);">Slett</button>
+                        <div style="display: flex; gap: 1rem; margin-left: auto;">
+                            <button type="button" id="cancel-doc-entry-modal" class="btn btn-secondary">Avbryt</button>
+                            <button type="submit" id="save-doc-entry-btn" class="btn btn-primary">Lagre</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Confirm Modal -->
+    <div id="confirm-modal" class="hidden modal-container" style="z-index: 3100;">
+        <div id="confirm-modal-overlay" class="modal-overlay"></div>
+        <div class="card modal-content" style="max-width: 450px; border: 2px solid var(--color-primary);">
+            <div class="card-body text-center" style="padding: 2.5rem 2rem;">
+                <p id="confirm-modal-text" class="mb-8 text-lg" style="line-height: 1.5;"></p>
+                <div style="display: flex; justify-content: center; gap: 1rem;">
+                    <button id="confirm-modal-cancel" class="btn btn-secondary" style="flex: 1;">Avbryt</button>
+                    <button id="confirm-modal-ok" class="btn btn-primary" style="flex: 1;">Gå videre</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Control Panel Modal -->
+    <div id="admin-control-modal" class="hidden modal-container">
+        <div id="admin-control-modal-overlay" class="modal-overlay"></div>
+        <div class="card modal-content" style="max-width: 650px;">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 class="text-lg" style="margin-bottom: 0;">Administrasjon</h3>
+                <button id="close-admin-control-modal" class="btn btn-ghost" style="padding: 0.5rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="admin-panel-grid">
+                    <button id="admin-panel-gallery-btn" class="admin-tool-item btn-ghost">
+                        <svg class="admin-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                            <circle cx="8.5" cy="8.5" r="1.5" />
+                            <polyline points="21 15 16 10 5 21" />
+                        </svg>
+                        <h4 class="admin-tool-title">Offentlig galleri</h4>
+                        <p class="admin-tool-desc">Velg hvilke bilder som skal vises i det offentlige galleriet.</p>
+                    </button>
+
+                    <button id="admin-panel-status-btn" class="admin-tool-item btn-ghost">
+                        <svg class="admin-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <circle cx="12" cy="12" r="10" />
+                            <polyline points="12 6 12 12 16 14" />
+                        </svg>
+                        <h4 class="admin-tool-title">Status & åpningstider</h4>
+                        <p class="admin-tool-desc">Oppdater verkstedets status og ukentlige åpningstider.</p>
+                    </button>
+
+                    <button id="admin-panel-members-btn" class="admin-tool-item btn-ghost">
+                        <svg class="admin-tool-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                            <circle cx="9" cy="7" r="4" />
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                        </svg>
+                        <h4 class="admin-tool-title">Medlemmer</h4>
+                        <p class="admin-tool-desc">Legg til nye brukere, slett kontoer eller endre roller.</p>
+                    </button>
+
+                </div>
+            </div>
+            <div class="card-footer" style="display: flex; justify-content: flex-end;">
+                <button type="button" id="close-admin-control-footer" class="btn btn-secondary">Lukk</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dark Mode Floating Button -->
+    <button class="theme-toggle" aria-label="Bytt tema">
+        <svg class="moon-icon" style="width: 24px; height: 24px;" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+        </svg>
+        <svg class="sun-icon hidden" style="width: 24px; height: 24px;" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+        </svg>
+    </button>
+
+    <!-- Universal Image Cropping Modal -->
+    <div id="universal-crop-modal" class="hidden modal-container">
+        <div class="modal-overlay" id="universal-crop-overlay"></div>
+        <div class="card modal-content maxWidth-600">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 class="text-lg" style="margin-bottom: 0;">Tilpass bilde</h3>
+                <button type="button" id="close-universal-crop" class="btn btn-ghost" style="padding: 0.5rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="card-body">
+                <p class="text-sm text-muted mb-4">Dra rammen for å velge hvilket utsnitt som skal vises.</p>
+
+                <div id="modal-crop-preview-wrapper" class="crop-preview-wrapper" style="max-height: 50vh;">
+                    <img id="modal-crop-image" src="" style="width: 100%; display: block;">
+                    <div class="crop-overlay"></div>
+                    <div id="modal-crop-viewport" class="crop-viewport"></div>
+                    <div class="crop-hint">Dra for å justere</div>
+                </div>
+            </div>
+            <div class="card-footer" style="display: flex; justify-content: flex-end; gap: 1rem;">
+                <button type="button" id="cancel-universal-crop" class="btn btn-secondary">Avbryt</button>
+                <button type="button" id="apply-universal-crop" class="btn btn-primary">Bruk utsnitt</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Image Lightbox Modal -->
+    <div id="image-lightbox" class="hidden lightbox">
+        <div class="lightbox-overlay" id="lightbox-overlay"></div>
+        <div class="lightbox-content">
+            <button id="close-lightbox" class="lightbox-close">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
+            </button>
+            <div class="lightbox-image-container">
+                <img id="lightbox-img" src="" alt="Enlarged view">
+            </div>
+            <div class="lightbox-caption">
+                <p id="lightbox-description"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase og hoved-script -->
+    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
+    <script type="module" src="firebase.js"></script>
+    <script type="module" src="tagging.js"></script>
+    <script type="module" src="script.js"></script>
+    <script type="module" src="feed.js"></script>
+    <script type="module" src="arrangement.js"></script>
+</body>
+
+</html>
