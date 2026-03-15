@@ -26,7 +26,7 @@
 
             <nav class="nav-desktop">
                 <a href="om-oss.html" class="nav-link">Om oss</a>
-                <a href="kurs.html" class="nav-link">Kurs</a>
+                <a href="hva-skjer.html" class="nav-link">Hva skjer</a>
                 <a href="galleri.html" class="nav-link">Galleri</a>
                 <a href="kontakt.html" class="nav-link">Kontakt</a>
                 <a href="medlem.html" class="nav-link active">Min side</a>
@@ -44,7 +44,24 @@
         <!-- Mobilmeny -->
         <div id="mobile-menu" class="mobile-menu">
             <a href="om-oss.html">Om oss</a>
-            <a href="kurs.html">Kurs</a>
+            <a href="medlem.html" id="mobile-member-link" class="mobile-nav-link hidden"
+                style="color: var(--color-primary); font-weight: 600;">Min side</a>
+
+            <div id="mobile-notifications-wrapper" class="mobile-nav-link hidden"
+                style="display: flex; justify-content: space-between; align-items: center; cursor: pointer;">
+                <span>Varsler</span>
+                <div style="position: relative;">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                    </svg>
+                    <div id="mobile-notifications-badge" class="hidden"
+                        style="position: absolute; top: -5px; right: -5px; background: var(--color-error); color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold;">
+                        0</div>
+                </div>
+            </div>
+            <a href="hva-skjer.html">Hva skjer</a>
             <a href="galleri.html">Galleri</a>
             <a href="kontakt.html">Kontakt</a>
             <a href="medlem.html" class="active">Min side</a>
@@ -687,6 +704,14 @@
                         </div>
                     </div>
                     <div class="form-group">
+                        <label class="form-label">Synlighet</label>
+                        <select id="event-visibility" class="form-input" required>
+                            <option value="internal">Kun for medlemmer (Intern)</option>
+                            <option value="public">Offentlig (Vis på forsiden)</option>
+                        </select>
+                        <p class="text-xs text-muted mt-1">Offentlige arrangementer vises både her og på hovedsiden.</p>
+                    </div>
+                    <div class="form-group">
                         <label class="form-label">Bilde</label>
                         <div id="event-upload-drop-zone" class="upload-drop-zone"
                             style="min-height: 120px; padding: 1rem;">
@@ -978,6 +1003,7 @@
     <!-- Firebase og hoved-script -->
     <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
     <script type="module" src="firebase.js"></script>
+    <script type="module" src="tagging.js"></script>
     <script type="module" src="script.js"></script>
     <script type="module" src="feed.js"></script>
     <script type="module" src="arrangement.js"></script>

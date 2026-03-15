@@ -1,5 +1,7 @@
 import { db, appId } from './firebase.js';
-import { authState, userReady, showCustomAlert, showCustomConfirm, toggleModal, setupImageAdjustment, cropAndCompressUniversal } from './script.js';
+import { authState, userReady, showCustomAlert, showCustomConfirm, toggleModal, setupImageAdjustment, cropAndCompressUniversal, getSearchableUsers, getAllCachedUsers } from './script.js';
+import { TaggingSystem, parseMentionsForDisplay } from './tagging.js';
+import { notifyMentionedUsers } from './feed.js';
 import {
     collection,
     addDoc,
@@ -138,6 +140,7 @@ async function handleEditEvent(eventId) {
         document.getElementById('event-title').value = eventData.title || '';
         document.getElementById('event-description').value = eventData.description || '';
         document.getElementById('event-location').value = eventData.location || '';
+        document.getElementById('event-visibility').value = eventData.visibility || 'internal';
 
         if (eventData.date) {
             const date = eventData.date.toDate();
@@ -195,6 +198,7 @@ async function handleEventSubmit(e) {
     const description = document.getElementById('event-description').value;
     const dateVal = document.getElementById('event-date').value;
     const location = document.getElementById('event-location').value;
+    const visibility = document.getElementById('event-visibility').value;
     const imageFile = eventImageInput ? eventImageInput.files[0] : null;
 
     try {
@@ -224,10 +228,13 @@ async function handleEventSubmit(e) {
             description,
             date: Timestamp.fromDate(new Date(dateVal)),
             location: location || 'Ikke oppgitt',
+            visibility: visibility || 'internal',
             imageUrl,
             imageOffset: imageOffset,
             updatedAt: serverTimestamp()
         };
+
+        let eventId = editingEventId;
 
         if (editingEventId) {
             await updateDoc(doc(db, arrangementsPath, editingEventId), eventData);
@@ -238,8 +245,14 @@ async function handleEventSubmit(e) {
             eventData.createdAt = serverTimestamp();
 
             const eventsRef = collection(db, arrangementsPath);
-            await addDoc(eventsRef, eventData);
+            const newEventRef = await addDoc(eventsRef, eventData);
+            eventId = newEventRef.id;
             showCustomAlert("Arrangementet ble publisert!");
+        }
+
+        // Notify tagged users
+        if(eventId) {
+            await notifyMentionedUsers(description, eventId, `${arrangementsPath}/${eventId}`, `${authState.profile?.displayName || 'Admin'} nevnte deg i et arrangement`);
         }
 
         newEventForm.reset();
@@ -318,9 +331,10 @@ function renderUpcomingEvents(events) {
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" /><circle cx="12" cy="10" r="3" /></svg>
                         <span>${sanitizeHTML(event.location)}</span>
                     </div>
+                    ${event.visibility === 'public' ? `<div class="event-meta-item" style="color: var(--color-primary);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg><span>Offentlig</span></div>` : `<div class="event-meta-item" style="color: var(--color-text-muted);"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg><span>Intern</span></div>`}
                 </div>
                 <h3 class="event-title">${sanitizeHTML(event.title)}</h3>
-                <p class="event-description">${sanitizeHTML(event.description).replace(/\n/g, '<br>')}</p>
+                <p class="event-description">${parseMentionsForDisplay(sanitizeHTML(event.description || '').replace(/\n/g, '<br>'), getAllCachedUsers()).html}</p>
                 
                 <div class="event-actions">
                     <button class="btn btn-secondary btn-sm rsvp-btn" data-id="${event.id}" data-status="coming">Kommer!</button>
@@ -464,6 +478,13 @@ async function handleDeleteEvent(eventId) {
     }
 }
 
+function setupEventTagging() {
+    const eventDescInput = document.getElementById('event-description');
+    if (eventDescInput) {
+        new TaggingSystem(eventDescInput, getSearchableUsers);
+    }
+}
+
 // --- INITIALISERING ---
 userReady.then(() => {
     // Initialiser premium opplastingssone for arrangementer
@@ -480,6 +501,7 @@ userReady.then(() => {
 
     if (newEventForm) {
         newEventForm.addEventListener('submit', handleEventSubmit);
+        setupEventTagging();
     }
 
     // Toggle past events

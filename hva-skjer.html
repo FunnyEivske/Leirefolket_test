@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kurs - Leirefolket Keramikkverksted</title>
+    <title>Hva skjer - Leirefolket Keramikkverksted</title>
     <link rel="stylesheet" href="style.css">
     <!-- Tema-veksler (Laster tidlig for å unngå flash) -->
     <script src="theme-switcher.js"></script>
@@ -52,7 +52,7 @@
             <!-- Desktop-meny -->
             <div class="nav-menu-desktop">
                 <a href="om-oss.html" class="nav-link">Om oss</a>
-                <a href="kurs.html" class="nav-link-active">Kurs</a>
+                <a href="hva-skjer.html" class="nav-link-active">Hva skjer</a>
                 <a href="galleri.html" class="nav-link">Galleri</a>
                 <a href="kontakt.html" class="nav-link">Kontakt</a>
                 <a id="member-link" href="medlem.html" class="nav-link-active hidden">Min side</a>
@@ -72,7 +72,7 @@
             <!-- Mobilmeny -->
             <div id="mobile-menu" class="nav-menu-mobile">
                 <a href="om-oss.html" class="nav-link">Om oss</a>
-                <a href="kurs.html" class="nav-link-active">Kurs</a>
+                <a href="hva-skjer.html" class="nav-link-active">Hva skjer</a>
                 <a href="galleri.html" class="nav-link">Galleri</a>
                 <a href="kontakt.html" class="nav-link">Kontakt</a>
                 <a id="mobile-member-link" href="medlem.html" class="nav-link-active hidden">Min side</a>
@@ -83,81 +83,16 @@
     </header>
 
     <main>
-        <!-- Kurs-seksjon -->
-        <section id="kurs-liste" class="section section-bg-white">
+        <!-- Hva skjer-seksjon -->
+        <section id="hva-skjer-liste" class="section section-bg-white">
             <div class="container">
                 <div class="text-center" style="max-width: 600px; margin: 0 auto 4rem auto;">
-                    <h1>Kurs og markeder</h1>
-                    <p class="text-lg">Her finner du en oversikt over kurs og marked som vi tilbyr. <br>Ta kontakt for
-                        påmelding
-                        eller mer informasjon.</p>
+                    <h1>Hva skjer hos Leirefolket</h1>
+                    <p class="text-lg">Her finner du en oversikt over kommende kurs, markeder og andre arrangementer hos oss. <br>Ta kontakt for mer informasjon.</p>
                 </div>
 
-                <div class="kurs-liste-container">
-
-                    <!-- Kurs 1: Introduksjonskurs i keramikk-->
-                    <article class="kurs-liste-item">
-                        <div class="kurs-liste-item-image-container">
-                            <img src="Media/Bilder/Ny.jpg" alt="Nybegynnerkurs" class="kurs-liste-item-image">
-                        </div>
-                        <div class="kurs-liste-item-text">
-                            <h2>Introduksjonskurs i keramikk</h2>
-                            <p class="text-lg">Lær de grunnleggende teknikkene innen håndbygging: klypeteknikk,
-                                plateteknikk og pølseteknikk, samt en liten tur innom dreieskiven.
-                                <br>
-                                Dette kurset er perfekt for deg som aldri har jobbet med leire før og som ønsker å
-                                utforske din kreative side.
-                            </p>
-                            <ul>
-                                <li>Varighet: 2 uker (1 kveld per uke, 3 timer pr. kveld)</li>
-                                <li>Pris: 2200,- (inkl. materialer, glasur og brenning)</li>
-                                <li>Neste kursstart: Kommer</li>
-                            </ul>
-                            <a href="#kontakt" class="button button-secondary" style="margin-top: 1.5rem;">Meld
-                                interesse</a>
-                        </div>
-                    </article>
-
-                    <!-- Kurs 2: Dreiekurs -->
-                    <article class="kurs-liste-item">
-                        <div class="kurs-liste-item-image-container">
-                            <img src="Media/Bilder/Dreie.jpg" alt="Dreiekurs" class="kurs-liste-item-image">
-                        </div>
-                        <div class="kurs-liste-item-text">
-                            <h2>Dreiekurs</h2>
-                            <p class="text-lg">Opplev magien ved dreieskiven!
-                                <br>
-                                På dette kurset går vi gjennom elting,
-                                sentrering, trekking og forming av leire på skiven. Målet er at du skal kunne dreie din
-                                egen kopp og skål.
-                            </p>
-                            <ul>
-                                <li>Varighet: 2 uker (1 kveld per uke)</li>
-                                <li>Pris: 2200,- (inkl. materialer og brenning)</li>
-                                <li>Neste kursstart: Fullt (venteliste)</li>
-                            </ul>
-                            <a href="#kontakt" class="button button-secondary" style="margin-top: 1.5rem;">Sett meg
-                                på venteliste</a>
-                        </div>
-                    </article>
-
-                    <!-- Kurs 3: Markeder -->
-                    <article class="kurs-liste-item">
-                        <div class="kurs-liste-item-image-container">
-                            <img src="Media/Bilder/Marked.jpg" alt="Markeder" class="kurs-liste-item-image">
-                        </div>
-                        <div class="kurs-liste-item-text">
-                            <h2>Markeder</h2>
-                            <p class="text-lg">Vellkommen til vårt neste marked!
-                                <br>Vi har marked i våre lokaler både vinter/jul og vår/sommer.
-                            </p>
-                            <ul>
-                                <li>Neste Marked: Sommer 2026</li>
-                                <li>Dato og tid: Kommer</li>
-                            </ul>
-                        </div>
-                    </article>
-
+                <div id="hva-skjer-events-container" class="kurs-liste-container">
+                    <p class="text-center py-10 text-muted" style="grid-column: 1/-1;">Laster arrangementer...</p>
                 </div>
             </div>
         </section>
@@ -239,6 +174,7 @@
     <!-- Firebase og hoved-script -->
     <script type="module" src="firebase.js"></script>
     <script type="module" src="script.js"></script>
+    <script type="module" src="hva-skjer.js"></script>
 </body>
 
 </html>

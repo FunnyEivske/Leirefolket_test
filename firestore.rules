@@ -37,10 +37,9 @@ service cloud.firestore {
     }
     // --- Brukere og Galleri ---
     match /users/{userId} {
-      // Alle kan lese profilinfo (navn/bilde) - nødvendig for at admin skal kunne liste brukere
-      // og for at vi skal kunne sjekke roller
-      // MEN: Hvis status er 'pending_deletion', kan ingen (unntatt admin) lese den
-      allow read: if (resource == null || resource.data.get('status', 'active') == 'active' || isAdmin()) && true;
+      // Alle innloggede kan liste brukere, filtrering av slettede skjer på klienten eller via get
+      allow list: if isSignedIn();
+      allow get: if (resource == null || resource.data.get('status', 'active') == 'active' || isAdmin());
       
       // Eier kan endre navn/bilde, men IKKE sin egen rolle og IKKE hvis de er under sletting
       allow create: if isOwner(userId) && (!request.resource.data.keys().hasAny(['role']) || request.resource.data.role == 'member');
@@ -82,7 +81,16 @@ service cloud.firestore {
         allow read: if isSignedIn();
         allow create: if isSignedIn();
         allow update, delete: if isSignedIn() && (isAdmin() || request.auth.uid == resource.data.userId);
+        // --- Notifications ---
+      match /notifications/{notificationId} {
+        // En bruker kan lese og slette sine egne notifikasjoner
+        allow read, delete: if request.auth != null && request.auth.uid == userId;
+        // En bruker kan markere sine egne notifikasjoner som lest
+        allow update: if request.auth != null && request.auth.uid == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+        // Andre (innloggede) kan opprette en notifikasjon (f.eks ved tagging)
+        allow create: if request.auth != null;
       }
+    }
 
       // Reaksjoner (tommel opp)
       match /reactions/{userId} {
@@ -93,7 +101,7 @@ service cloud.firestore {
 
     // --- Arrangementer ---
     match /artifacts/{appId}/public/data/arrangements/{arrangementId} {
-      allow read: if isSignedIn();
+      allow read: if isSignedIn() || resource.data.visibility == 'public';
       allow create: if isAdmin() || isSecretary() || isContributor();
       allow update, delete: if isAdmin();
 

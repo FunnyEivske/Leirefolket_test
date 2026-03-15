@@ -25,7 +25,7 @@
             <!-- Desktop-meny -->
             <div class="nav-menu-desktop">
                 <a href="om-oss.html" class="nav-link">Om oss</a>
-                <a href="kurs.html" class="nav-link">Kurs</a>
+                <a href="hva-skjer.html" class="nav-link">Hva skjer</a>
                 <a href="galleri.html" class="nav-link">Galleri</a>
                 <a href="kontakt.html" class="nav-link">Kontakt</a>
                 <a id="member-link" href="medlem.html" class="nav-link-active hidden">Min side</a>
@@ -46,7 +46,7 @@
             <!-- Mobilmeny -->
             <div id="mobile-menu" class="nav-menu-mobile">
                 <a href="om-oss.html" class="nav-link">Om oss</a>
-                <a href="kurs.html" class="nav-link">Kurs</a>
+                <a href="hva-skjer.html" class="nav-link">Hva skjer</a>
                 <a href="galleri.html" class="nav-link">Galleri</a>
                 <a href="kontakt.html" class="nav-link">Kontakt</a>
                 <a id="mobile-member-link" href="medlem.html" class="nav-link-active hidden">Min side</a>
@@ -89,47 +89,16 @@
             </div>
         </section>
 
-        <!-- Kurs (Teaser) -->
-        <section id="kurs" class="section section-bg-medium">
+        <!-- Arrangementer (Hva skjer) -->
+        <section id="hva-skjer" class="section section-bg-medium">
             <div class="container">
                 <div class="text-center" style="max-width: 600px; margin: 0 auto 3rem auto;">
-                    <h2>Utforsk våre kurs og markeder</h2>
-                    <p class="text-lg">Bli med på et av våre eksklusive kurs og la kreativiteten blomstre!
+                    <h2>Hva skjer hos Leirefolket</h2>
+                    <p class="text-lg">Her finner du en oversikt over kommende arrangementer, kurs og markeder!
                     </p>
                 </div>
-                <div class="kurs-grid">
-                    <!-- Kurskort 1 -->
-                    <div class="kurs-card">
-                        <img src="Media/Bilder/Ny.jpg" alt="Nybegynnerkurs" class="kurs-card-image">
-                        <div class="kurs-card-content">
-                            <h3>Nybegynnerkurs</h3>
-                            <p>Lær de grunnleggende teknikkene innen håndbygging. Perfekt for deg som aldri
-                                har jobbet med leire før.</p>
-                            <a href="kurs.html" class="button button-secondary">Les mer</a>
-                        </div>
-                    </div>
-                    <!-- Kurskort 2 -->
-                    <div class="kurs-card">
-                        <img src="Media/Bilder/Dreie.jpg" alt="Dreiekurs" class="kurs-card-image">
-                        <div class="kurs-card-content">
-                            <h3>Dreiekurs</h3>
-                            <p>Opplev magien ved dreieskiven! Vi går gjennom sentrering, trekking og forming av leire på
-                                skiven.</p>
-                            <a href="kurs.html" class="button button-secondary">Les mer</a>
-                        </div>
-                    </div>
-                    <!-- Kurskort 3 -->
-                    <div class="kurs-card">
-                        <img src="Media/Bilder/Marked.jpg" alt="Markeder" class="kurs-card-image">
-                        <div class="kurs-card-content">
-                            <h3>Markeder</h3>
-                            <p>Velkommen til marked!</p>
-                            <a href="kurs.html" class="button button-secondary">Les mer</a>
-                        </div>
-                    </div>
-                </div>
-                <div class="text-center" style="margin-top: 3rem;">
-                    <a href="kurs.html" class="button button-primary button-lg">Se mer</a>
+                <div id="public-events-container" class="kurs-grid">
+                    <p class="text-center py-10 text-muted" style="grid-column: 1/-1;">Laster arrangementer...</p>
                 </div>
             </div>
         </section>
@@ -149,8 +118,17 @@
             </div>
         </section>
 
+        <!-- Kontakt og Kjøp Keramikk -->
+        <section id="kjop-keramikk" class="section section-bg-medium text-center" style="padding-bottom: 3rem;">
+            <div class="container" style="max-width: 600px;">
+                <h2>Ønsker du å kjøpe keramikk?</h2>
+                <p class="text-lg">Vi har mange dyktige medlemmer som selger sine verk.</p>
+                <a href="kontakt.html" class="button button-primary button-lg" style="margin-top: 1.5rem;">Ta kontakt med oss</a>
+            </div>
+        </section>
+
         <!-- Kontakt (Teaser) -->
-        <section id="kontakt-teaser" class="section section-bg-medium text-center">
+        <section id="kontakt-teaser" class="section section-bg-white text-center">
             <div class="container" style="max-width: 600px;">
                 <h2>Hvor du finner oss</h2>
                 <p class="text-lg">Vårt medlemsbaserte verksted, et kreativt knutepunkt i Kristiansand ligger på Lund
@@ -158,8 +136,6 @@
                 <p class="text-lg"
                     style="font-weight: 500; color: var(--color-text-main); margin-top: 1.5rem; margin-bottom: 2rem;">
                     Nye Teglverks vei 23, 4614 Kristiansand</p>
-                <a href="kontakt.html" class="button button-secondary button-lg">Ta kontakt</a>
-                <br>
                 <a href="bli-medlem.html" class="button button-primary button-lg" style="margin-top: 1.5rem;">Søk
                     medlemskap</a>
             </div>
@@ -217,10 +193,10 @@
         </div>
     </div>
 
-    <!-- Firebase og hoved-script -->
     <script type="module" src="firebase.js"></script>
     <script type="module" src="script.js"></script>
     <script type="module" src="public-gallery.js"></script>
+    <script type="module" src="index-events.js"></script>
 </body>
 
 </html>

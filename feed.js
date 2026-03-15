@@ -1,5 +1,6 @@
 import { db, appId } from './firebase.js';
-import { authState, userReady, toggleModal, showCustomAlert, showCustomConfirm, setupImageAdjustment, cropAndCompressUniversal } from './script.js';
+import { authState, userReady, toggleModal, showCustomAlert, showCustomConfirm, setupImageAdjustment, cropAndCompressUniversal, getSearchableUsers, getAllCachedUsers } from './script.js';
+import { TaggingSystem, parseMentionsForDisplay } from './tagging.js';
 import {
     collection,
     addDoc,
@@ -14,7 +15,8 @@ import {
     getDoc,
     getDocs,
     updateDoc,
-    serverTimestamp
+    serverTimestamp,
+    runTransaction
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- UI-ELEMENTER ---
@@ -60,6 +62,13 @@ userReady.then(() => {
             console.log("Post crop complete. Offset:", postImageOffset);
         });
     }
+
+    // Initialize tagging system for static inputs
+    const postContent = document.getElementById('post-content');
+    if (postContent) new TaggingSystem(postContent, getSearchableUsers);
+    
+    const detailComment = document.getElementById('detail-comment-input');
+    if (detailComment) new TaggingSystem(detailComment, getSearchableUsers);
 });
 
 // Sti til feed-databasen
@@ -130,7 +139,8 @@ function renderFeed(posts) {
 
         const safeTitle = sanitizeHTML(post.title);
         const safeAuthorName = sanitizeHTML(post.authorName || 'Medlem');
-        const safeContentHtml = sanitizeHTML(post.content).replace(/\n/g, '<br>');
+        const safeContentHtml = sanitizeHTML(post.content); // Sanitize first
+        const parsedContentForDisplay = parseMentionsForDisplay(safeContentHtml, getAllCachedUsers()); // Then parse mentions
         const safePhotoURL = post.authorPhotoURL ? sanitizeHTML(post.authorPhotoURL) : null;
         const postImageUrl = post.imageUrl || null;
 
@@ -160,7 +170,7 @@ function renderFeed(posts) {
                 ` : ''}
             </div>
             <h3 style="margin-top: 0;">${safeTitle}</h3>
-            <div class="feed-item-content">${safeContentHtml}</div>
+            <div class="feed-item-content">${parsedContentForDisplay.html}</div>
             ${postImageUrl ? `
                 <div class="feed-item-image" style="margin-top: 1rem; border-radius: var(--radius-md); overflow: hidden; cursor: pointer;">
                     <img src="${postImageUrl}" alt="${safeTitle}" style="width: 100%; display: block; object-fit: cover; max-height: 500px;" onclick="window.openLightbox('${postImageUrl}', '${safeTitle}')">
@@ -203,6 +213,12 @@ function renderFeed(posts) {
 
         // Setup individual listeners for counts/previews
         setupPostStatsListeners(post.id);
+        
+        // Setup tagging for the quick comment input
+        const quickCommentInput = postElement.querySelector('.quick-comment-input');
+        if (quickCommentInput) {
+            new TaggingSystem(quickCommentInput, getSearchableUsers);
+        }
     });
 
     // Event Delegation for buttons
@@ -410,6 +426,8 @@ async function handlePostSubmit(e) {
             updatedAt: serverTimestamp()
         };
 
+        let postId = editingPostId;
+
         if (editingPostId) {
             await updateDoc(doc(db, feedCollectionPath, editingPostId), postData);
             showCustomAlert("Innlegget ble oppdatert!");
@@ -422,8 +440,14 @@ async function handlePostSubmit(e) {
             postData.commentsCount = 0;
 
             const feedCollectionRef = collection(db, feedCollectionPath);
-            await addDoc(feedCollectionRef, postData);
+            const newPostRef = await addDoc(feedCollectionRef, postData);
+            postId = newPostRef.id;
             showCustomAlert("Innlegget ble publisert!");
+        }
+
+        // Notify mentioned users in the post content
+        if (postId) {
+            await notifyMentionedUsers(content, postId, `${feedCollectionPath}/${postId}`, `${authorName} nevnte deg i et innlegg`);
         }
 
         // Tøm skjemaet og tilbakestill
@@ -446,7 +470,7 @@ async function handlePostSubmit(e) {
     } finally {
         if (postSubmitButton) {
             postSubmitButton.disabled = false;
-            postSubmitButton.textContent = 'Publiser';
+            postSubmitButton.textContent = originalBtnText;
         }
     }
 }
@@ -490,11 +514,14 @@ function loadInlineComments(postId) {
             const data = doc.data();
             const div = document.createElement('div');
             div.className = 'comment-item';
+            const safeCommentContent = sanitizeHTML(data.content);
+            const parsedCommentForDisplay = parseMentionsForDisplay(safeCommentContent, getAllCachedUsers());
+
             div.innerHTML = `
                 <img src="${data.userPhoto || 'https://ui-avatars.com/api/?name=' + data.userName}" alt="${data.userName}" class="comment-avatar" style="width: 1.5rem; height: 1.5rem;">
                 <div class="comment-content" style="padding: 0.25rem 0.5rem; font-size: 0.85rem;">
                     <span class="comment-author">${sanitizeHTML(data.userName)}</span>
-                    <p class="comment-text">${sanitizeHTML(data.content)}</p>
+                    <p class="comment-text">${parsedCommentForDisplay.html}</p>
                 </div>
                 ${authState.role === 'admin' ? `<button class="comment-delete-btn" data-postid="${postId}" data-commentid="${doc.id}" title="Slett kommentar">🗑️</button>` : ''}
             `;
@@ -580,13 +607,16 @@ async function handleAddComment(postId, text) {
     if (!authState.user || !text.trim()) return;
 
     try {
-        await addDoc(collection(db, `${feedCollectionPath}/${postId}/comments`), {
+        const commentRef = await addDoc(collection(db, `${feedCollectionPath}/${postId}/comments`), {
             content: text,
             userId: authState.user.uid,
             userName: authState.profile?.displayName || 'Medlem',
             userPhoto: authState.profile?.photoURL || null,
             createdAt: serverTimestamp()
         });
+        // Notify mentioned users in the comment
+        await notifyMentionedUsers(text, postId, `${feedCollectionPath}/${postId}/comments/${commentRef.id}`, `${authState.profile?.displayName || 'Medlem'} nevnte deg i en kommentar`);
+
     } catch (e) { console.error("Comment failed:", e); }
 }
 
@@ -618,6 +648,14 @@ async function handleDeleteComment(postId, commentId) {
     }
 }
 
+function setupPostTagging() {
+    const postContentInput = document.getElementById('post-content');
+    if (postContentInput && !postContentInput.dataset.taggingInitialized) {
+        new TaggingSystem(postContentInput, getSearchableUsers);
+        postContentInput.dataset.taggingInitialized = 'true'; // Mark as initialized
+    }
+}
+
 
 // --- INITIALISERING ---
 
@@ -645,6 +683,8 @@ if (document.getElementById('feed-container')) {
 
         if (newPostForm) {
             newPostForm.addEventListener('submit', handlePostSubmit);
+            // Setup tagging for the new post form content field
+            setupPostTagging();
         }
 
         // --- NEW POST IMAGE HANDLING ---
@@ -676,5 +716,34 @@ if (document.getElementById('feed-container')) {
         console.error("Feed.js: Error waiting for userReady:", error);
         feedContainer.innerHTML = '<p style="color: var(--color-error); text-align: center;">En alvorlig feil oppstod under lasting.</p>';
     });
+}
 
+/**
+ * Parses text, finds mentioned uids, and creates notifications in Firestore.
+ */
+export async function notifyMentionedUsers(text, sourceId, sourcePath, notificationText) {
+    const parsed = parseMentionsForDisplay(text, getAllCachedUsers());
+    const uids = parsed.uids;
+    
+    if (!uids || uids.length === 0) return;
+    
+    try {
+        const promises = uids.map(uid => {
+            if (uid === authState.uid) return Promise.resolve(); // Ikke varsle deg selv
+            
+            const notifRef = collection(db, `users/${uid}/notifications`);
+            return addDoc(notifRef, {
+                type: 'mention',
+                sourceId: sourceId,
+                sourcePath: sourcePath,
+                text: notificationText,
+                read: false,
+                createdAt: serverTimestamp()
+            });
+        });
+        
+        await Promise.all(promises);
+    } catch (e) {
+        console.error('Feil under sending av varsler for tagging:', e);
+    }
 }

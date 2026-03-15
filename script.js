@@ -19,7 +19,8 @@ import {
     getDocs,
     onSnapshot,
     serverTimestamp,
-    orderBy
+    orderBy,
+    writeBatch
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- GLOBAL STATE --- //
@@ -34,7 +35,12 @@ export let authState = {
 
 let profileUnsubscribe = null;
 let galleryUnsubscribe = null; // Listener for user's own gallery
+let notificationsUnsubscribe = null;
 let sidebarMembersLimit = 5; // Initial limit for sidebar display
+
+// Global users cache for tagging/mentions
+export let allUsersCache = [];
+let usersLoadPromise = null;
 
 // --- DARK MODE LOGIKK (Flyttet til theme-switcher.js) ---
 
@@ -757,6 +763,12 @@ function setupUserListener(uid) {
             authState.profile = data;
             authState.role = data.role || 'member'; // Standard rolle er 'member'
             setCachedProfile(uid, data);
+            
+            // Start notifikasjons-lytter
+            setupNotificationsListener(uid);
+            // Pre-load brukere for tagging
+            loadAllUsersForCache();
+            
         } else {
             // Hvis dokumentet ikke finnes (ny bruker), sett standardverdier
             authState.profile = {
@@ -873,6 +885,185 @@ function setupGalleryListener(uid) {
 
     return unsubscribe;
 }
+
+// Laster alle brukere for @mention autocomplete (kjøres bare én gang, eller på initiativ)
+async function loadAllUsersForCache() {
+    if (usersLoadPromise) return usersLoadPromise;
+    
+    usersLoadPromise = (async () => {
+        try {
+            const usersSnapshot = await getDocs(collection(db, 'users'));
+            allUsersCache = usersSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            })).filter(user => user.status !== 'pending_deletion');
+            return allUsersCache;
+        } catch (error) {
+            console.error("Feil ved lasting av brukere for tagging:", error);
+            return [];
+        }
+    })();
+    
+    return usersLoadPromise;
+}
+
+export function getAllCachedUsers() {
+    return allUsersCache || [];
+}
+
+// Funksjon for tagging.js for å hente filtrerte brukere
+export async function getSearchableUsers(term) {
+    if (!allUsersCache || allUsersCache.length === 0) {
+        await loadAllUsersForCache();
+    }
+    
+    const lowerTerm = term.toLowerCase().replace(/\s/g, '');
+    return allUsersCache.filter(user => {
+        if(!user.displayName) return false;
+        const nameClean = user.displayName.toLowerCase().replace(/\s/g, '');
+        return nameClean.includes(lowerTerm);
+    }).slice(0, 5); // Return max 5 options
+}
+
+// Lytter på notifikasjoner for den innloggede brukeren
+function setupNotificationsListener(uid) {
+    if (notificationsUnsubscribe) notificationsUnsubscribe();
+    if (!uid) return null;
+
+    const notifRef = collection(db, `users/${uid}/notifications`);
+    const q = query(notifRef, where("read", "==", false), orderBy("createdAt", "desc"));
+
+    notificationsUnsubscribe = onSnapshot(q, (snapshot) => {
+        const notifications = [];
+        snapshot.forEach(doc => {
+            notifications.push({ id: doc.id, ...doc.data() });
+        });
+        
+        updateNotificationsUI(uid, notifications);
+    }, (error) => {
+        // Om vi mangler index får vi feil inntil linken i konsollen er klikket.
+        console.warn("Notifications listener error (kan skyldes manglende index): ", error);
+        // Fallback for å unngå total krasj
+        const simpleQ = query(notifRef, where("read", "==", false));
+        notificationsUnsubscribe = onSnapshot(simpleQ, (snap) => {
+            const notifs = [];
+            snap.forEach(d => {
+                const data = d.data();
+                notifs.push({ id: d.id, ...data });
+            });
+            notifs.sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
+            updateNotificationsUI(uid, notifs);
+        });
+    });
+}
+
+function updateNotificationsUI(uid, notifications) {
+    // Desktop UI
+    const wrapper = document.getElementById('notifications-wrapper');
+    const badge = document.getElementById('notifications-badge');
+    const list = document.getElementById('notifications-list');
+    
+    // Mobile UI
+    const mobileWrapper = document.getElementById('mobile-notifications-wrapper');
+    const mobileBadge = document.getElementById('mobile-notifications-badge');
+
+    if (!wrapper && !mobileWrapper) return;
+    
+    if (wrapper) wrapper.classList.remove('hidden');
+    if (mobileWrapper) mobileWrapper.classList.remove('hidden');
+
+    const unreadCount = notifications.length;
+
+    if (unreadCount > 0) {
+        if (badge) {
+            badge.textContent = unreadCount;
+            badge.classList.remove('hidden');
+        }
+        if (mobileBadge) {
+            mobileBadge.textContent = unreadCount;
+            mobileBadge.classList.remove('hidden');
+        }
+    } else {
+        if (badge) badge.classList.add('hidden');
+        if (mobileBadge) mobileBadge.classList.add('hidden');
+    }
+
+    // Oppdater dropdown liste (kun for desktop i første omgang, eller delt)
+    if (list) {
+        if (unreadCount === 0) {
+            list.innerHTML = '<p class="text-sm text-muted text-center py-2">Ingen nye varsler.</p>';
+        } else {
+            list.innerHTML = '';
+            notifications.forEach(notif => {
+                const item = document.createElement('div');
+                item.className = 'notif-item';
+                item.style.padding = '0.5rem';
+                item.style.borderBottom = '1px solid var(--color-border)';
+                item.style.cursor = 'pointer';
+                item.innerHTML = `
+                    <p style="margin: 0; font-size: 0.85rem;"><strong>${notif.text}</strong></p>
+                    <span style="font-size: 0.7rem; color: var(--color-text-muted);">Klikk for å se.</span>
+                `;
+                
+                // Hover effect
+                item.addEventListener('mouseenter', () => item.style.backgroundColor = 'var(--color-bg-subtle)');
+                item.addEventListener('mouseleave', () => item.style.backgroundColor = 'transparent');
+                
+                item.addEventListener('click', async () => {
+                    // Mark as read
+                    try {
+                        await setDoc(doc(db, `users/${uid}/notifications`, notif.id), { read: true }, { merge: true });
+                        // Lukker menyen
+                        const dropdown = document.getElementById('notifications-dropdown');
+                        if(dropdown) dropdown.classList.add('hidden');
+                        
+                        // Enkel redirect til medlemssiden / skrolle ned (fordi vi for øyeblikket er en single-page-app struktur for feeden)
+                        // Senere kan man utvide for å markere posten
+                        window.location.hash = "feed-section";
+                        
+                    } catch (e) { console.error(e); }
+                });
+                
+                list.appendChild(item);
+            });
+            
+            // Mark all read button
+            const markAll = document.createElement('button');
+            markAll.className = 'btn btn-ghost btn-sm btn-full mt-2';
+            markAll.textContent = 'Marker alle som lest';
+            markAll.onclick = async (e) => {
+                e.stopPropagation();
+                const batch = writeBatch(db);
+                notifications.forEach(n => {
+                    batch.update(doc(db, `users/${uid}/notifications`, n.id), { read: true });
+                });
+                await batch.commit();
+            };
+            list.appendChild(markAll);
+        }
+    }
+}
+
+// Toggle notifications menu
+document.addEventListener('DOMContentLoaded', () => {
+    const wrapper = document.getElementById('notifications-wrapper');
+    const dropdown = document.getElementById('notifications-dropdown');
+    
+    if (wrapper && dropdown) {
+        wrapper.addEventListener('click', (e) => {
+            // Unngå problemer hvis man klikker på dropdown selve
+            if(dropdown.contains(e.target)) return;
+            dropdown.classList.toggle('hidden');
+        });
+        
+        // Klikk utenfor for å lukke
+        document.addEventListener('click', (e) => {
+            if (!wrapper.contains(e.target)) {
+                dropdown.classList.add('hidden');
+            }
+        });
+    }
+});
 
 async function saveUserProfile(uid, data) {
     if (!uid) throw new Error("Ingen bruker-ID oppgitt.");
