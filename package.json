@@ -21,6 +21,7 @@
   },
   "homepage": "https://github.com/FunnyEivske/Leirefolket_test#readme",
   "devDependencies": {
+    "firebase-tools": "^15.10.0",
     "vite": "^7.3.1"
   }
 }

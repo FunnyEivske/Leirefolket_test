@@ -14,5 +14,23 @@
     "firestore": {
         "rules": "firestore.rules",
         "indexes": "firestore.indexes.json"
+    },
+    "hosting": {
+        "public": ".",
+        "ignore": [
+            "firebase.json",
+            "**/.*",
+            "**/node_modules/**",
+            "functions/**",
+            "package.json",
+            "package-lock.json",
+            "task.md",
+            "implementation_plan.md",
+            "deploy_log.txt",
+            "deploy_result.txt",
+            "README.md",
+            "firestore.rules",
+            "firestore.indexes.json"
+        ]
     }
 }
