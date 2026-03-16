@@ -67,7 +67,8 @@ function renderEvents(events) {
     }
 
     events.forEach(event => {
-        const card = document.createElement('div');
+        const card = document.createElement('a');
+        card.href = 'hva-skjer.html';
         card.className = 'kurs-card'; // Gjenbruker eksisterende styling
         
         const imageUrl = event.imageUrl || '';

@@ -710,6 +710,8 @@ p {
 }
 
 .kurs-card {
+  display: block;
+  text-decoration: none;
   background-color: var(--color-bg-card);
   border-radius: var(--border-radius-lg);
   box-shadow: var(--shadow-lg);
