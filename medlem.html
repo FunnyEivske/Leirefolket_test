@@ -32,24 +32,8 @@
                 <a href="kontakt.html" class="nav-link">Kontakt</a>
                 <a href="medlem.html" class="nav-link active">Min side</a>
                 
-                <!-- Desktop Notifications -->
-                <div id="notifications-wrapper" class="nav-link hidden" style="position: relative; cursor: pointer; padding: 0.5rem;">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                        <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                    </svg>
-                    <div id="notifications-badge" class="hidden" style="position: absolute; top: 0; right: 0; background: var(--color-error); color: white; border-radius: 50%; width: 14px; height: 14px; font-size: 9px; display: flex; align-items: center; justify-content: center; font-weight: bold;">0</div>
-                    
-                    <!-- Dropdown -->
-                    <div id="notifications-dropdown" class="card hidden" style="position: absolute; top: 100%; right: 0; width: 300px; z-index: 1000; box-shadow: var(--shadow-lg); margin-top: 0.5rem; max-height: 400px; overflow-y: auto;">
-                        <div class="card-header" style="padding: 0.75rem;">
-                            <h4 class="text-sm">Varsler</h4>
-                        </div>
-                        <div id="notifications-list" class="card-body" style="padding: 0;">
-                            <p class="text-xs text-muted text-center py-4">Laster varsler...</p>
-                        </div>
-                    </div>
-                </div>
+                <!-- Desktop Notifications moved to sidebar -->
+
 
                 <button id="dropdown-logout-button" class="btn btn-ghost text-sm">Logg ut</button>
 
@@ -97,6 +81,32 @@
 
             <!-- Sidebar: Profil -->
             <aside class="dashboard-sidebar">
+                <!-- Notifications Card -->
+                <div id="notifications-sidebar-card" class="card hidden">
+                    <div class="card-body" style="padding: 1rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer;" id="notifications-wrapper">
+                        <div style="display: flex; align-items: center; gap: 0.75rem;">
+                            <div style="position: relative;">
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--color-primary);">
+                                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                                    <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                                </svg>
+                                <div id="notifications-badge" class="hidden" style="position: absolute; top: -5px; right: -5px; background: var(--color-error); color: white; border-radius: 50%; width: 16px; height: 16px; font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid var(--color-bg-surface);">0</div>
+                            </div>
+                            <span class="text-sm font-semibold">Varsler</span>
+                        </div>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" id="notifications-chevron">
+                            <path d="M6 9l6 6 6-6" />
+                        </svg>
+
+                        <!-- Dropdown popout (still absolute but relative to sidebar card) -->
+                        <div id="notifications-dropdown" class="card hidden" style="position: absolute; top: 100%; left: 0; width: 100%; z-index: 1000; box-shadow: var(--shadow-lg); margin-top: 0.5rem; max-height: 400px; overflow-y: auto;">
+                            <div id="notifications-list" class="card-body" style="padding: 0;">
+                                <p class="text-xs text-muted text-center py-4">Laster varsler...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="card profile-card">
                     <div class="card-body">
                         <img id="profile-img" src="https://ui-avatars.com/api/?name=Medlem&background=random"

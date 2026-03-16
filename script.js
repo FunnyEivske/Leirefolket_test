@@ -112,6 +112,8 @@ let tosModal, tosCheckbox, acceptTosBtn, declineTosBtn;
 let messageModal, messageModalText, messageModalClose, messageModalOverlay;
 let confirmModal, confirmModalText, confirmModalOk, confirmModalCancel, confirmModalOverlay;
 let openDocumentsBtn, documentsModal, documentsModalOverlay, closeDocumentsModalBtn, closeDocumentsFooterBtn, btnReferater, btnRetningslinjer, btnVedtekter, documentsModalTitle, retningslinjerTabs, tabFire, tabGlaze, tabWorkshop, documentsListContainer, adminAddDocBtn;
+let notificationsSidebarCard;
+
 let docEntryModal, docEntryModalOverlay, closeDocEntryModalBtn, cancelDocEntryModalBtn, docEntryForm, docEntryIdInput, docEntryCategoryInput, docEntryNameInput, docEntryDateInput, docEntryContentInput, saveDocEntryBtn, deleteDocEntryBtn, docEntryTitle, docEntryTypeGroup, docEntryTypeInput, docTypeDisplay, docEntryNameGroup, docEntryDateGroup, docPointsContainer, addMorePointsBtn, docContentHint, docContentLabel, docQuillEditor, docRichTextHint;
 
 function initUI() {
@@ -248,6 +250,8 @@ function initUI() {
     messageModalText = document.getElementById('message-modal-text');
     messageModalClose = document.getElementById('message-modal-close');
     messageModalOverlay = document.getElementById('message-modal-overlay');
+    notificationsSidebarCard = document.getElementById('notifications-sidebar-card');
+
     confirmModal = document.getElementById('confirm-modal');
     confirmModalText = document.getElementById('confirm-modal-text');
     confirmModalOk = document.getElementById('confirm-modal-ok');
@@ -1169,6 +1173,8 @@ function updateNotificationsUI(uid, notifications) {
     
     if (wrapper) wrapper.classList.remove('hidden');
     if (mobileWrapper) mobileWrapper.classList.remove('hidden');
+    if (notificationsSidebarCard) notificationsSidebarCard.classList.remove('hidden');
+
 
     const unreadCount = notifications.length;
 
@@ -1264,16 +1270,28 @@ document.addEventListener('DOMContentLoaded', () => {
         wrapper.addEventListener('click', (e) => {
             // Unngå problemer hvis man klikker på dropdown selve
             if(dropdown.contains(e.target)) return;
+            
+            const isHidden = dropdown.classList.contains('hidden');
             dropdown.classList.toggle('hidden');
+            wrapper.classList.toggle('active', isHidden);
+            
+            // For sidebar context, we might want to rotate a chevron if it exists
+            const chevron = document.getElementById('notifications-chevron');
+            if (chevron) {
+                chevron.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+            }
         });
         
         // Klikk utenfor for å lukke
         document.addEventListener('click', (e) => {
             if (!wrapper.contains(e.target)) {
                 dropdown.classList.add('hidden');
+                const chevron = document.getElementById('notifications-chevron');
+                if (chevron) chevron.style.transform = 'rotate(0deg)';
             }
         });
     }
+
 });
 
 async function saveUserProfile(uid, data) {

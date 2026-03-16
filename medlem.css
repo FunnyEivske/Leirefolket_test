@@ -2172,3 +2172,46 @@ textarea {
     background-color: rgba(67, 97, 238, 0.2);
     text-decoration: underline;
 }
+
+/* Sidebar Notifications */
+#notifications-sidebar-card {
+  margin-bottom: 1rem;
+}
+
+#notifications-wrapper {
+  transition: background-color 0.2s;
+}
+
+#notifications-wrapper:hover {
+  background-color: var(--color-bg-subtle);
+}
+
+#notifications-chevron {
+  transition: transform 0.3s ease;
+}
+
+#notifications-wrapper:not(.collapsed) #notifications-chevron {
+  transform: rotate(180deg);
+}
+
+/* Adjust dropdown for sidebar context */
+#notifications-sidebar-card #notifications-dropdown {
+  position: relative; /* Change from absolute to relative for sidebar list behavior */
+  top: 0;
+  left: 0;
+  width: 100%;
+  box-shadow: none;
+  border: none;
+  background: transparent;
+  margin-top: 0.5rem;
+  max-height: 300px;
+  border-top: 1px solid var(--color-border);
+}
+
+.notif-item {
+  border-bottom: 1px solid var(--color-border);
+}
+
+.notif-item:last-child {
+  border-bottom: none;
+}
