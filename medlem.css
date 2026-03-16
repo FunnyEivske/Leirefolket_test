@@ -583,7 +583,7 @@ p {
   z-index: 100;
   border-bottom: 1px solid var(--color-border);
   transition: background-color 0.3s ease;
-  /* Remove overflow: hidden if it exists to allow dropdowns to pop out */
+  overflow: visible !important;
 }
 
 .header-inner {
@@ -591,7 +591,7 @@ p {
   align-items: center;
   justify-content: space-between;
   height: 4.5rem;
-  /* overflow: visible should be default, but explicitly ensuring it here */
+  overflow: visible !important;
 }
 
 .logo {
@@ -614,6 +614,7 @@ p {
   display: none;
   align-items: center;
   gap: 2rem;
+  overflow: visible !important;
 }
 
 .nav-link {
