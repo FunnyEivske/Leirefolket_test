@@ -29,17 +29,11 @@ service cloud.firestore {
         exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', null) == 'sekretær';
     }
-
-    function isBoardMember() {
-      return isSignedIn() && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', null) == 'styremedlem';
-    }
-    // --- Brukere og Galleri ---
     match /users/{userId} {
-      // Alle innloggede kan liste brukere, filtrering av slettede skjer på klienten eller via get
+      // Alle innloggede kan liste brukere
       allow list: if isSignedIn();
-      allow get: if (resource == null || resource.data.get('status', 'active') == 'active' || isAdmin());
+      // Eier kan alltid lese sitt eget dokument, andre kan lese hvis aktiv eller admin
+      allow get: if isOwner(userId) || (resource != null && resource.data.get('status', 'active') == 'active') || isAdmin();
       
       // Eier kan endre navn/bilde, men IKKE sin egen rolle og IKKE hvis de er under sletting
       allow create: if isOwner(userId) && (!request.resource.data.keys().hasAny(['role']) || request.resource.data.role == 'member');
@@ -48,14 +42,25 @@ service cloud.firestore {
                       !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'status', 'deletionRequestedAt']);
       allow delete: if isOwner(userId) && (resource.data.get('status', 'active') == 'active');
       
+      
       // Admin kan endre alt, inkludert roller og slettestatus
       allow write: if isAdmin(); 
 
       // Personlig galleri
       match /gallery_images/{imageId} {
-        // Blokker tilgang hvis brukeren er under sletting (unntatt for admin)
-        allow read: if (get(/databases/$(database)/documents/users/$(userId)).data.get('status', 'active') == 'active' || isAdmin());
+        // Enklere regler for å unngå permission denied ved login
+        allow read: if isSignedIn() && (isOwner(userId) || isAdmin());
         allow write: if (isOwner(userId) && get(/databases/$(database)/documents/users/$(userId)).data.get('status', 'active') == 'active') || isAdmin();
+      }
+
+      // Notifikasjoner (Flyttet hit, under users/{userId})
+      match /notifications/{notificationId} {
+        // En bruker kan lese og slette sine egne notifikasjoner
+        allow read, delete: if isOwner(userId);
+        // En bruker kan markere sine egne notifikasjoner som lest
+        allow update: if isOwner(userId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+        // Andre (innloggede) kan opprette en notifikasjon (f.eks ved tagging)
+        allow create: if isSignedIn();
       }
     }
 
@@ -74,23 +79,12 @@ service cloud.firestore {
     match /artifacts/{appId}/public/data/feed/{postId} {
       allow read: if isSignedIn(); // Only members/admins
       allow create: if isAdmin() || isSecretary() || isContributor();
-      allow update, delete: if isAdmin();
-
-      // Kommentarer
+      allow update, delete: if isAdmin();      // Kommentarer
       match /comments/{commentId} {
         allow read: if isSignedIn();
         allow create: if isSignedIn();
         allow update, delete: if isSignedIn() && (isAdmin() || request.auth.uid == resource.data.userId);
-        // --- Notifications ---
-      match /notifications/{notificationId} {
-        // En bruker kan lese og slette sine egne notifikasjoner
-        allow read, delete: if request.auth != null && request.auth.uid == userId;
-        // En bruker kan markere sine egne notifikasjoner som lest
-        allow update: if request.auth != null && request.auth.uid == userId && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
-        // Andre (innloggede) kan opprette en notifikasjon (f.eks ved tagging)
-        allow create: if request.auth != null;
       }
-    }
 
       // Reaksjoner (tommel opp)
       match /reactions/{userId} {

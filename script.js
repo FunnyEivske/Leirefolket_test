@@ -36,11 +36,33 @@ export let authState = {
 let profileUnsubscribe = null;
 let galleryUnsubscribe = null; // Listener for user's own gallery
 let notificationsUnsubscribe = null;
+let currentAdminSelections = new Set();
 let sidebarMembersLimit = 5; // Initial limit for sidebar display
 
 // Global users cache for tagging/mentions
 export let allUsersCache = [];
 let usersLoadPromise = null;
+
+// Secondary Auth for admin user management (to avoid logging out current admin)
+let secondaryApp, secondaryAuth;
+
+// Document and Cropping state
+let currentVedtektId = null;
+let currentVedtektData = null;
+let currentCropCallback = null;
+let currentCropOffset = 0;
+let currentCropReset = null;
+
+// Helper functions for page identification
+function isMemberPage() {
+    const path = window.location.pathname;
+    return path.endsWith('/medlem.html') || path.endsWith('/medlem') || path.endsWith('/medlem/');
+}
+
+function isLoginPage() {
+    const path = window.location.pathname;
+    return path.endsWith('/login.html') || path.endsWith('/login') || path.endsWith('/login/');
+}
 
 // --- DARK MODE LOGIKK (Flyttet til theme-switcher.js) ---
 
@@ -66,245 +88,385 @@ export const userReady = new Promise((resolve) => {
     resolveUserReady = resolve;
 });
 
-// --- UI-ELEMENTER ---
-// Login side
-const loginForm = document.getElementById('login-form');
-const forgotPasswordBtn = document.getElementById('forgot-password-btn');
-const loginError = document.getElementById('login-error');
-const loginSuccess = document.getElementById('login-success');
+// --- UI-ELEMENTER (Initialiseres i initUI()) ---
+let loginForm, forgotPasswordBtn, loginError, loginSuccess;
+let mobileMenuButton, mobileMenu, dropdownLogoutButton, mobileLogoutButton;
+let loginLink, memberLink, logoutButton, mobileLoginLink, mobileMemberLink;
+let profileName, profileRoleText, profileImg, openProfileModal, profileModal, profileModalOverlay, closeProfileModalButton;
+let profileForm, displayNameInput, profileImageUrlInput, profileImageFileInput, saveProfileButton, profileSaveStatus;
+let memberDurationValue, galleryCountValue;
+let uploadGalleryBtn, uploadModal, uploadModalOverlay, closeUploadModalBtn, uploadForm, uploadFilesInput, uploadDropZone, pendingUploadsContainer, uploadActions, confirmUploadBtn, modalGalleryContainer, dashboardGalleryPreview;
+let imageLightbox, lightboxOverlay, lightboxImg, lightboxDescription, closeLightboxBtn;
+let sidebarMembersList;
+let adminPublishCard, publishCardTitle, newPostBtn, newEventBtn, adminPublishSeparator, adminToolsCard, adminGalleryBtn, adminTriggerContainer, openAdminControlBtn;
+let postModal, postModalOverlay, closePostModalBtn, cancelPostModalBtn;
+let universalCropModal, universalCropOverlay, closeUniversalCropBtn, cancelUniversalCropBtn, applyUniversalCropBtn, modalCropImage, modalCropViewport, modalCropPreviewWrapper;
+let eventModal, eventModalOverlay, closeEventModalBtn, cancelEventModalBtn;
+let adminImageModal, adminImageModalOverlay, closeAdminModalBtn, cancelAdminModalBtn, saveAdminSelectionBtn, adminUserList, adminModalTitle;
+let adminStatusBtn, adminToolsHeader, adminToolsContent, adminToolsChevron, adminStatusModal, adminStatusModalOverlay, closeStatusModalBtn, cancelStatusModalBtn, saveStatusBtn, workshopCustomStatusDisplay, workshopHoursDisplay, customStatusInput, openingDayInputs;
+let adminMembersBtn, createUserForm, createUserBtn, editUserIdInput, userMemberSinceInput, userOrganizationRoleInput;
+let adminMembersModal, adminMembersModalOverlay, closeMembersModalBtn, closeMembersFooterBtn, adminMembersList, tabActiveMembers, tabPendingDeletions, tabArchive, tabAddMember, activeMembersSection, pendingDeletionsSection, archiveSection, addMemberSection, adminPendingList, adminArchiveList, adminSoftDeleteBtn;
+let adminControlModal, adminControlModalOverlay, closeAdminControlModalBtn, closeAdminControlFooterBtn, adminPanelGalleryBtn, adminPanelStatusBtn, adminPanelMembersBtn;
+let expandAllUsersBtn, collapseAllUsersBtn, activeImagesGrid, activeImageCount;
+let tosModal, tosCheckbox, acceptTosBtn, declineTosBtn;
+let messageModal, messageModalText, messageModalClose, messageModalOverlay;
+let confirmModal, confirmModalText, confirmModalOk, confirmModalCancel, confirmModalOverlay;
+let openDocumentsBtn, documentsModal, documentsModalOverlay, closeDocumentsModalBtn, closeDocumentsFooterBtn, btnReferater, btnRetningslinjer, btnVedtekter, documentsModalTitle, retningslinjerTabs, tabFire, tabGlaze, tabWorkshop, documentsListContainer, adminAddDocBtn;
+let docEntryModal, docEntryModalOverlay, closeDocEntryModalBtn, cancelDocEntryModalBtn, docEntryForm, docEntryIdInput, docEntryCategoryInput, docEntryNameInput, docEntryDateInput, docEntryContentInput, saveDocEntryBtn, deleteDocEntryBtn, docEntryTitle, docEntryTypeGroup, docEntryTypeInput, docTypeDisplay, docEntryNameGroup, docEntryDateGroup, docPointsContainer, addMorePointsBtn, docContentHint, docContentLabel, docQuillEditor, docRichTextHint;
 
-// Header / Nav
-const mobileMenuButton = document.getElementById('mobile-menu-button');
-const mobileMenu = document.getElementById('mobile-menu');
-const dropdownLogoutButton = document.getElementById('dropdown-logout-button');
-const mobileLogoutButton = document.getElementById('mobile-logout-button');
+function initUI() {
+    console.log("Initialiserer UI-elementer...");
+    loginForm = document.getElementById('login-form');
+    forgotPasswordBtn = document.getElementById('forgot-password-btn');
+    loginError = document.getElementById('login-error');
+    loginSuccess = document.getElementById('login-success');
+    mobileMenuButton = document.getElementById('mobile-menu-button');
+    mobileMenu = document.getElementById('mobile-menu');
+    dropdownLogoutButton = document.getElementById('dropdown-logout-button');
+    mobileLogoutButton = document.getElementById('mobile-logout-button');
+    loginLink = document.getElementById('login-link');
+    memberLink = document.getElementById('member-link');
+    logoutButton = document.getElementById('logout-button');
+    mobileLoginLink = document.getElementById('mobile-login-link');
+    mobileMemberLink = document.getElementById('mobile-member-link');
+    profileName = document.getElementById('profile-name');
+    profileRoleText = document.getElementById('profile-role-text');
+    profileImg = document.getElementById('profile-img');
+    openProfileModal = document.getElementById('open-profile-modal');
+    profileModal = document.getElementById('profile-modal');
+    profileModalOverlay = document.getElementById('profile-modal-overlay');
+    closeProfileModalButton = document.getElementById('close-profile-modal');
+    profileForm = document.getElementById('profile-form');
+    displayNameInput = document.getElementById('display-name-input');
+    profileImageUrlInput = document.getElementById('profile-image-url-input');
+    profileImageFileInput = document.getElementById('profile-image-file-input');
+    saveProfileButton = document.getElementById('save-profile-button');
+    profileSaveStatus = document.getElementById('profile-save-status');
+    memberDurationValue = document.getElementById('member-duration-value');
+    galleryCountValue = document.getElementById('gallery-count-value');
+    uploadGalleryBtn = document.getElementById('upload-gallery-btn');
+    uploadModal = document.getElementById('upload-modal');
+    uploadModalOverlay = document.getElementById('upload-modal-overlay');
+    closeUploadModalBtn = document.getElementById('close-upload-modal');
+    uploadForm = document.getElementById('upload-form');
+    uploadFilesInput = document.getElementById('upload-files-input');
+    uploadDropZone = document.getElementById('upload-drop-zone');
+    pendingUploadsContainer = document.getElementById('pending-uploads-container');
+    uploadActions = document.getElementById('upload-actions');
+    confirmUploadBtn = document.getElementById('confirm-upload-btn');
+    modalGalleryContainer = document.getElementById('modal-gallery-container');
+    dashboardGalleryPreview = document.getElementById('dashboard-gallery-preview');
+    imageLightbox = document.getElementById('image-lightbox');
+    lightboxOverlay = document.getElementById('lightbox-overlay');
+    lightboxImg = document.getElementById('lightbox-img');
+    lightboxDescription = document.getElementById('lightbox-description');
+    closeLightboxBtn = document.getElementById('close-lightbox');
+    sidebarMembersList = document.getElementById('sidebar-members-list');
+    adminPublishCard = document.getElementById('admin-publish-card');
+    publishCardTitle = document.getElementById('publish-card-title');
+    newPostBtn = document.getElementById('new-post-btn');
+    newEventBtn = document.getElementById('new-event-btn');
+    adminPublishSeparator = document.getElementById('admin-publish-separator');
+    adminToolsCard = document.getElementById('admin-tools-card');
+    adminGalleryBtn = document.getElementById('admin-gallery-btn');
+    adminTriggerContainer = document.getElementById('admin-trigger-container');
+    openAdminControlBtn = document.getElementById('open-admin-control-btn');
+    postModal = document.getElementById('post-modal');
+    postModalOverlay = document.getElementById('post-modal-overlay');
+    closePostModalBtn = document.getElementById('close-post-modal');
+    cancelPostModalBtn = document.getElementById('cancel-post-modal');
+    universalCropModal = document.getElementById('universal-crop-modal');
+    universalCropOverlay = document.getElementById('universal-crop-overlay');
+    closeUniversalCropBtn = document.getElementById('close-universal-crop');
+    cancelUniversalCropBtn = document.getElementById('cancel-universal-crop');
+    applyUniversalCropBtn = document.getElementById('apply-universal-crop');
+    modalCropImage = document.getElementById('modal-crop-image');
+    modalCropViewport = document.getElementById('modal-crop-viewport');
+    modalCropPreviewWrapper = document.getElementById('modal-crop-preview-wrapper');
+    eventModal = document.getElementById('event-modal');
+    eventModalOverlay = document.getElementById('event-modal-overlay');
+    closeEventModalBtn = document.getElementById('close-event-modal');
+    cancelEventModalBtn = document.getElementById('cancel-event-modal');
+    adminImageModal = document.getElementById('admin-image-modal');
+    adminImageModalOverlay = document.getElementById('admin-image-modal-overlay');
+    closeAdminModalBtn = document.getElementById('close-admin-modal');
+    cancelAdminModalBtn = document.getElementById('cancel-admin-modal');
+    saveAdminSelectionBtn = document.getElementById('save-admin-selection');
+    adminUserList = document.getElementById('admin-user-list');
+    adminModalTitle = document.getElementById('admin-modal-title');
+    adminStatusBtn = document.getElementById('admin-status-btn');
+    adminToolsHeader = document.getElementById('admin-tools-header');
+    adminToolsContent = document.getElementById('admin-tools-content');
+    adminToolsChevron = document.getElementById('admin-tools-chevron');
+    adminStatusModal = document.getElementById('admin-status-modal');
+    adminStatusModalOverlay = document.getElementById('admin-status-modal-overlay');
+    closeStatusModalBtn = document.getElementById('close-status-modal');
+    cancelStatusModalBtn = document.getElementById('cancel-status-modal');
+    saveStatusBtn = document.getElementById('save-status-btn');
+    workshopCustomStatusDisplay = document.getElementById('workshop-custom-status');
+    workshopHoursDisplay = document.getElementById('workshop-hours-display');
+    customStatusInput = document.getElementById('custom-status-input');
+    openingDayInputs = document.querySelectorAll('.opening-day-input');
+    adminMembersBtn = document.getElementById('admin-members-btn');
+    createUserForm = document.getElementById('admin-create-user-form');
+    createUserBtn = document.getElementById('create-user-btn');
+    editUserIdInput = document.getElementById('edit-user-id');
+    userMemberSinceInput = document.getElementById('new-user-member-since');
+    userOrganizationRoleInput = document.getElementById('new-user-organization-role');
+    adminMembersModal = document.getElementById('admin-members-modal');
+    adminMembersModalOverlay = document.getElementById('admin-members-modal-overlay');
+    closeMembersModalBtn = document.getElementById('close-members-modal');
+    closeMembersFooterBtn = document.getElementById('close-members-footer-btn');
+    adminMembersList = document.getElementById('admin-members-list');
+    tabActiveMembers = document.getElementById('tab-active-members');
+    tabPendingDeletions = document.getElementById('tab-pending-deletions');
+    tabArchive = document.getElementById('tab-archive');
+    tabAddMember = document.getElementById('tab-add-member');
+    activeMembersSection = document.getElementById('active-members-section');
+    pendingDeletionsSection = document.getElementById('pending-deletions-section');
+    archiveSection = document.getElementById('archive-section');
+    addMemberSection = document.getElementById('add-member-section');
+    adminPendingList = document.getElementById('admin-pending-list');
+    adminArchiveList = document.getElementById('admin-archive-list');
+    adminSoftDeleteBtn = document.getElementById('admin-soft-delete-btn');
+    adminControlModal = document.getElementById('admin-control-modal');
+    adminControlModalOverlay = document.getElementById('admin-control-modal-overlay');
+    closeAdminControlModalBtn = document.getElementById('close-admin-control-modal');
+    closeAdminControlFooterBtn = document.getElementById('close-admin-control-footer');
+    adminPanelGalleryBtn = document.getElementById('admin-panel-gallery-btn');
+    adminPanelStatusBtn = document.getElementById('admin-panel-status-btn');
+    adminPanelMembersBtn = document.getElementById('admin-panel-members-btn');
+    expandAllUsersBtn = document.getElementById('expand-all-users');
+    collapseAllUsersBtn = document.getElementById('collapse-all-users');
+    activeImagesGrid = document.getElementById('active-images-grid');
+    activeImageCount = document.getElementById('active-image-count');
+    tosModal = document.getElementById('tos-modal');
+    tosCheckbox = document.getElementById('tos-checkbox');
+    acceptTosBtn = document.getElementById('accept-tos-btn');
+    declineTosBtn = document.getElementById('decline-tos-btn');
+    messageModal = document.getElementById('message-modal');
+    messageModalText = document.getElementById('message-modal-text');
+    messageModalClose = document.getElementById('message-modal-close');
+    messageModalOverlay = document.getElementById('message-modal-overlay');
+    confirmModal = document.getElementById('confirm-modal');
+    confirmModalText = document.getElementById('confirm-modal-text');
+    confirmModalOk = document.getElementById('confirm-modal-ok');
+    confirmModalCancel = document.getElementById('confirm-modal-cancel');
+    confirmModalOverlay = document.getElementById('confirm-modal-overlay');
+    openDocumentsBtn = document.getElementById('open-documents-btn');
+    documentsModal = document.getElementById('view-documents-modal');
+    documentsModalOverlay = document.getElementById('view-documents-modal-overlay');
+    closeDocumentsModalBtn = document.getElementById('close-documents-modal');
+    closeDocumentsFooterBtn = document.getElementById('close-documents-footer-btn');
+    btnReferater = document.getElementById('btn-referater');
+    btnRetningslinjer = document.getElementById('btn-retningslinjer');
+    btnVedtekter = document.getElementById('btn-vedtekter');
+    documentsModalTitle = document.getElementById('documents-modal-title');
+    retningslinjerTabs = document.getElementById('retningslinjer-tabs');
+    tabFire = document.getElementById('tab-fire');
+    tabGlaze = document.getElementById('tab-glaze');
+    tabWorkshop = document.getElementById('tab-workshop');
+    documentsListContainer = document.getElementById('documents-list-container');
+    adminAddDocBtn = document.getElementById('admin-add-doc-btn');
+    docEntryModal = document.getElementById('doc-entry-modal');
+    docEntryModalOverlay = document.getElementById('doc-entry-modal-overlay');
+    closeDocEntryModalBtn = document.getElementById('close-doc-entry-modal');
+    cancelDocEntryModalBtn = document.getElementById('cancel-doc-entry-modal');
+    docEntryForm = document.getElementById('doc-entry-form');
+    docEntryIdInput = document.getElementById('doc-entry-id');
+    docEntryCategoryInput = document.getElementById('doc-entry-category');
+    docEntryNameInput = document.getElementById('doc-entry-name');
+    docEntryDateInput = document.getElementById('doc-entry-date');
+    docEntryContentInput = document.getElementById('doc-entry-content');
+    saveDocEntryBtn = document.getElementById('save-doc-entry-btn');
+    deleteDocEntryBtn = document.getElementById('delete-doc-entry-btn');
+    docEntryTitle = document.getElementById('doc-entry-title');
+    docEntryTypeGroup = document.getElementById('doc-entry-type-group');
+    docEntryTypeInput = document.getElementById('doc-entry-type');
+    docTypeDisplay = document.getElementById('doc-type-display');
+    docEntryNameGroup = document.getElementById('doc-entry-name-group');
+    docEntryDateGroup = document.getElementById('doc-entry-date-group');
+    docPointsContainer = document.getElementById('doc-points-container');
+    addMorePointsBtn = document.getElementById('add-more-points-btn');
+    docContentHint = document.getElementById('doc-content-hint');
+    docContentLabel = document.getElementById('doc-content-label');
+    docQuillEditor = document.getElementById('doc-quill-editor');
+    docRichTextHint = document.getElementById('doc-rich-text-hint');
 
-// Navigation Links
-const loginLink = document.getElementById('login-link');
-const memberLink = document.getElementById('member-link');
-const logoutButton = document.getElementById('logout-button');
-const mobileLoginLink = document.getElementById('mobile-login-link');
-const mobileMemberLink = document.getElementById('mobile-member-link');
-
-// Dashboard / Profil
-const profileName = document.getElementById('profile-name');
-const profileRoleText = document.getElementById('profile-role-text');
-const profileImg = document.getElementById('profile-img');
-const openProfileModal = document.getElementById('open-profile-modal');
-const profileModal = document.getElementById('profile-modal');
-const profileModalOverlay = document.getElementById('profile-modal-overlay');
-const closeProfileModalButton = document.getElementById('close-profile-modal');
-const profileForm = document.getElementById('profile-form');
-const displayNameInput = document.getElementById('display-name-input');
-const profileImageUrlInput = document.getElementById('profile-image-url-input');
-const profileImageFileInput = document.getElementById('profile-image-file-input');
-const saveProfileButton = document.getElementById('save-profile-button');
-const profileSaveStatus = document.getElementById('profile-save-status');
-const memberDurationValue = document.getElementById('member-duration-value');
-const galleryCountValue = document.getElementById('gallery-count-value');
-
-// Gallery Uploads (Personal)
-const uploadGalleryBtn = document.getElementById('upload-gallery-btn');
-const uploadModal = document.getElementById('upload-modal');
-const uploadModalOverlay = document.getElementById('upload-modal-overlay');
-const closeUploadModalBtn = document.getElementById('close-upload-modal');
-const uploadForm = document.getElementById('upload-form');
-const uploadFilesInput = document.getElementById('upload-files-input');
-const uploadDropZone = document.getElementById('upload-drop-zone');
-const pendingUploadsContainer = document.getElementById('pending-uploads-container');
-const uploadActions = document.getElementById('upload-actions');
-const confirmUploadBtn = document.getElementById('confirm-upload-btn');
-const modalGalleryContainer = document.getElementById('modal-gallery-container'); // Renamed
-const dashboardGalleryPreview = document.getElementById('dashboard-gallery-preview'); // New
-
-// Lightbox
-const imageLightbox = document.getElementById('image-lightbox');
-const lightboxOverlay = document.getElementById('lightbox-overlay');
-const lightboxImg = document.getElementById('lightbox-img');
-const lightboxDescription = document.getElementById('lightbox-description');
-const closeLightboxBtn = document.getElementById('close-lightbox');
-
-// Sidebar Member List
-const sidebarMembersList = document.getElementById('sidebar-members-list');
-
-// Admin
-const adminPublishCard = document.getElementById('admin-publish-card');
-const publishCardTitle = document.getElementById('publish-card-title');
-const newPostBtn = document.getElementById('new-post-btn');
-const newEventBtn = document.getElementById('new-event-btn');
-const adminPublishSeparator = document.getElementById('admin-publish-separator');
-const adminToolsCard = document.getElementById('admin-tools-card');
-const adminGalleryBtn = document.getElementById('admin-gallery-btn');
-const adminTriggerContainer = document.getElementById('admin-trigger-container');
-const openAdminControlBtn = document.getElementById('open-admin-control-btn');
-// Stats button is handled locally in the logic block or can be global if needed, 
-// but let's keep it cleaned up.
-
-// Publishing Modals
-const postModal = document.getElementById('post-modal');
-const postModalOverlay = document.getElementById('post-modal-overlay');
-const closePostModalBtn = document.getElementById('close-post-modal');
-const cancelPostModalBtn = document.getElementById('cancel-post-modal');
-
-// Universal Crop Modal Elements
-const universalCropModal = document.getElementById('universal-crop-modal');
-const universalCropOverlay = document.getElementById('universal-crop-overlay');
-const closeUniversalCropBtn = document.getElementById('close-universal-crop');
-const cancelUniversalCropBtn = document.getElementById('cancel-universal-crop');
-const applyUniversalCropBtn = document.getElementById('apply-universal-crop');
-const modalCropImage = document.getElementById('modal-crop-image');
-const modalCropViewport = document.getElementById('modal-crop-viewport');
-const modalCropPreviewWrapper = document.getElementById('modal-crop-preview-wrapper');
-
-let currentCropCallback = null;
-let currentCropReset = null;
-let currentCropOffset = 0;
-
-const eventModal = document.getElementById('event-modal');
-const eventModalOverlay = document.getElementById('event-modal-overlay');
-const closeEventModalBtn = document.getElementById('close-event-modal');
-const cancelEventModalBtn = document.getElementById('cancel-event-modal');
-
-// const adminPromotedBtn = document.getElementById('admin-promoted-btn'); // REMOVED
-const adminImageModal = document.getElementById('admin-image-modal');
-const adminImageModalOverlay = document.getElementById('admin-image-modal-overlay');
-const closeAdminModalBtn = document.getElementById('close-admin-modal');
-const cancelAdminModalBtn = document.getElementById('cancel-admin-modal');
-const saveAdminSelectionBtn = document.getElementById('save-admin-selection');
-const adminUserList = document.getElementById('admin-user-list');
-const adminModalTitle = document.getElementById('admin-modal-title');
-
-// Workshop Status
-const adminStatusBtn = document.getElementById('admin-status-btn');
-const adminToolsHeader = document.getElementById('admin-tools-header');
-const adminToolsContent = document.getElementById('admin-tools-content');
-const adminToolsChevron = document.getElementById('admin-tools-chevron');
-const adminStatusModal = document.getElementById('admin-status-modal');
-const adminStatusModalOverlay = document.getElementById('admin-status-modal-overlay');
-const closeStatusModalBtn = document.getElementById('close-status-modal');
-const cancelStatusModalBtn = document.getElementById('cancel-status-modal');
-const saveStatusBtn = document.getElementById('save-status-btn');
-const workshopCustomStatusDisplay = document.getElementById('workshop-custom-status');
-const workshopHoursDisplay = document.getElementById('workshop-hours-display');
-const customStatusInput = document.getElementById('custom-status-input');
-const openingDayInputs = document.querySelectorAll('.opening-day-input');
-
-// Admin User Management
-const adminMembersBtn = document.getElementById('admin-members-btn');
-const adminUserModal = null; // Removed, now part of members modal
-const adminUserModalOverlay = null;
-const closeUserModalBtn = null;
-const cancelUserModalBtn = null;
-const createUserForm = document.getElementById('admin-create-user-form');
-const createUserBtn = document.getElementById('create-user-btn');
-const userModalTitle = null; // Generic title now in members modal
-const editUserIdInput = document.getElementById('edit-user-id');
-const userMemberSinceInput = document.getElementById('new-user-member-since');
-const userOrganizationRoleInput = document.getElementById('new-user-organization-role');
-
-// Admin Member List
-const adminMembersModal = document.getElementById('admin-members-modal');
-const adminMembersModalOverlay = document.getElementById('admin-members-modal-overlay');
-const closeMembersModalBtn = document.getElementById('close-members-modal');
-const closeMembersFooterBtn = document.getElementById('close-members-footer-btn');
-const adminMembersList = document.getElementById('admin-members-list');
-const tabActiveMembers = document.getElementById('tab-active-members');
-const tabPendingDeletions = document.getElementById('tab-pending-deletions');
-const tabArchive = document.getElementById('tab-archive');
-const tabAddMember = document.getElementById('tab-add-member');
-const activeMembersSection = document.getElementById('active-members-section');
-const pendingDeletionsSection = document.getElementById('pending-deletions-section');
-const archiveSection = document.getElementById('archive-section');
-const addMemberSection = document.getElementById('add-member-section');
-const adminPendingList = document.getElementById('admin-pending-list');
-const adminArchiveList = document.getElementById('admin-archive-list');
-const adminSoftDeleteBtn = document.getElementById('admin-soft-delete-btn');
-
-// Admin Control Panel Modal
-const adminControlModal = document.getElementById('admin-control-modal');
-const adminControlModalOverlay = document.getElementById('admin-control-modal-overlay');
-const closeAdminControlModalBtn = document.getElementById('close-admin-control-modal');
-const closeAdminControlFooterBtn = document.getElementById('close-admin-control-footer');
-const adminPanelGalleryBtn = document.getElementById('admin-panel-gallery-btn');
-const adminPanelStatusBtn = document.getElementById('admin-panel-status-btn');
-const adminPanelMembersBtn = document.getElementById('admin-panel-members-btn');
-
-// TOS & Privacy
-const tosModal = document.getElementById('tos-modal');
-const tosCheckbox = document.getElementById('tos-checkbox');
-const acceptTosBtn = document.getElementById('accept-tos-btn');
-const declineTosBtn = document.getElementById('decline-tos-btn');
-const adminMembersMenuBtn = null;
-const adminMembersSubmenu = null;
-
-// Secondary Firebase app for user creation
-let secondaryApp;
-let secondaryAuth;
-
-// Initialiser secondary app bare hvis den ikke finnes
-try {
-    secondaryApp = initializeApp(firebaseConfig, "Secondary");
-} catch (e) {
-    // Hvis den allerede finnes, hent den eksisterende
-    secondaryApp = getApp("Secondary");
+    attachEventListeners();
+    
+    // Initialize secondary if not already done
+    try {
+        secondaryApp = initializeApp(firebaseConfig, "Secondary");
+    } catch (e) {
+        secondaryApp = getApp("Secondary");
+    }
+    secondaryAuth = getAuth(secondaryApp);
 }
-secondaryAuth = getAuth(secondaryApp);
 
-// Custom Modals
-const messageModal = document.getElementById('message-modal');
-const messageModalText = document.getElementById('message-modal-text');
-const messageModalClose = document.getElementById('message-modal-close');
-const messageModalOverlay = document.getElementById('message-modal-overlay');
+function attachEventListeners() {
+    console.log("Kobler til event-lyttere...");
+    
+    if (loginForm) {
+        console.log("Login-skjema funnet, kobler til submit.");
+        loginForm.addEventListener('submit', handleLogin);
+    }
+    if (forgotPasswordBtn) forgotPasswordBtn.addEventListener('click', handleForgotPassword);
+    if (dropdownLogoutButton) dropdownLogoutButton.addEventListener('click', handleLogout);
+    if (mobileLogoutButton) mobileLogoutButton.addEventListener('click', handleLogout);
+    if (logoutButton) logoutButton.addEventListener('click', handleLogout);
+    
+    if (mobileMenuButton) {
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu?.classList.remove('hidden');
+            const isOpen = mobileMenu?.classList.toggle('show');
+            updateScrollLock();
+            mobileMenuButton.innerHTML = isOpen ? `
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M18 6L6 18M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            ` : `
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M4 6h16M4 12h16m-7 6h7" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+            `;
+        });
+        mobileMenu?.querySelectorAll('a, button').forEach(link => {
+            link.addEventListener('click', () => {
+                mobileMenu.classList.remove('show');
+                updateScrollLock();
+                mobileMenuButton.innerHTML = `
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 6h16M4 12h16m-7 6h7" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                `;
+            });
+        });
+    }
 
-const confirmModal = document.getElementById('confirm-modal');
-const confirmModalText = document.getElementById('confirm-modal-text');
-const confirmModalOk = document.getElementById('confirm-modal-ok');
-const confirmModalCancel = document.getElementById('confirm-modal-cancel');
-const confirmModalOverlay = document.getElementById('confirm-modal-overlay');
+    if (openProfileModal) openProfileModal.addEventListener('click', () => {
+        if (displayNameInput) displayNameInput.value = authState.profile?.displayName || '';
+        if (profileImageUrlInput) profileImageUrlInput.value = authState.profile?.photoURL || '';
+        toggleModal(profileModal, true);
+    });
+    closeProfileModalButton?.addEventListener('click', () => toggleModal(profileModal, false));
+    profileModalOverlay?.addEventListener('click', () => toggleModal(profileModal, false));
+    profileForm?.addEventListener('submit', handleProfileSave);
 
-// Documents
-const openDocumentsBtn = document.getElementById('open-documents-btn');
-const documentsModal = document.getElementById('view-documents-modal');
-const documentsModalOverlay = document.getElementById('view-documents-modal-overlay');
-const closeDocumentsModalBtn = document.getElementById('close-documents-modal');
-const closeDocumentsFooterBtn = document.getElementById('close-documents-footer-btn');
-const btnReferater = document.getElementById('btn-referater');
-const btnRetningslinjer = document.getElementById('btn-retningslinjer');
-const btnVedtekter = document.getElementById('btn-vedtekter');
-const documentsModalTitle = document.getElementById('documents-modal-title');
-const retningslinjerTabs = document.getElementById('retningslinjer-tabs');
-const tabFire = document.getElementById('tab-fire');
-const tabGlaze = document.getElementById('tab-glaze');
-const tabWorkshop = document.getElementById('tab-workshop');
-const documentsListContainer = document.getElementById('documents-list-container');
-const adminAddDocBtn = document.getElementById('admin-add-doc-btn');
-let currentVedtektData = null; // Store for single-view Vedtekter
-let currentVedtektId = null;
+    uploadGalleryBtn?.addEventListener('click', openUploadModal);
+    uploadForm?.addEventListener('submit', handleGalleryUploadSubmit);
+    closeUploadModalBtn?.addEventListener('click', closeUploadModal);
+    uploadModalOverlay?.addEventListener('click', closeUploadModal);
 
-const docEntryModal = document.getElementById('doc-entry-modal');
-const docEntryModalOverlay = document.getElementById('doc-entry-modal-overlay');
-const closeDocEntryModalBtn = document.getElementById('close-doc-entry-modal');
-const cancelDocEntryModalBtn = document.getElementById('cancel-doc-entry-modal');
-const docEntryForm = document.getElementById('doc-entry-form');
-const docEntryIdInput = document.getElementById('doc-entry-id');
-const docEntryCategoryInput = document.getElementById('doc-entry-category');
-const docEntryNameInput = document.getElementById('doc-entry-name');
-const docEntryDateInput = document.getElementById('doc-entry-date');
-const docEntryContentInput = document.getElementById('doc-entry-content');
-const saveDocEntryBtn = document.getElementById('save-doc-entry-btn');
-const deleteDocEntryBtn = document.getElementById('delete-doc-entry-btn');
-const docEntryTitle = document.getElementById('doc-entry-title');
-const docEntryTypeGroup = document.getElementById('doc-entry-type-group');
-const docEntryTypeInput = document.getElementById('doc-entry-type');
-const docTypeDisplay = document.getElementById('doc-type-display');
-const docEntryNameGroup = document.getElementById('doc-entry-name-group');
-const docEntryDateGroup = document.getElementById('doc-entry-date-group');
-const docPointsContainer = document.getElementById('doc-points-container');
-const addMorePointsBtn = document.getElementById('add-more-points-btn');
-const docContentHint = document.getElementById('doc-content-hint');
-const docContentLabel = document.getElementById('doc-content-label');
-const docQuillEditor = document.getElementById('doc-quill-editor');
-const docRichTextHint = document.getElementById('doc-rich-text-hint');
+    closeLightboxBtn?.addEventListener('click', closeLightbox);
+    lightboxOverlay?.addEventListener('click', closeLightbox);
+
+    closeAdminModalBtn?.addEventListener('click', () => toggleModal(adminImageModal, false));
+    cancelAdminModalBtn?.addEventListener('click', () => toggleModal(adminImageModal, false));
+    saveAdminSelectionBtn?.addEventListener('click', saveAdminSelection);
+    adminImageModalOverlay?.addEventListener('click', () => toggleModal(adminImageModal, false));
+
+    closeStatusModalBtn?.addEventListener('click', () => toggleModal(adminStatusModal, false));
+    cancelStatusModalBtn?.addEventListener('click', () => toggleModal(adminStatusModal, false));
+    adminStatusModalOverlay?.addEventListener('click', () => toggleModal(adminStatusModal, false));
+
+    closeMembersModalBtn?.addEventListener('click', closeMembersModal);
+    closeMembersFooterBtn?.addEventListener('click', closeMembersModal);
+    adminMembersModalOverlay?.addEventListener('click', closeMembersModal);
+
+    setupMembersTabs();
+
+    closeDocumentsModalBtn?.addEventListener('click', closeDocumentsModal);
+    closeDocumentsFooterBtn?.addEventListener('click', closeDocumentsModal);
+    documentsModalOverlay?.addEventListener('click', closeDocumentsModal);
+
+    btnReferater?.addEventListener('click', () => openDocumentsModal('referater'));
+    btnRetningslinjer?.addEventListener('click', () => openDocumentsModal('retningslinjer'));
+    btnVedtekter?.addEventListener('click', () => openDocumentsModal('vedtekter'));
+
+    setupRetningslinjerTabs();
+
+    adminAddDocBtn?.addEventListener('click', () => openDocEntryModal());
+    closeDocEntryModalBtn?.addEventListener('click', closeDocEntryModal);
+    cancelDocEntryModalBtn?.addEventListener('click', closeDocEntryModal);
+    docEntryModalOverlay?.addEventListener('click', closeDocEntryModal);
+    docEntryForm?.addEventListener('submit', handleDocEntrySubmit);
+    deleteDocEntryBtn?.addEventListener('click', handleDeleteDocEntry);
+
+    openAdminControlBtn?.addEventListener('click', () => toggleModal(adminControlModal, true));
+    closeAdminControlModalBtn?.addEventListener('click', () => toggleModal(adminControlModal, false));
+    closeAdminControlFooterBtn?.addEventListener('click', () => toggleModal(adminControlModal, false));
+    adminControlModalOverlay?.addEventListener('click', () => toggleModal(adminControlModal, false));
+
+    adminPanelGalleryBtn?.addEventListener('click', () => { toggleModal(adminControlModal, false); openAdminModal(); });
+    adminPanelStatusBtn?.addEventListener('click', () => { toggleModal(adminControlModal, false); openStatusModal(); });
+    adminPanelMembersBtn?.addEventListener('click', () => { toggleModal(adminControlModal, false); openMembersModal(); });
+
+    expandAllUsersBtn?.addEventListener('click', () => {
+        document.querySelectorAll('.user-group').forEach(group => {
+            if (!group.classList.contains('expanded')) {
+                group.querySelector('.user-group-header').click();
+            }
+        });
+    });
+
+    collapseAllUsersBtn?.addEventListener('click', () => {
+        document.querySelectorAll('.user-group').forEach(group => {
+            group.classList.remove('expanded');
+        });
+    });
+
+    if (declineTosBtn) {
+        declineTosBtn.addEventListener('click', async () => {
+            const confirmed = await showCustomConfirm("Hvis du ikke godtar vilkårene, kan du ikke bruke våre tjenester. Vil kanskje du logge ut?");
+            if (confirmed) {
+                await signOut(auth);
+                toggleModal(tosModal, false);
+                if (!window.location.pathname.endsWith('/login.html')) window.location.href = 'login.html';
+            }
+        });
+    }
+
+    newPostBtn?.addEventListener('click', () => toggleModal(postModal, true));
+    closePostModalBtn?.addEventListener('click', () => toggleModal(postModal, false));
+    cancelPostModalBtn?.addEventListener('click', () => toggleModal(postModal, false));
+    postModalOverlay?.addEventListener('click', () => toggleModal(postModal, false));
+
+    newEventBtn?.addEventListener('click', () => toggleModal(eventModal, true));
+    closeEventModalBtn?.addEventListener('click', () => toggleModal(eventModal, false));
+    cancelEventModalBtn?.addEventListener('click', () => toggleModal(eventModal, false));
+    eventModalOverlay?.addEventListener('click', () => toggleModal(eventModal, false));
+
+    // Upload zones
+    setupUploadZone('profile-image-file-input', 'profile-upload-drop-zone', 'profile-image-preview', 'profile-preview-container');
+    const profileInput = document.getElementById('profile-image-file-input');
+    if (profileInput) {
+        profileInput.addEventListener('cropComplete', (e) => {
+            profileImageOffset = e.detail.offset;
+        });
+    }
+
+    // Gallery upload zone
+    setupUploadZone('upload-files-input', 'upload-drop-zone', null, null, true);
+
+    // Universal Crop Modal Listeners
+    if (applyUniversalCropBtn) {
+        applyUniversalCropBtn.addEventListener('click', () => {
+            if (currentCropCallback) {
+                currentCropCallback(currentCropOffset);
+            }
+            toggleModal(universalCropModal, false);
+        });
+    }
+    if (cancelUniversalCropBtn || closeUniversalCropBtn) {
+        [cancelUniversalCropBtn, closeUniversalCropBtn].forEach(btn => {
+            if (btn) btn.addEventListener('click', () => toggleModal(universalCropModal, false));
+        });
+    }
+    if (universalCropOverlay) {
+        universalCropOverlay.addEventListener('click', () => toggleModal(universalCropModal, false));
+    }
+}
 
 // Initialize Quill
 let quill;
@@ -351,29 +513,7 @@ export function openUniversalCropModal(file, aspectRatioClass, callback) {
 }
 window.openUniversalCropModal = openUniversalCropModal;
 
-// Modal button listeners
-if (applyUniversalCropBtn) {
-    applyUniversalCropBtn.addEventListener('click', () => {
-        if (currentCropCallback) {
-            currentCropCallback(currentCropOffset);
-        }
-        toggleModal(universalCropModal, false);
-    });
-}
-
-if (cancelUniversalCropBtn || closeUniversalCropBtn) {
-    [cancelUniversalCropBtn, closeUniversalCropBtn].forEach(btn => {
-        if (btn) btn.addEventListener('click', () => {
-            toggleModal(universalCropModal, false);
-        });
-    });
-}
-
-if (universalCropOverlay) {
-    universalCropOverlay.addEventListener('click', () => {
-        toggleModal(universalCropModal, false);
-    });
-}
+// Modal button listeners removed from here and moved to attachEventListeners
 
 // --- HJELPEFUNKSJONER ---
 
@@ -495,22 +635,20 @@ export function resizeAndConvertToBase64(file, maxWidth = 800) {
  * Hjelpefunksjon for å sette opp en premium "opplastingssone".
  * Håndterer både klikk og drag-and-drop.
  */
-export function setupUploadZone(inputId, dropZoneId, previewImgId, previewWrapperId) {
+export function setupUploadZone(inputId, dropZoneId, previewImgId, previewWrapperId, isMultiple = false) {
     const input = document.getElementById(inputId);
     const dropZone = document.getElementById(dropZoneId);
-    const previewImg = document.getElementById(previewImgId);
-    const previewWrapper = document.getElementById(previewWrapperId);
+    const previewImg = previewImgId ? document.getElementById(previewImgId) : null;
+    const previewWrapper = previewWrapperId ? document.getElementById(previewWrapperId) : null;
 
     if (!input || !dropZone) return;
 
-    // Klikk på sonen trigger input (unntatt hvis man klikket direkte på den usynlige inputen)
     dropZone.addEventListener('click', (e) => {
         if (e.target !== input) {
             input.click();
         }
     });
 
-    // Drag and drop events
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         dropZone.addEventListener(eventName, (e) => {
             e.preventDefault();
@@ -526,19 +664,44 @@ export function setupUploadZone(inputId, dropZoneId, previewImgId, previewWrappe
         dropZone.addEventListener(eventName, () => dropZone.classList.remove('dragover'), false);
     });
 
-    const handleFiles = (files) => {
+    const handleFiles = async (files) => {
         if (files.length > 0) {
-            const file = files[0];
-            if (!file.type.startsWith('image/')) {
-                showCustomAlert("Vennligst velg et bilde (JPG/PNG).");
+            const allowedFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+            if (allowedFiles.length === 0) {
+                showCustomAlert("Vennligst velg bilde(r) (JPG/PNG).");
                 return;
             }
 
-            // Trigger standard input change for compatibility
-            const dataTransfer = new DataTransfer();
-            dataTransfer.items.add(file);
-            input.files = dataTransfer.files;
-            input.dispatchEvent(new Event('change', { bubbles: true }));
+            if (isMultiple) {
+                // Multi-upload handling (Gallery)
+                const dataTransfer = new DataTransfer();
+                allowedFiles.forEach(f => dataTransfer.items.add(f));
+                input.files = dataTransfer.files;
+                renderPendingUploads(input.files);
+            } else {
+                // Single-upload handling (Profile, Posts, Events)
+                const file = allowedFiles[0];
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(file);
+                input.files = dataTransfer.files;
+
+                let aspectClass = 'square';
+                if (previewWrapper) {
+                    if (previewWrapper.classList.contains('banner')) aspectClass = 'banner';
+                    if (previewWrapper.classList.contains('post')) aspectClass = 'post';
+                }
+
+                openUniversalCropModal(file, aspectClass, (offset) => {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        if (previewImg) previewImg.src = event.target.result;
+                        if (previewWrapper) previewWrapper.classList.remove('hidden');
+                    };
+                    reader.readAsDataURL(file);
+                    input.dataset.cropOffset = offset;
+                    input.dispatchEvent(new CustomEvent('cropComplete', { detail: { offset } }));
+                });
+            }
         }
     };
 
@@ -547,29 +710,46 @@ export function setupUploadZone(inputId, dropZoneId, previewImgId, previewWrappe
     });
 
     input.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file && previewImg && previewWrapper) {
-            // Bestem aspect ratio basert på wrapper (eller send det som argument)
-            let aspectClass = 'square';
-            if (previewWrapper.classList.contains('banner')) aspectClass = 'banner';
-            if (previewWrapper.classList.contains('post')) aspectClass = 'post';
-
-            openUniversalCropModal(file, aspectClass, (offset) => {
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    previewImg.src = event.target.result;
-                    previewWrapper.classList.remove('hidden');
-                    // We don't need to manually set top anymore because we use the offset during cropAndCompress
-                    // But for visual feedback in the tiny preview, we COULD show a thumbnail or similar
-                };
-                reader.readAsDataURL(file);
-
-                // Trigger en custom event eller callback så komponenten vet om offsetten
-                input.dataset.cropOffset = offset;
-                input.dispatchEvent(new CustomEvent('cropComplete', { detail: { offset } }));
-            });
-        }
+        handleFiles(e.target.files);
     });
+}
+window.setupUploadZone = setupUploadZone;
+
+/**
+ * Viser forhåndsvisning av flere filer som skal lastes opp (Galleriet)
+ */
+function renderPendingUploads(files) {
+    if (!pendingUploadsContainer || !uploadActions || !uploadDropZone) return;
+
+    pendingUploadsContainer.innerHTML = '';
+    
+    if (files.length > 0) {
+        pendingUploadsContainer.classList.remove('hidden');
+        uploadActions.classList.remove('hidden');
+        uploadDropZone.classList.add('hidden');
+
+        Array.from(files).forEach((file, index) => {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const card = document.createElement('div');
+                card.className = 'pending-upload-card';
+                card.innerHTML = `
+                    <div class="pending-preview-wrapper">
+                        <img src="${e.target.result}" class="pending-preview">
+                    </div>
+                    <div class="pending-info">
+                        <input type="text" class="form-input text-xs pending-description" placeholder="Legg til beskrivelse (valgfritt)">
+                    </div>
+                `;
+                pendingUploadsContainer.appendChild(card);
+            };
+            reader.readAsDataURL(file);
+        });
+    } else {
+        pendingUploadsContainer.classList.add('hidden');
+        uploadActions.classList.add('hidden');
+        uploadDropZone.classList.remove('hidden');
+    }
 }
 window.setupUploadZone = setupUploadZone;
 
@@ -774,7 +954,8 @@ function setupUserListener(uid) {
             authState.profile = {
                 displayName: authState.user?.email?.split('@')[0] || 'Medlem',
                 photoURL: null,
-                memberSince: serverTimestamp() // Setzt startdato for nye brukere
+                memberSince: serverTimestamp(),
+                status: 'active'
             };
             authState.role = 'member';
             // Opprett dokumentet første gang
@@ -953,8 +1134,25 @@ function setupNotificationsListener(uid) {
             });
             notifs.sort((a,b) => (b.createdAt?.seconds||0) - (a.createdAt?.seconds||0));
             updateNotificationsUI(uid, notifs);
+        }, (err) => {
+            console.error("Simple notifications listener failed:", err);
         });
     });
+}
+
+// --- NOTIFIKASJONER ---
+
+function formatRelativeTime(date) {
+    if (!date) return '';
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+
+    if (diffInSeconds < 60) return 'Nå';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)}m`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)}t`;
+    if (diffInSeconds < 604800) return `${Math.floor(diffInSeconds / 86400)}d`;
+    
+    return date.toLocaleDateString('no-NO', { day: 'numeric', month: 'short' });
 }
 
 function updateNotificationsUI(uid, notifications) {
@@ -994,15 +1192,24 @@ function updateNotificationsUI(uid, notifications) {
             list.innerHTML = '<p class="text-sm text-muted text-center py-2">Ingen nye varsler.</p>';
         } else {
             list.innerHTML = '';
+            notifications.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+
             notifications.forEach(notif => {
                 const item = document.createElement('div');
                 item.className = 'notif-item';
-                item.style.padding = '0.5rem';
+                item.style.padding = '0.75rem 1rem';
                 item.style.borderBottom = '1px solid var(--color-border)';
                 item.style.cursor = 'pointer';
+                item.style.transition = 'background-color 0.2s';
+                
+                const date = notif.createdAt?.toDate ? notif.createdAt.toDate() : new Date(notif.createdAt);
+                const timeStr = formatRelativeTime(date);
+
                 item.innerHTML = `
-                    <p style="margin: 0; font-size: 0.85rem;"><strong>${notif.text}</strong></p>
-                    <span style="font-size: 0.7rem; color: var(--color-text-muted);">Klikk for å se.</span>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
+                        <p style="margin: 0; font-size: 0.85rem; line-height: 1.4; color: var(--color-text-main);"><strong>${notif.text}</strong></p>
+                        <span style="font-size: 0.7rem; color: var(--color-text-muted); white-space: nowrap;">${timeStr}</span>
+                    </div>
                 `;
                 
                 // Hover effect
@@ -1010,17 +1217,21 @@ function updateNotificationsUI(uid, notifications) {
                 item.addEventListener('mouseleave', () => item.style.backgroundColor = 'transparent');
                 
                 item.addEventListener('click', async () => {
-                    // Mark as read
                     try {
                         await setDoc(doc(db, `users/${uid}/notifications`, notif.id), { read: true }, { merge: true });
-                        // Lukker menyen
                         const dropdown = document.getElementById('notifications-dropdown');
                         if(dropdown) dropdown.classList.add('hidden');
                         
-                        // Enkel redirect til medlemssiden / skrolle ned (fordi vi for øyeblikket er en single-page-app struktur for feeden)
-                        // Senere kan man utvide for å markere posten
-                        window.location.hash = "feed-section";
-                        
+                        // Redirection logic
+                        if (notif.sourcePath?.includes('arrangements')) {
+                            const tabEvents = document.getElementById('tab-events');
+                            if (tabEvents) tabEvents.click();
+                            document.getElementById('events-section')?.scrollIntoView({ behavior: 'smooth' });
+                        } else {
+                            const tabPosts = document.getElementById('tab-posts');
+                            if (tabPosts) tabPosts.click();
+                            document.getElementById('posts-section')?.scrollIntoView({ behavior: 'smooth' });
+                        }
                     } catch (e) { console.error(e); }
                 });
                 
@@ -1191,7 +1402,9 @@ async function handleGalleryUploadSubmit(e) {
                 continue; // Hopp over filer som ikke er JPG/PNG
             }
 
+            console.log("Resizing and converting file:", file.name);
             const base64Image = await resizeAndConvertToBase64(file, 800);
+            console.log("Converted to base64. Length:", base64Image.length);
 
             await addDoc(galleryRef, {
                 imageUrl: base64Image,
@@ -1199,6 +1412,7 @@ async function handleGalleryUploadSubmit(e) {
                 createdAt: serverTimestamp(),
                 uploadedBy: uid
             });
+            console.log("Successfully added document to gallery.");
         }
 
         showCustomAlert("Bilder lastet opp!");
@@ -1345,7 +1559,7 @@ function updateUI(user, profile) {
 }
 
 function protectMemberPage() {
-    if (window.location.pathname.endsWith('/medlem.html')) {
+    if (isMemberPage()) {
         if (!authState.user) {
             window.location.href = 'login.html';
         }
@@ -1353,7 +1567,7 @@ function protectMemberPage() {
 }
 
 function protectLoginPage() {
-    if (window.location.pathname.endsWith('/login.html')) {
+    if (isLoginPage()) {
         // Rediger bare hvis de er logget inn OG har godkjent vilkårene
         if (authState.user && authState.profile?.termsAccepted) {
             window.location.href = 'medlem.html';
@@ -1396,6 +1610,10 @@ async function handleLogin(e) {
             }
         }
 
+        // Alt ok - gå til medlemssiden
+        console.log("Innlogging vellykket! Viderekobler umiddelbart...");
+        window.location.href = 'medlem.html';
+        return; 
 
     } catch (error) {
         console.error("Login failed error code:", error.code);
@@ -1446,9 +1664,7 @@ async function handleLogout() {
             clearCachedProfile(authState.user.uid);
         }
         await signOut(auth);
-        if (window.location.pathname.endsWith('/medlem.html')) {
-            window.location.href = 'index.html'; // Eller login.html
-        }
+        window.location.href = 'index.html';
     } catch (error) {
         console.error("Logout failed:", error);
     }
@@ -1511,7 +1727,7 @@ async function handleProfileSave(e) {
         const profilePreviewContainer = document.getElementById('profile-preview-container');
         const profilePreviewImg = document.getElementById('profile-image-preview');
         setTimeout(() => {
-            closeModal();
+            toggleModal(profileModal, false);
             saveButton.textContent = originalButtonText;
             saveButton.disabled = false;
             if (statusMsg) statusMsg.textContent = '';
@@ -1659,15 +1875,22 @@ function closeAdminModal() {
     toggleModal(adminImageModal, false);
 }
 
-// **OPPDATERT**: Laster faktiske brukere og deres bilder
+// **OPPDATERT**: Laster faktiske brukere med lazy-loading og aktiv preview
 async function loadAdminImages() {
     if (!adminUserList) return;
     adminUserList.innerHTML = '<p class="text-muted text-center">Laster brukere...</p>';
+    currentAdminSelections.clear();
 
     try {
         // 1. Hent nåværende offentlige bilder fra 'items' undersamlingen
         const itemsSnapshot = await getDocs(collection(db, 'site_content', 'gallery', 'items'));
-        const currentPublicImages = itemsSnapshot.docs.map(doc => doc.data().imageUrl);
+        itemsSnapshot.docs.forEach(doc => {
+            const data = doc.data();
+            if (data.imageUrl) currentAdminSelections.add(data.imageUrl);
+        });
+
+        // Oppdater teller og preview umiddelbart
+        renderActiveGalleryPreview();
 
         // 2. Hent alle brukere fra 'users' samlingen
         const usersSnapshot = await getDocs(collection(db, 'users'));
@@ -1679,66 +1902,41 @@ async function loadAdminImages() {
 
         adminUserList.innerHTML = '';
 
-        // Loop gjennom hver bruker
-        for (const userDoc of usersSnapshot.docs) {
+        // Loop gjennom hver bruker og lag headere (uten å hente bilder enda)
+        usersSnapshot.docs.forEach(userDoc => {
             const userData = userDoc.data();
             const userId = userDoc.id;
             const displayName = userData.displayName || 'Ukjent bruker';
 
-            // Hent galleribilder for denne brukeren
-            const gallerySnapshot = await getDocs(collection(db, `users/${userId}/gallery_images`));
-
             const userGroup = document.createElement('div');
             userGroup.className = 'user-group';
+            userGroup.dataset.userId = userId;
+            userGroup.dataset.loaded = "false";
 
-            const header = document.createElement('h4');
-            header.className = 'text-sm font-semibold mb-3 text-muted';
-            header.textContent = `${displayName}`;
+            const header = document.createElement('div');
+            header.className = 'user-group-header';
+            header.innerHTML = `
+                <span class="text-sm font-semibold">${displayName}</span>
+                <svg class="collapse-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
+            `;
+            
+            const content = document.createElement('div');
+            content.className = 'user-group-content';
+            content.innerHTML = '<p class="text-xs text-muted py-2">Laster bilder...</p>';
+
+            header.addEventListener('click', () => {
+                const isExpanded = userGroup.classList.toggle('expanded');
+                if (isExpanded && userGroup.dataset.loaded === "false") {
+                    loadUserGalleryForAdmin(userId, content, userGroup);
+                }
+            });
+
             userGroup.appendChild(header);
-
-            if (gallerySnapshot.empty) {
-                const noImg = document.createElement('p');
-                noImg.className = 'text-sm text-muted bg-subtle p-3 rounded';
-                noImg.textContent = 'Ingen bilder lastet opp.';
-                userGroup.appendChild(noImg);
-            } else {
-                const grid = document.createElement('div');
-                grid.className = 'gallery-preview-grid';
-
-                gallerySnapshot.forEach(imgDoc => {
-                    const imgData = imgDoc.data();
-                    const isSelected = currentPublicImages.includes(imgData.imageUrl);
-
-                    const item = document.createElement('div');
-                    item.className = `admin-gallery-item ${isSelected ? 'selected' : ''}`;
-                    item.dataset.url = imgData.imageUrl;
-                    item.dataset.userId = userId;
-
-                    const img = document.createElement('img');
-                    img.src = imgData.imageUrl;
-
-                    const checkIndicator = document.createElement('div');
-                    checkIndicator.className = 'admin-gallery-check';
-                    checkIndicator.innerHTML = `
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                        </svg>
-                    `;
-
-                    item.appendChild(img);
-                    item.appendChild(checkIndicator);
-
-                    // Toggle selection on click
-                    item.addEventListener('click', () => {
-                        item.classList.toggle('selected');
-                    });
-
-                    grid.appendChild(item);
-                });
-                userGroup.appendChild(grid);
-            }
+            userGroup.appendChild(content);
             adminUserList.appendChild(userGroup);
-        }
+        });
 
     } catch (error) {
         console.error("Error loading admin images:", error);
@@ -1746,16 +1944,95 @@ async function loadAdminImages() {
     }
 }
 
+// Hjelpefunksjon for lazy-loading av brukerens bilder
+async function loadUserGalleryForAdmin(userId, container, groupElement) {
+    try {
+        const gallerySnapshot = await getDocs(collection(db, `users/${userId}/gallery_images`));
+        container.innerHTML = '';
+
+        if (gallerySnapshot.empty) {
+            container.innerHTML = '<p class="text-xs text-muted italic py-2">Ingen bilder i dette galleriet.</p>';
+        } else {
+            const grid = document.createElement('div');
+            grid.className = 'gallery-preview-grid';
+
+            gallerySnapshot.forEach(imgDoc => {
+                const imgData = imgDoc.data();
+                const url = imgData.imageUrl;
+                const isSelected = currentAdminSelections.has(url);
+
+                const item = document.createElement('div');
+                item.className = `admin-gallery-item ${isSelected ? 'selected' : ''}`;
+                item.dataset.url = url;
+                item.innerHTML = `
+                    <img src="${url}" loading="lazy">
+                    <div class="admin-gallery-check">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="20 6 9 17 4 12"></polyline>
+                        </svg>
+                    </div>
+                `;
+
+                item.addEventListener('click', () => {
+                    const selected = item.classList.toggle('selected');
+                    if (selected) {
+                        currentAdminSelections.add(url);
+                    } else {
+                        currentAdminSelections.delete(url);
+                    }
+                    renderActiveGalleryPreview();
+                });
+
+                grid.appendChild(item);
+            });
+            container.appendChild(grid);
+        }
+        groupElement.dataset.loaded = "true";
+    } catch (e) {
+        console.error("Feil ved lasting av brukergalleri:", e);
+        container.innerHTML = '<p class="text-error text-xs">Kunne ikke laste bilder.</p>';
+    }
+}
+
+// Oppdaterer den sticky preview-seksjonen øverst
+function renderActiveGalleryPreview() {
+    if (!activeImagesGrid || !activeImageCount) return;
+
+    activeImageCount.textContent = `${currentAdminSelections.size} bilder valgt`;
+    activeImagesGrid.innerHTML = '';
+
+    if (currentAdminSelections.size === 0) {
+        activeImagesGrid.innerHTML = '<p class="text-xs text-muted w-full text-center py-2">Ingen bilder valgt</p>';
+        return;
+    }
+
+    currentAdminSelections.forEach(url => {
+        const item = document.createElement('div');
+        item.className = 'active-image-item';
+        item.innerHTML = `
+            <img src="${url}">
+            <button class="active-image-remove" title="Fjern fra utvalg">×</button>
+        `;
+
+        item.querySelector('.active-image-remove').addEventListener('click', (e) => {
+            e.stopPropagation();
+            currentAdminSelections.delete(url);
+            
+            // Sync med hovedlisten hvis bildet er synlig der
+            const mainItems = document.querySelectorAll(`.admin-gallery-item[data-url="${url}"]`);
+            mainItems.forEach(mi => mi.classList.remove('selected'));
+            
+            renderActiveGalleryPreview();
+        });
+
+        activeImagesGrid.appendChild(item);
+    });
+}
+
 
 // --- ADMIN SAVE SELECTION ---
 async function saveAdminSelection() {
-
-    // Finn alle valgte bilder via CSS-klassen
-    const selectedItems = document.querySelectorAll('.admin-gallery-item.selected');
-    const selectedImages = Array.from(selectedItems).map(item => item.dataset.url);
-
-    // Lagre valget i 'site_content' samlingen
-    const contentRef = doc(db, 'site_content', 'gallery');
+    const selectedImages = Array.from(currentAdminSelections);
 
     const btn = document.getElementById('save-admin-selection');
     const originalText = btn.textContent;
@@ -1763,37 +2040,43 @@ async function saveAdminSelection() {
     btn.disabled = true;
 
     try {
-        // 1. Hent alle eksisterende elementer i det offentlige galleriet
+        // 1. Hent alle elementer i det offentlige galleriet
         const itemsRef = collection(db, 'site_content', 'gallery', 'items');
         const itemsSnapshot = await getDocs(itemsRef);
 
-        // 2. Slett gamle koblinger (vi overskriver hele utvalget slik det fungerte før, men uten 1MB-grensen)
-        const deletePromises = itemsSnapshot.docs.map(doc => deleteDoc(doc.ref));
-        await Promise.all(deletePromises);
+        // 2. Bruk batch for effektivitet
+        const batch = writeBatch(db);
+
+        // Slett alle gamle oppføringer
+        itemsSnapshot.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
 
         // 3. Legg til nye koblinger
-        const addPromises = selectedImages.map((url, index) => {
-            return addDoc(itemsRef, {
+        selectedImages.forEach((url, index) => {
+            const newDocRef = doc(itemsRef); // Generer ny ID
+            batch.set(newDocRef, {
                 imageUrl: url,
                 order: index,
                 updatedAt: serverTimestamp(),
                 updatedBy: authState.user.uid
             });
         });
-        await Promise.all(addPromises);
 
-        // 4. Oppdater hoved-dokumentet (valgfritt, for å logge når det sist ble endret)
-        await setDoc(doc(db, 'site_content', 'gallery'), {
+        // 4. Oppdater hoved-dokumentet logging
+        batch.set(doc(db, 'site_content', 'gallery'), {
             lastUpdated: serverTimestamp(),
             updatedBy: authState.user.uid
         }, { merge: true });
 
-        showCustomAlert(`Lagret ${selectedImages.length} bilder til offentlig galleri!`);
-        closeAdminModal();
+        await batch.commit();
+        
+        showCustomAlert("Galleriet har blitt oppdatert!");
+        toggleModal(adminImageModal, false);
 
     } catch (error) {
-        console.error("Error saving selection:", error);
-        showCustomAlert("Kunne ikke lagre: " + error.message);
+        console.error("Error saving admin selection:", error);
+        showCustomAlert(`Feil ved lagring: ${error.message}`);
     } finally {
         btn.textContent = originalText;
         btn.disabled = false;
@@ -1916,191 +2199,7 @@ async function loadWorkshopStatus() {
 }
 
 
-// --- EVENT LISTENERS ---
-
-// Mobilmeny
-if (mobileMenuButton) {
-    mobileMenuButton.addEventListener('click', () => {
-        // Fjern 'hidden' hvis den finnes (viktig for sider som kurs.html/galleri.html)
-        mobileMenu.classList.remove('hidden');
-
-        const isOpen = mobileMenu.classList.toggle('show');
-
-        // Body scroll lock
-        updateScrollLock();
-
-        if (isOpen) {
-            // Endre ikon til X (enkelt) eller animer SVG (bedre)
-            mobileMenuButton.innerHTML = `
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M18 6L6 18M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            `;
-        } else {
-            mobileMenuButton.innerHTML = `
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M4 6h16M4 12h16m-7 6h7" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-            `;
-        }
-    });
-
-    // Lukk meny når man klikker på en lenke
-    if (mobileMenu) {
-        mobileMenu.querySelectorAll('a, button').forEach(link => {
-            link.addEventListener('click', () => {
-                mobileMenu.classList.remove('show');
-                updateScrollLock();
-                mobileMenuButton.innerHTML = `
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M4 6h16M4 12h16m-7 6h7" stroke-linecap="round" stroke-linejoin="round"/>
-                    </svg>
-                `;
-            });
-        });
-    }
-}
-
-// Login
-if (loginForm) loginForm.addEventListener('submit', handleLogin);
-if (forgotPasswordBtn) forgotPasswordBtn.addEventListener('click', handleForgotPassword);
-
-// Logout
-if (dropdownLogoutButton) dropdownLogoutButton.addEventListener('click', handleLogout);
-if (mobileLogoutButton) mobileLogoutButton.addEventListener('click', handleLogout);
-if (logoutButton) logoutButton.addEventListener('click', handleLogout);
-
-// Theme Toggle (Håndteres nå av theme-switcher.js)
-
-// Profil Modal
-if (openProfileModal) {
-    openProfileModal.addEventListener('click', () => {
-        displayNameInput.value = authState.profile?.displayName || '';
-        profileImageUrlInput.value = authState.profile?.photoURL || '';
-        toggleModal(profileModal, true);
-    });
-}
-function closeModal() { toggleModal(profileModal, false); }
-if (closeProfileModalButton) closeProfileModalButton.addEventListener('click', closeModal);
-if (profileModalOverlay) profileModalOverlay.addEventListener('click', closeModal);
-if (profileForm) profileForm.addEventListener('submit', handleProfileSave);
-
-// Gallery Upload (Open Modal)
-if (uploadGalleryBtn) {
-    uploadGalleryBtn.addEventListener('click', openUploadModal);
-}
-if (uploadForm) {
-    uploadForm.addEventListener('submit', handleGalleryUploadSubmit);
-}
-if (closeUploadModalBtn) closeUploadModalBtn.addEventListener('click', closeUploadModal);
-if (uploadModalOverlay) uploadModalOverlay.addEventListener('click', closeUploadModal);
-
-// Lightbox listeners
-if (closeLightboxBtn) closeLightboxBtn.addEventListener('click', closeLightbox);
-if (lightboxOverlay) lightboxOverlay.addEventListener('click', closeLightbox);
-
-// Admin Gallery Modals (Selection)
-if (closeAdminModalBtn) closeAdminModalBtn.addEventListener('click', () => toggleModal(adminImageModal, false));
-if (cancelAdminModalBtn) cancelAdminModalBtn.addEventListener('click', () => toggleModal(adminImageModal, false));
-if (saveAdminSelectionBtn) saveAdminSelectionBtn.addEventListener('click', saveAdminSelection);
-if (adminImageModalOverlay) adminImageModalOverlay.addEventListener('click', () => toggleModal(adminImageModal, false));
-
-// Admin Status Modal
-if (closeStatusModalBtn) closeStatusModalBtn.addEventListener('click', () => toggleModal(adminStatusModal, false));
-if (cancelStatusModalBtn) cancelStatusModalBtn.addEventListener('click', () => toggleModal(adminStatusModal, false));
-if (adminStatusModalOverlay) adminStatusModalOverlay.addEventListener('click', () => toggleModal(adminStatusModal, false));
-
-// Admin Members Modal
-if (closeMembersModalBtn) closeMembersModalBtn.addEventListener('click', closeMembersModal);
-if (closeMembersFooterBtn) closeMembersFooterBtn.addEventListener('click', closeMembersModal);
-if (adminMembersModalOverlay) adminMembersModalOverlay.addEventListener('click', closeMembersModal);
-
-
-
-// Tab switching logic for unified 3-tab modal
-function setupMembersTabs() {
-    const tabs = [
-        { btn: tabActiveMembers, section: activeMembersSection, loadFunc: loadMembersList },
-        { btn: tabPendingDeletions, section: pendingDeletionsSection, loadFunc: loadPendingDeletionsList },
-        { btn: tabArchive, section: archiveSection, loadFunc: loadArchiveList },
-        { btn: tabAddMember, section: addMemberSection }
-    ];
-
-    tabs.forEach(tab => {
-        if (tab.btn) {
-            tab.btn.addEventListener('click', () => {
-                if (tab.btn.classList.contains('active')) return;
-
-                // Highlighting
-                tabs.forEach(t => {
-                    if (t.btn) {
-                        t.btn.classList.remove('active');
-                        t.btn.classList.replace('btn-primary', 'btn-secondary');
-                    }
-                    if (t.section) t.section.classList.add('hidden');
-                });
-
-                tab.btn.classList.add('active');
-                tab.btn.classList.replace('btn-secondary', 'btn-primary');
-                if (tab.section) tab.section.classList.remove('hidden');
-
-                // Load data if function provided
-                if (tab.loadFunc) tab.loadFunc();
-
-                // If switching away from Add tab, reset password hint
-                if (tab.btn !== tabAddMember) {
-                    const hint = document.getElementById('password-hint');
-                    if (hint) hint.textContent = 'Minst 6 tegn for nye brukere.';
-                }
-            });
-        }
-    });
-}
-setupMembersTabs();
-
-if (closeMembersModalBtn) closeMembersModalBtn.addEventListener('click', closeMembersModal);
-if (closeMembersFooterBtn) closeMembersFooterBtn.addEventListener('click', closeMembersModal);
-if (adminMembersModalOverlay) adminMembersModalOverlay.addEventListener('click', closeMembersModal);
-
-// Documentation Event Listeners
-// Documentation Event Listeners
-if (closeDocumentsModalBtn) closeDocumentsModalBtn.addEventListener('click', closeDocumentsModal);
-if (closeDocumentsFooterBtn) closeDocumentsFooterBtn.addEventListener('click', closeDocumentsModal);
-if (documentsModalOverlay) documentsModalOverlay.addEventListener('click', closeDocumentsModal);
-
-// New Dashboard Buttons
-if (btnReferater) btnReferater.addEventListener('click', () => openDocumentsModal('referater'));
-if (btnRetningslinjer) btnRetningslinjer.addEventListener('click', () => openDocumentsModal('retningslinjer'));
-if (btnVedtekter) btnVedtekter.addEventListener('click', () => openDocumentsModal('vedtekter'));
-
-setupRetningslinjerTabs();
-
-if (adminAddDocBtn) adminAddDocBtn.addEventListener('click', () => openDocEntryModal());
-if (closeDocEntryModalBtn) closeDocEntryModalBtn.addEventListener('click', closeDocEntryModal);
-if (cancelDocEntryModalBtn) cancelDocEntryModalBtn.addEventListener('click', closeDocEntryModal);
-if (docEntryModalOverlay) docEntryModalOverlay.addEventListener('click', closeDocEntryModal);
-if (docEntryForm) docEntryForm.addEventListener('submit', handleDocEntrySubmit);
-if (deleteDocEntryBtn) deleteDocEntryBtn.addEventListener('click', handleDeleteDocEntry);
-
-// Admin Control Panel Modal
-if (openAdminControlBtn) openAdminControlBtn.addEventListener('click', () => toggleModal(adminControlModal, true));
-if (closeAdminControlModalBtn) closeAdminControlModalBtn.addEventListener('click', () => toggleModal(adminControlModal, false));
-if (closeAdminControlFooterBtn) closeAdminControlFooterBtn.addEventListener('click', () => toggleModal(adminControlModal, false));
-if (adminControlModalOverlay) adminControlModalOverlay.addEventListener('click', () => toggleModal(adminControlModal, false));
-
-// Admin Control Panel Tool Buttons
-if (adminPanelGalleryBtn) adminPanelGalleryBtn.addEventListener('click', () => {
-    toggleModal(adminControlModal, false);
-    openAdminModal();
-});
-if (adminPanelStatusBtn) adminPanelStatusBtn.addEventListener('click', () => {
-    toggleModal(adminControlModal, false);
-    openStatusModal();
-});
-if (adminPanelMembersBtn) adminPanelMembersBtn.addEventListener('click', () => {
-    toggleModal(adminControlModal, false);
-    openMembersModal();
-});
+// --- EVENT LISTENERS (ATTACHED IN attachEventListeners()) ---
 
 
 
@@ -2201,6 +2300,26 @@ async function openMembersModal() {
 
 function closeMembersModal() {
     toggleModal(adminMembersModal, false);
+    if (createUserForm) createUserForm.reset();
+
+    // Reset fields that might have been disabled during edit
+    const emailInput = document.getElementById('new-user-email');
+    const passInput = document.getElementById('new-user-password');
+    const userModalTitle = document.getElementById('user-modal-title');
+
+    if (emailInput) {
+        emailInput.disabled = false;
+        emailInput.required = true;
+    }
+    if (passInput) {
+        passInput.disabled = false;
+        passInput.required = true;
+    }
+    // Note: userModalTitle is usually an h3 in the header, might be 'admin-modal-title'
+    const modalTitle = document.querySelector('#admin-members-modal h3');
+    if (modalTitle) modalTitle.textContent = 'Legg til ny bruker';
+    if (editUserIdInput) editUserIdInput.value = '';
+    if (adminSoftDeleteBtn) adminSoftDeleteBtn.classList.add('hidden');
 }
 
 async function loadMembersList() {
@@ -2372,33 +2491,7 @@ function resetAddMemberForm() {
     if (createUserBtn) createUserBtn.textContent = 'Opprett bruker';
 }
 
-// --- ADMIN USER MANAGEMENT ---
 
-// Redundant adminAddUserBtn listener removed (merged into unified modal)
-
-function closeUserModal() {
-    toggleModal(adminUserModal, false);
-    createUserForm.reset();
-
-    // Reset fields that might have been disabled during edit
-    const emailInput = document.getElementById('new-user-email');
-    const passInput = document.getElementById('new-user-password');
-    if (emailInput) {
-        emailInput.disabled = false;
-        emailInput.required = true;
-    }
-    if (passInput) {
-        passInput.disabled = false;
-        passInput.required = true;
-    }
-    if (userModalTitle) userModalTitle.textContent = 'Legg til ny bruker';
-    if (editUserIdInput) editUserIdInput.value = '';
-    if (adminSoftDeleteBtn) adminSoftDeleteBtn.classList.add('hidden');
-}
-
-if (closeUserModalBtn) closeUserModalBtn.addEventListener('click', closeUserModal);
-if (cancelUserModalBtn) cancelUserModalBtn.addEventListener('click', closeUserModal);
-if (adminUserModalOverlay) adminUserModalOverlay.addEventListener('click', closeUserModal);
 
 if (createUserForm) {
     createUserForm.addEventListener('submit', async (e) => {
@@ -2769,6 +2862,35 @@ function updateRetningslinjerTabsUI() {
             tab.classList.add('active');
         } else {
             tab.classList.remove('active');
+        }
+    });
+}
+
+function setupMembersTabs() {
+    const tabs = [
+        { btn: tabActiveMembers, section: activeMembersSection },
+        { btn: tabPendingDeletions, section: pendingDeletionsSection },
+        { btn: tabArchive, section: archiveSection },
+        { btn: tabAddMember, section: addMemberSection }
+    ];
+
+    tabs.forEach(t => {
+        if (t.btn) {
+            t.btn.addEventListener('click', () => {
+                // Remove active class from all tabs
+                tabs.forEach(tab => tab.btn?.classList.remove('active'));
+                // Hide all sections
+                tabs.forEach(tab => tab.section?.classList.add('hidden'));
+
+                // Add active class and show section
+                t.btn.classList.add('active');
+                t.section?.classList.remove('hidden');
+
+                // Load appropriate list if needed
+                if (t.btn === tabPendingDeletions) loadPendingDeletionsList();
+                if (t.btn === tabArchive) loadArchiveList();
+                if (t.btn === tabActiveMembers) loadMembersList();
+            });
         }
     });
 }
@@ -3381,50 +3503,10 @@ if (tosCheckbox && acceptTosBtn) {
     });
 }
 
-if (declineTosBtn) {
-    declineTosBtn.addEventListener('click', async () => {
-        const confirmed = await showCustomConfirm("Hvis du ikke godtar vilkårene, kan du ikke bruke våre tjenester. Vil du logge ut?");
-        if (confirmed) {
-            await signOut(auth);
-            toggleModal(tosModal, false);
-
-            // Ensure they are on login page or redirected there
-            if (!window.location.pathname.endsWith('/login.html')) {
-                window.location.href = 'login.html';
-            }
-        }
-    });
+// --- INITIALISERING ---
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initUI);
+} else {
+    initUI();
 }
-// --- PUBLISHING MODALS ---
-newPostBtn?.addEventListener('click', () => toggleModal(postModal, true));
-closePostModalBtn?.addEventListener('click', () => toggleModal(postModal, false));
-cancelPostModalBtn?.addEventListener('click', () => toggleModal(postModal, false));
-postModalOverlay?.addEventListener('click', () => toggleModal(postModal, false));
 
-newEventBtn?.addEventListener('click', () => toggleModal(eventModal, true));
-closeEventModalBtn?.addEventListener('click', () => toggleModal(eventModal, false));
-cancelEventModalBtn?.addEventListener('click', () => toggleModal(eventModal, false));
-eventModalOverlay?.addEventListener('click', () => toggleModal(eventModal, false));
-
-
-
-
-// --- INITIALISERING AV OPPLASTINGSSONER ---
-document.addEventListener('DOMContentLoaded', () => {
-    // Profilbilde
-    setupUploadZone('profile-image-file-input', 'profile-upload-drop-zone', 'profile-image-preview', 'profile-preview-container');
-
-    const profileInput = document.getElementById('profile-image-file-input');
-    if (profileInput) {
-        profileInput.addEventListener('cropComplete', (e) => {
-            profileImageOffset = e.detail.offset;
-            console.log("Profile crop complete. Offset:", profileImageOffset);
-        });
-
-        profileInput.addEventListener('change', (e) => {
-            if (!profileInput.files[0]) {
-                profileImageOffset = 0;
-            }
-        });
-    }
-});

@@ -3,7 +3,8 @@ import {
     collection,
     onSnapshot,
     query,
-    orderBy
+    orderBy,
+    where
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { parseMentionsForDisplay } from './tagging.js';
 import { getAllCachedUsers } from './script.js';
@@ -33,6 +34,8 @@ function setupPublicEventsListener() {
     if (!eventsContainer) return;
 
     const eventsRef = collection(db, arrangementsPath);
+    // Vi gjør filtrering på 'visibility' manuelt på klientsiden for å unngå 
+    // behov for compound index (som tar tid å generere).
     const q = query(eventsRef, orderBy("date", "asc"));
 
     onSnapshot(q, (snapshot) => {
@@ -94,7 +97,9 @@ function renderEvents(events) {
                 <!-- Viser evt. antall påmeldte e.l. her om ønskelig i fremtiden -->
                 <!-- <ul><li>...</li></ul> -->
                 
+                ${event.allowRegistration !== false ? `
                 <a href="kontakt.html" class="button button-secondary" style="margin-top: 1.5rem;">Ta kontakt for påmelding</a>
+                ` : ''}
             </div>
         `;
         eventsContainer.appendChild(card);

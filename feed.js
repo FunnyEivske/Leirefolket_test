@@ -712,6 +712,12 @@ if (document.getElementById('feed-container')) {
             };
         }
 
+        if (postImagePreview) {
+            postImagePreview.style.cursor = 'pointer';
+            postImagePreview.title = 'Klikk for å endre bilde';
+            postImagePreview.onclick = () => postImageInput.click();
+        }
+
     }).catch(error => {
         console.error("Feed.js: Error waiting for userReady:", error);
         feedContainer.innerHTML = '<p style="color: var(--color-error); text-align: center;">En alvorlig feil oppstod under lasting.</p>';

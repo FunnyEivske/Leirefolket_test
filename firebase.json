@@ -16,11 +16,14 @@
         "indexes": "firestore.indexes.json"
     },
     "hosting": {
+        "site": "leirefolket",
         "public": ".",
+        "cleanUrls": true,
         "ignore": [
             "firebase.json",
             "**/.*",
-            "**/node_modules/**",
+            ".git/**",
+            "node_modules/**",
             "functions/**",
             "package.json",
             "package-lock.json",
@@ -31,6 +34,32 @@
             "README.md",
             "firestore.rules",
             "firestore.indexes.json"
+        ],
+        "headers": [
+            {
+                "source": "**/*.@(html|js)",
+                "headers": [
+                    {
+                        "key": "Content-Type",
+                        "value": "text/html; charset=utf-8"
+                    }
+                ]
+            },
+            {
+                "source": "**/*.js",
+                "headers": [
+                    {
+                        "key": "Content-Type",
+                        "value": "application/javascript; charset=utf-8"
+                    }
+                ]
+            }
+        ],
+        "rewrites": [
+            {
+                "source": "/",
+                "destination": "/index.html"
+            }
         ]
     }
 }

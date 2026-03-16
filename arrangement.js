@@ -141,6 +141,10 @@ async function handleEditEvent(eventId) {
         document.getElementById('event-description').value = eventData.description || '';
         document.getElementById('event-location').value = eventData.location || '';
         document.getElementById('event-visibility').value = eventData.visibility || 'internal';
+        const allowRegistrationCheckbox = document.getElementById('event-allow-registration');
+        if (allowRegistrationCheckbox) {
+            allowRegistrationCheckbox.checked = eventData.allowRegistration !== false;
+        }
 
         if (eventData.date) {
             const date = eventData.date.toDate();
@@ -199,6 +203,7 @@ async function handleEventSubmit(e) {
     const dateVal = document.getElementById('event-date').value;
     const location = document.getElementById('event-location').value;
     const visibility = document.getElementById('event-visibility').value;
+    const allowRegistration = document.getElementById('event-allow-registration').checked;
     const imageFile = eventImageInput ? eventImageInput.files[0] : null;
 
     try {
@@ -229,6 +234,7 @@ async function handleEventSubmit(e) {
             date: Timestamp.fromDate(new Date(dateVal)),
             location: location || 'Ikke oppgitt',
             visibility: visibility || 'internal',
+            allowRegistration: allowRegistration,
             imageUrl,
             imageOffset: imageOffset,
             updatedAt: serverTimestamp()
@@ -336,11 +342,13 @@ function renderUpcomingEvents(events) {
                 <h3 class="event-title">${sanitizeHTML(event.title)}</h3>
                 <p class="event-description">${parseMentionsForDisplay(sanitizeHTML(event.description || '').replace(/\n/g, '<br>'), getAllCachedUsers()).html}</p>
                 
+                ${event.allowRegistration !== false ? `
                 <div class="event-actions">
                     <button class="btn btn-secondary btn-sm rsvp-btn" data-id="${event.id}" data-status="coming">Kommer!</button>
                     <button class="btn btn-secondary btn-sm rsvp-btn" data-id="${event.id}" data-status="not_coming">Kommer ikke</button>
                     <div id="rsvp-status-${event.id}" class="rsvp-status"></div>
                 </div>
+                ` : ''}
                 
                 ${authState.role === 'admin' ? `
                 <div style="margin-top: 1rem; text-align: right; display: flex; justify-content: flex-end; gap: 0.5rem;">
@@ -349,6 +357,7 @@ function renderUpcomingEvents(events) {
                 </div>
                 ` : ''}
                 
+                ${event.allowRegistration !== false ? `
                 <div class="mt-4 text-sm text-muted">
                     <details>
                         <summary style="cursor: pointer;">Se hvem som kommer (<span id="rsvp-count-${event.id}">0</span>)</summary>
@@ -357,6 +366,7 @@ function renderUpcomingEvents(events) {
                         </ul>
                     </details>
                 </div>
+                ` : ''}
             </div>
         `;
         upcomingEventsContainer.appendChild(card);
@@ -490,6 +500,25 @@ userReady.then(() => {
     // Initialiser premium opplastingssone for arrangementer
     if (typeof window.setupUploadZone === 'function') {
         window.setupUploadZone('event-image', 'event-upload-drop-zone', 'event-image-preview', 'event-image-preview-wrapper');
+    }
+
+    const removeEventImageBtn = document.getElementById('remove-event-image');
+    if (removeEventImageBtn) {
+        removeEventImageBtn.onclick = (e) => {
+            e.preventDefault();
+            eventImageInput.value = '';
+            if (previewWrapper) previewWrapper.classList.add('hidden');
+            if (previewImg) previewImg.src = '';
+            const dropZone = document.getElementById('event-upload-drop-zone');
+            if (dropZone) dropZone.classList.remove('hidden');
+            eventImageOffset = 0;
+        };
+    }
+
+    if (previewImg) {
+        previewImg.style.cursor = 'pointer';
+        previewImg.title = 'Klikk for å endre bilde';
+        previewImg.onclick = () => eventImageInput.click();
     }
 
     // Tab event listeners
