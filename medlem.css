@@ -569,7 +569,7 @@ p {
   line-height: 1.6;
 }
 
-/*
+/* 
 ==========================================
   Layout & Header
 ==========================================
@@ -583,6 +583,7 @@ p {
   z-index: 100;
   border-bottom: 1px solid var(--color-border);
   transition: background-color 0.3s ease;
+  /* Remove overflow: hidden if it exists to allow dropdowns to pop out */
 }
 
 .header-inner {
@@ -590,6 +591,7 @@ p {
   align-items: center;
   justify-content: space-between;
   height: 4.5rem;
+  /* overflow: visible should be default, but explicitly ensuring it here */
 }
 
 .logo {

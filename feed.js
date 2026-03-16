@@ -65,10 +65,16 @@ userReady.then(() => {
 
     // Initialize tagging system for static inputs
     const postContent = document.getElementById('post-content');
-    if (postContent) new TaggingSystem(postContent, getSearchableUsers);
+    if (postContent && !postContent.dataset.taggingInitialized) {
+        new TaggingSystem(postContent, getSearchableUsers);
+        postContent.dataset.taggingInitialized = 'true';
+    }
     
     const detailComment = document.getElementById('detail-comment-input');
-    if (detailComment) new TaggingSystem(detailComment, getSearchableUsers);
+    if (detailComment && !detailComment.dataset.taggingInitialized) {
+        new TaggingSystem(detailComment, getSearchableUsers);
+        detailComment.dataset.taggingInitialized = 'true';
+    }
 });
 
 // Sti til feed-databasen
@@ -216,8 +222,9 @@ function renderFeed(posts) {
         
         // Setup tagging for the quick comment input
         const quickCommentInput = postElement.querySelector('.quick-comment-input');
-        if (quickCommentInput) {
+        if (quickCommentInput && !quickCommentInput.dataset.taggingInitialized) {
             new TaggingSystem(quickCommentInput, getSearchableUsers);
+            quickCommentInput.dataset.taggingInitialized = 'true';
         }
     });
 
