@@ -583,16 +583,16 @@ p {
   z-index: 100;
   border-bottom: 1px solid var(--color-border);
   transition: background-color 0.3s ease;
-  overflow: visible !important;
 }
+
 
 .header-inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
   height: 4.5rem;
-  overflow: visible !important;
 }
+
 
 .logo {
   display: flex;
@@ -840,7 +840,9 @@ p {
 
 .profile-card {
   text-align: center;
+  position: relative; /* For absolute positioning of notifications */
 }
+
 
 .profile-avatar {
   width: 6rem;
@@ -2173,40 +2175,51 @@ textarea {
     text-decoration: underline;
 }
 
-/* Sidebar Notifications */
-#notifications-sidebar-card {
-  margin-bottom: 1rem;
+/* Profile Card Notifications */
+.profile-notif-wrapper {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  z-index: 10;
 }
 
 #notifications-wrapper {
-  transition: background-color 0.2s;
+  padding: 0.5rem;
+  border-radius: var(--radius-md);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 #notifications-wrapper:hover {
   background-color: var(--color-bg-subtle);
+  transform: translateY(-1px);
 }
 
-#notifications-chevron {
-  transition: transform 0.3s ease;
+#notifications-wrapper.active {
+  background-color: var(--color-bg-subtle);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
 }
 
-#notifications-wrapper:not(.collapsed) #notifications-chevron {
-  transform: rotate(180deg);
-}
-
-/* Adjust dropdown for sidebar context */
-#notifications-sidebar-card #notifications-dropdown {
-  position: relative; /* Change from absolute to relative for sidebar list behavior */
-  top: 0;
+#notifications-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
   left: 0;
-  width: 100%;
-  box-shadow: none;
-  border: none;
-  background: transparent;
-  margin-top: 0.5rem;
-  max-height: 300px;
-  border-top: 1px solid var(--color-border);
+  width: 300px;
+  z-index: 1000;
+  background-color: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-xl);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
 }
+
+.notif-item {
+  border-bottom: 1px solid var(--color-border);
+  padding: 0.75rem 1rem;
+}
+
 
 .notif-item {
   border-bottom: 1px solid var(--color-border);

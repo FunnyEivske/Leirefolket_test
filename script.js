@@ -112,7 +112,6 @@ let tosModal, tosCheckbox, acceptTosBtn, declineTosBtn;
 let messageModal, messageModalText, messageModalClose, messageModalOverlay;
 let confirmModal, confirmModalText, confirmModalOk, confirmModalCancel, confirmModalOverlay;
 let openDocumentsBtn, documentsModal, documentsModalOverlay, closeDocumentsModalBtn, closeDocumentsFooterBtn, btnReferater, btnRetningslinjer, btnVedtekter, documentsModalTitle, retningslinjerTabs, tabFire, tabGlaze, tabWorkshop, documentsListContainer, adminAddDocBtn;
-let notificationsSidebarCard;
 
 let docEntryModal, docEntryModalOverlay, closeDocEntryModalBtn, cancelDocEntryModalBtn, docEntryForm, docEntryIdInput, docEntryCategoryInput, docEntryNameInput, docEntryDateInput, docEntryContentInput, saveDocEntryBtn, deleteDocEntryBtn, docEntryTitle, docEntryTypeGroup, docEntryTypeInput, docTypeDisplay, docEntryNameGroup, docEntryDateGroup, docPointsContainer, addMorePointsBtn, docContentHint, docContentLabel, docQuillEditor, docRichTextHint;
 
@@ -250,7 +249,6 @@ function initUI() {
     messageModalText = document.getElementById('message-modal-text');
     messageModalClose = document.getElementById('message-modal-close');
     messageModalOverlay = document.getElementById('message-modal-overlay');
-    notificationsSidebarCard = document.getElementById('notifications-sidebar-card');
 
     confirmModal = document.getElementById('confirm-modal');
     confirmModalText = document.getElementById('confirm-modal-text');
@@ -1173,7 +1171,9 @@ function updateNotificationsUI(uid, notifications) {
     
     if (wrapper) wrapper.classList.remove('hidden');
     if (mobileWrapper) mobileWrapper.classList.remove('hidden');
-    if (notificationsSidebarCard) notificationsSidebarCard.classList.remove('hidden');
+    
+    const profileNotifWrapper = document.querySelector('.profile-notif-wrapper');
+    if (profileNotifWrapper) profileNotifWrapper.classList.remove('hidden');
 
 
     const unreadCount = notifications.length;
