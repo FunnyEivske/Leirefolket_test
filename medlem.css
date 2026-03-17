@@ -1323,10 +1323,12 @@ div[id$="-modal"]:not(.hidden) .card {
   }
 }
 
-/* Modal Scroll Fix */
+/* Modal Scroll Lock - Unified */
 body.modal-open {
   overflow: hidden !important;
   height: 100vh;
+  position: relative;
+  /* Prevent touch move on some mobile browsers */
   touch-action: none;
   -webkit-overflow-scrolling: none;
 }
@@ -1587,12 +1589,6 @@ body.modal-open {
   display: none;
 }
 
-/* Scroll Lock */
-body.modal-open {
-  overflow: hidden !important;
-  height: 100vh;
-  position: relative;
-}
 
 /* Modal sizing utilities */
 .maxWidth-600 {

@@ -595,10 +595,9 @@ window.openUniversalCropModal = openUniversalCropModal;
 // --- HJELPEFUNKSJONER ---
 
 export function updateScrollLock() {
-    const allModals = document.querySelectorAll('.lightbox, [id$="-modal"]');
+    const allModals = document.querySelectorAll('.lightbox, .modal-container');
     const anyModalOpen = Array.from(allModals).some(m => {
         const style = window.getComputedStyle(m);
-        // A modal is considered "open" if it's not hidden via class OR has a visible display
         return !m.classList.contains('hidden') && style.display !== 'none' && style.visibility !== 'hidden';
     });
     const menuOpen = mobileMenu && mobileMenu.classList.contains('show');
