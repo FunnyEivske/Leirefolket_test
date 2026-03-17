@@ -369,6 +369,7 @@ function attachEventListeners() {
     closeStatusModalBtn?.addEventListener('click', () => toggleModal(adminStatusModal, false));
     cancelStatusModalBtn?.addEventListener('click', () => toggleModal(adminStatusModal, false));
     adminStatusModalOverlay?.addEventListener('click', () => toggleModal(adminStatusModal, false));
+    saveStatusBtn?.addEventListener('click', saveWorkshopStatus);
 
     closeMembersModalBtn?.addEventListener('click', closeMembersModal);
     closeMembersFooterBtn?.addEventListener('click', closeMembersModal);
