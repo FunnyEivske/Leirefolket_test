@@ -1603,6 +1603,10 @@ body.modal-open {
   max-width: 800px;
 }
 
+.maxWidth-800 {
+  max-width: 800px;
+}
+
 .lightbox {
   position: fixed;
   inset: 0;

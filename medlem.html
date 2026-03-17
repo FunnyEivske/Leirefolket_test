@@ -298,11 +298,9 @@
     </main>
 
     <!-- Profil Modal -->
-    <div id="profile-modal" class="hidden"
-        style="position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;">
-        <div id="profile-modal-overlay"
-            style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px);"></div>
-        <div class="card" style="position: relative; width: 100%; max-width: 500px; margin: 1rem; z-index: 10;">
+    <div id="profile-modal" class="hidden modal-container">
+        <div id="profile-modal-overlay" class="modal-overlay"></div>
+        <div class="card modal-content maxWidth-600">
             <div class="card-header">
                 <h3>Rediger profil</h3>
             </div>
@@ -340,9 +338,6 @@
                             </div>
 
                             <p class="text-xs text-muted">Støtter kun JPG og PNG.</p>
-                            <p class="text-sm text-muted">Eller lim inn en URL:</p>
-                            <input type="text" id="profile-image-url-input" class="form-input"
-                                placeholder="https://...">
                         </div>
                     </div>
                 </div>
@@ -356,17 +351,14 @@
     </div>
 
     <!-- Upload/Manage Gallery Modal -->
-    <div id="upload-modal" class="hidden"
-        style="position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center;">
-        <div id="upload-modal-overlay"
-            style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.5); backdrop-filter: blur(4px);"></div>
-        <div class="card"
-            style="position: relative; width: 100%; max-width: 800px; height: 80vh; margin: 1rem; z-index: 10; display: flex; flex-direction: column;">
+    <div id="upload-modal" class="hidden modal-container">
+        <div id="upload-modal-overlay" class="modal-overlay"></div>
+        <div class="card modal-content maxWidth-800" style="height: 80vh;">
             <div class="card-header">
                 <h3>Administrer bilder</h3>
             </div>
 
-            <div class="card-body" style="overflow-y: auto; flex: 1;">
+            <div class="card-body">
                 <!-- Upload Section -->
                 <form id="upload-form" class="mb-6">
                     <div class="form-group">
@@ -432,7 +424,7 @@
                     </svg>
                 </button>
             </div>
-            <div class="card-body" style="overflow-y: auto; flex: 1; min-height: 400px; display: flex; flex-direction: column;">
+            <div class="card-body" style="min-height: 400px; display: flex; flex-direction: column;">
                 <!-- Nåværende utvalg (Sticky Top) -->
                 <div id="active-gallery-preview" class="gallery-admin-active-section">
                     <h4 class="text-sm font-semibold mb-2" style="display: flex; justify-content: space-between;">
@@ -478,7 +470,7 @@
                     </svg>
                 </button>
             </div>
-            <div class="card-body" style="overflow-y: auto; flex: 1;">
+            <div class="card-body">
                 <form id="status-hours-form">
                     <div class="form-group">
                         <label class="form-label">Egendefinert status (f.eks. "Stengt pga oppussing")</label>
@@ -561,7 +553,7 @@
                     <button id="tab-add-member" class="btn btn-secondary text-sm tab-btn">+ Legg til / Rediger</button>
                 </div>
             </div>
-            <div class="card-body" style="overflow-y: auto; flex: 1;">
+            <div class="card-body">
                 <!-- Active Members Tab -->
                 <div id="active-members-section">
                     <div id="admin-members-list" style="display: flex; flex-direction: column; gap: 1rem;">
@@ -647,8 +639,7 @@
     <!-- Custom Alert/Message Modal -->
     <div id="message-modal" class="hidden modal-container" style="z-index: 3000;">
         <div id="message-modal-overlay" class="modal-overlay"></div>
-        <div class="card modal-content"
-            style="max-width: 400px; border: 2px solid var(--color-primary); overflow: hidden;">
+        <div class="card modal-content" style="max-width: 400px; border: 2px solid var(--color-primary);">
             <div class="card-body text-center" style="padding: 2.5rem 2rem;">
                 <p id="message-modal-text" class="mb-8 text-lg" style="line-height: 1.5;"></p>
                 <div style="display: flex; justify-content: center;">
@@ -802,8 +793,7 @@
     <!-- View Documents Modal -->
     <div id="view-documents-modal" class="hidden modal-container">
         <div id="view-documents-modal-overlay" class="modal-overlay"></div>
-        <div class="card modal-content"
-            style="max-height: 90vh; display: flex; flex-direction: column; width: 100%; max-width: 800px;">
+        <div class="card modal-content maxWidth-800">
             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                 <div style="display: flex; align-items: center; gap: 0.75rem;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
@@ -942,7 +932,7 @@
     <!-- Admin Control Panel Modal -->
     <div id="admin-control-modal" class="hidden modal-container">
         <div id="admin-control-modal-overlay" class="modal-overlay"></div>
-        <div class="card modal-content" style="max-width: 650px;">
+        <div class="card modal-content maxWidth-800">
             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
                 <h3 class="text-lg" style="margin-bottom: 0;">Administrasjon</h3>
                 <button id="close-admin-control-modal" class="btn btn-ghost" style="padding: 0.5rem;">

@@ -93,7 +93,7 @@ let loginForm, forgotPasswordBtn, loginError, loginSuccess;
 let mobileMenuButton, mobileMenu, dropdownLogoutButton, mobileLogoutButton;
 let loginLink, memberLink, logoutButton, mobileLoginLink, mobileMemberLink;
 let profileName, profileRoleText, profileImg, openProfileModal, profileModal, profileModalOverlay, closeProfileModalButton;
-let profileForm, displayNameInput, profileImageUrlInput, profileImageFileInput, saveProfileButton, profileSaveStatus;
+let profileForm, displayNameInput, profileImageFileInput, saveProfileButton, profileSaveStatus;
 let memberDurationValue, galleryCountValue;
 let uploadGalleryBtn, uploadModal, uploadModalOverlay, closeUploadModalBtn, uploadForm, uploadFilesInput, uploadDropZone, pendingUploadsContainer, uploadActions, confirmUploadBtn, modalGalleryContainer, dashboardGalleryPreview;
 let imageLightbox, lightboxOverlay, lightboxImg, lightboxDescription, closeLightboxBtn;
@@ -139,7 +139,6 @@ function initUI() {
     closeProfileModalButton = document.getElementById('close-profile-modal');
     profileForm = document.getElementById('profile-form');
     displayNameInput = document.getElementById('display-name-input');
-    profileImageUrlInput = document.getElementById('profile-image-url-input');
     profileImageFileInput = document.getElementById('profile-image-file-input');
     saveProfileButton = document.getElementById('save-profile-button');
     profileSaveStatus = document.getElementById('profile-save-status');
@@ -348,7 +347,6 @@ function attachEventListeners() {
 
     if (openProfileModal) openProfileModal.addEventListener('click', () => {
         if (displayNameInput) displayNameInput.value = authState.profile?.displayName || '';
-        if (profileImageUrlInput) profileImageUrlInput.value = authState.profile?.photoURL || '';
         toggleModal(profileModal, true);
     });
     closeProfileModalButton?.addEventListener('click', () => toggleModal(profileModal, false));

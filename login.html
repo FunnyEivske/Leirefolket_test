@@ -65,17 +65,14 @@
     </div>
 
     <!-- Mandatory TOS & Privacy Modal -->
-    <div id="tos-modal" class="hidden"
-        style="position: fixed; inset: 0; z-index: 500; display: flex; align-items: center; justify-content: center;">
-        <div style="position: absolute; inset: 0; background-color: var(--color-bg-page); z-index: -1;"></div>
-        <div class="card"
-            style="position: relative; width: 100%; max-width: 800px; max-height: 90vh; margin: 1rem; z-index: 10; display: flex; flex-direction: column; box-shadow: var(--shadow-xl); border: 2px solid var(--color-primary);">
+    <div id="tos-modal" class="hidden modal-container">
+        <div id="tos-modal-overlay" class="modal-overlay"></div>
+        <div class="card modal-content maxWidth-800">
             <div class="card-header" style="text-align: center; border-bottom: 2px solid var(--color-bg-section);">
                 <h2 style="margin: 0; font-size: 1.5rem;">Velkommen til Leirefolket</h2>
                 <p class="text-xs text-muted mt-1">Vennligst les og godta våre vilkår for å fortsette</p>
             </div>
-            <div class="card-body"
-                style="overflow-y: auto; flex: 1; padding: 2rem; line-height: 1.6; font-size: 0.95rem;">
+            <div class="card-body" style="padding: 2rem; line-height: 1.6; font-size: 0.95rem;">
                 <div id="tos-content" class="text-left">
                     <h3 style="font-size: 1.25rem; margin-top: 0;">Brukervilkår og Personvernerklæring for Leirefolket
                     </h3>
@@ -157,11 +154,8 @@
     </div>
 
     <!-- Custom Alert/Message Modal -->
-    <div id="message-modal" class="hidden"
-        style="position: fixed; inset: 0; z-index: 600; display: flex; align-items: center; justify-content: center; padding: 1rem;">
-        <div id="message-modal-overlay"
-            style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(8px);">
-        </div>
+    <div id="message-modal" class="hidden modal-container" style="z-index: 3000;">
+        <div id="message-modal-overlay" class="modal-overlay"></div>
         <div class="card"
             style="position: relative; width: 100%; max-width: 400px; z-index: 10; box-shadow: var(--shadow-xl); border: 2px solid var(--color-primary); overflow: hidden;">
             <div class="card-body text-center" style="padding: 2.5rem 2rem;">
@@ -175,11 +169,8 @@
     </div>
 
     <!-- Custom Confirm Modal -->
-    <div id="confirm-modal" class="hidden"
-        style="position: fixed; inset: 0; z-index: 600; display: flex; align-items: center; justify-content: center; padding: 1rem;">
-        <div id="confirm-modal-overlay"
-            style="position: absolute; inset: 0; background-color: rgba(0,0,0,0.6); backdrop-filter: blur(8px);">
-        </div>
+    <div id="confirm-modal" class="hidden modal-container" style="z-index: 3100;">
+        <div id="confirm-modal-overlay" class="modal-overlay"></div>
         <div class="card"
             style="position: relative; width: 100%; max-width: 450px; z-index: 10; box-shadow: var(--shadow-xl); border: 2px solid var(--color-primary); overflow: hidden;">
             <div class="card-body text-center" style="padding: 2.5rem 2rem;">
