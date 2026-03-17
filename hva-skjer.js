@@ -3,7 +3,6 @@ import {
     collection,
     onSnapshot,
     query,
-    orderBy,
     where
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { parseMentionsForDisplay } from './tagging.js';
@@ -36,7 +35,7 @@ function setupPublicEventsListener() {
     const eventsRef = collection(db, arrangementsPath);
     // Vi gjør filtrering på 'visibility' manuelt på klientsiden for å unngå 
     // behov for compound index (som tar tid å generere).
-    const q = query(eventsRef, orderBy("date", "asc"));
+    const q = query(eventsRef, where("visibility", "==", "public"));
 
     onSnapshot(q, (snapshot) => {
         const upcoming = [];
@@ -49,10 +48,12 @@ function setupPublicEventsListener() {
             const eventDate = data.date.toDate();
             const event = { id: docSnap.id, ...data };
 
-            if (eventDate >= todayStart && event.visibility === 'public') {
+            if (eventDate >= todayStart) {
                 upcoming.push(event);
             }
         });
+
+        upcoming.sort((a, b) => a.date.toDate() - b.date.toDate());
 
         renderEvents(upcoming);
     }, (error) => {

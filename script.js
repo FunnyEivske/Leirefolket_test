@@ -468,6 +468,83 @@ function attachEventListeners() {
     if (universalCropOverlay) {
         universalCropOverlay.addEventListener('click', () => toggleModal(universalCropModal, false));
     }
+
+    if (createUserForm) {
+        createUserForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const email = document.getElementById('new-user-email').value.trim();
+            const password = document.getElementById('new-user-password').value.trim();
+            const name = document.getElementById('new-user-name').value.trim();
+            const role = document.getElementById('new-user-role').value;
+            const orgRole = userOrganizationRoleInput ? userOrganizationRoleInput.value : 'medlem';
+            const memberSince = userMemberSinceInput.value;
+            const editingId = editUserIdInput.value;
+
+            const originalText = createUserBtn.textContent;
+            createUserBtn.textContent = 'Lagrer...';
+            createUserBtn.disabled = true;
+
+            try {
+                // Convert date string to Date object
+                let memberSinceDate = memberSince ? new Date(memberSince) : new Date();
+
+                if (editingId) {
+                    // --- UPDATE EXISTING USER ---
+                    await setDoc(doc(db, 'users', editingId), {
+                        displayName: name,
+                        role: role,
+                        organizationRole: orgRole,
+                        memberSince: memberSinceDate, // Admin controlled display date
+                        status: 'active'
+                    }, { merge: true });
+
+                    showCustomAlert(`Bruker ${name} er oppdatert!`);
+                    loadMembersList(); // Refresh list if open
+                } else {
+                    // --- CREATE NEW USER ---
+                    if (password.length < 6) {
+                        showCustomAlert("Passordet må være minst 6 tegn langt.");
+                        createUserBtn.textContent = originalText;
+                        createUserBtn.disabled = false;
+                        return;
+                    }
+
+                    // 1. Create account in secondary auth
+                    const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
+                    const newUser = userCredential.user;
+
+                    // 2. Create profile in Firestore
+                    await setDoc(doc(db, 'users', newUser.uid), {
+                        displayName: name,
+                        email: email, // Saved for archive purposes
+                        photoURL: null,
+                        role: role,
+                        organizationRole: orgRole,
+                        memberSince: memberSinceDate, // Admin controlled display date
+                        startDate: serverTimestamp(), // Actual account creation
+                        status: 'active',
+                        createdAt: serverTimestamp(),
+                        createdBy: authState.user ? authState.user.uid : 'admin'
+                    });
+
+                    // 3. Sign out secondary auth immediately
+                    await signOut(secondaryAuth);
+
+                    showCustomAlert(`Bruker ${name} er nå opprettet som ${role === 'admin' ? 'administrator' : 'medlem'}!`);
+                }
+                closeUserModal();
+            } catch (error) {
+                console.error("Error creating user:", error);
+                let msg = "Kunne ikke opprette bruker: " + error.message;
+                if (error.code === 'auth/email-already-in-use') msg = "E-postadressen er allerede i bruk.";
+                showCustomAlert(msg);
+            } finally {
+                createUserBtn.textContent = originalText;
+                createUserBtn.disabled = false;
+            }
+        });
+    }
 }
 
 // Initialize Quill
@@ -2507,85 +2584,6 @@ function resetAddMemberForm() {
         adminSoftDeleteBtn.onclick = null;
     }
     if (createUserBtn) createUserBtn.textContent = 'Opprett bruker';
-}
-
-
-
-if (createUserForm) {
-    createUserForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const email = document.getElementById('new-user-email').value.trim();
-        const password = document.getElementById('new-user-password').value.trim();
-        const name = document.getElementById('new-user-name').value.trim();
-        const role = document.getElementById('new-user-role').value;
-        const orgRole = userOrganizationRoleInput ? userOrganizationRoleInput.value : 'medlem';
-        const memberSince = userMemberSinceInput.value;
-        const editingId = editUserIdInput.value;
-
-        const originalText = createUserBtn.textContent;
-        createUserBtn.textContent = 'Lagrer...';
-        createUserBtn.disabled = true;
-
-        try {
-            // Convert date string to Date object
-            let memberSinceDate = memberSince ? new Date(memberSince) : new Date();
-
-            if (editingId) {
-                // --- UPDATE EXISTING USER ---
-                await setDoc(doc(db, 'users', editingId), {
-                    displayName: name,
-                    role: role,
-                    organizationRole: orgRole,
-                    memberSince: memberSinceDate, // Admin controlled display date
-                    status: 'active'
-                }, { merge: true });
-
-                showCustomAlert(`Bruker ${name} er oppdatert!`);
-                loadMembersList(); // Refresh list if open
-            } else {
-                // --- CREATE NEW USER ---
-                if (password.length < 6) {
-                    showCustomAlert("Passordet må være minst 6 tegn langt.");
-                    createUserBtn.textContent = originalText;
-                    createUserBtn.disabled = false;
-                    return;
-                }
-
-                // 1. Create account in secondary auth
-                const userCredential = await createUserWithEmailAndPassword(secondaryAuth, email, password);
-                const newUser = userCredential.user;
-
-                // 2. Create profile in Firestore
-                await setDoc(doc(db, 'users', newUser.uid), {
-                    displayName: name,
-                    email: email, // Saved for archive purposes
-                    photoURL: null,
-                    role: role,
-                    organizationRole: orgRole,
-                    memberSince: memberSinceDate, // Admin controlled display date
-                    startDate: serverTimestamp(), // Actual account creation
-                    status: 'active',
-                    createdAt: serverTimestamp(),
-                    createdBy: authState.user ? authState.user.uid : 'admin'
-                });
-
-                // 3. Sign out secondary auth immediately
-                await signOut(secondaryAuth);
-
-                showCustomAlert(`Bruker ${name} er nå opprettet som ${role === 'admin' ? 'administrator' : 'medlem'}!`);
-            }
-            closeUserModal();
-        } catch (error) {
-            console.error("Error creating user:", error);
-            let msg = "Kunne ikke opprette bruker: " + error.message;
-            if (error.code === 'auth/email-already-in-use') msg = "E-postadressen er allerede i bruk.";
-            showCustomAlert(msg);
-        } finally {
-            createUserBtn.textContent = originalText;
-            createUserBtn.disabled = false;
-        }
-    });
 }
 
 // --- PENDING DELETION MANAGEMENT ---
