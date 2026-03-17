@@ -329,14 +329,14 @@
                                 </div>
                                 <input type="file" id="profile-image-file-input" accept="image/png, image/jpeg">
                             </div>
-
-                            <!-- Profile Image Preview -->
-                            <div id="profile-preview-container" class="hidden crop-preview-wrapper"
-                                style="aspect-ratio: 1/1; overflow: hidden;">
-                                <img id="profile-image-preview" src=""
-                                    style="width: 100%; height: 100%; object-fit: cover;">
-                            </div>
-
+                             <!-- Profile Image Preview -->
+                             <div id="profile-preview-container" class="hidden crop-preview-wrapper">
+                                 <div class="crop-area">
+                                     <img id="profile-image-preview" src="" class="crop-image">
+                                     <div class="crop-overlay"></div>
+                                     <div class="crop-viewport square"></div>
+                                 </div>
+                             </div>
                             <p class="text-xs text-muted">Støtter kun JPG og PNG.</p>
                         </div>
                     </div>
@@ -689,11 +689,14 @@
                             </div>
                             <input type="file" id="post-image-input" accept="image/png, image/jpeg">
                         </div>
-                        <div id="post-image-preview-container" class="hidden crop-preview-wrapper post"
-                            style="margin-top: 1rem; max-height: 250px; overflow: hidden; border-radius: var(--radius-md);">
-                            <img id="post-image-preview" src="" style="width: 100%; height: 100%; object-fit: contain;">
-                            <button type="button" id="remove-post-image"
-                                style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 40;">&times;</button>
+                        <div id="post-image-preview-container" class="hidden crop-preview-wrapper post">
+                            <div class="crop-area">
+                                <img id="post-image-preview" src="" class="crop-image">
+                                <div class="crop-overlay"></div>
+                                <div class="crop-viewport post"></div>
+                                <button type="button" id="remove-post-image"
+                                    style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 40;">&times;</button>
+                            </div>
                         </div>
                     </div>
                     <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
@@ -771,12 +774,14 @@
                             </div>
                             <input type="file" id="event-image" accept="image/*">
                         </div>
-                        <div id="event-image-preview-wrapper" class="hidden crop-preview-wrapper banner"
-                            style="margin-top: 1rem; max-height: 200px; overflow: hidden; border-radius: var(--radius-md);">
-                            <img id="event-image-preview" src=""
-                                style="width: 100%; height: 100%; object-fit: contain;">
-                            <button type="button" id="remove-event-image"
-                                style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 40;">&times;</button>
+                        <div id="event-image-preview-wrapper" class="hidden crop-preview-wrapper banner">
+                            <div class="crop-area">
+                                <img id="event-image-preview" src="" class="crop-image">
+                                <div class="crop-overlay"></div>
+                                <div class="crop-viewport banner"></div>
+                                <button type="button" id="remove-event-image"
+                                    style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 40;">&times;</button>
+                            </div>
                         </div>
                     </div>
                     <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
@@ -1012,12 +1017,14 @@
             <div class="card-body">
                 <p class="text-sm text-muted mb-4">Dra rammen for å velge hvilket utsnitt som skal vises.</p>
 
-                <div id="modal-crop-preview-wrapper" class="crop-preview-wrapper" style="max-height: 50vh;">
-                    <img id="modal-crop-image" src="" style="width: 100%; display: block;">
-                    <div class="crop-overlay"></div>
-                    <div id="modal-crop-viewport" class="crop-viewport"></div>
-                    <div class="crop-hint">Dra for å justere</div>
-                </div>
+                <div id="modal-crop-preview-wrapper" class="crop-preview-wrapper">
+            <div class="crop-area">
+                <img id="modal-crop-image" src="" class="crop-image">
+                <div class="crop-overlay"></div>
+                <div id="modal-crop-viewport" class="crop-viewport"></div>
+                <div class="crop-hint">Dra for å justere</div>
+            </div>
+        </div>
             </div>
             <div class="card-footer" style="display: flex; justify-content: flex-end; gap: 1rem;">
                 <button type="button" id="cancel-universal-crop" class="btn btn-secondary">Avbryt</button>

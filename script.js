@@ -438,7 +438,7 @@ function attachEventListeners() {
     eventModalOverlay?.addEventListener('click', () => toggleModal(eventModal, false));
 
     // Upload zones
-    setupUploadZone('profile-image-file-input', 'profile-upload-drop-zone', 'profile-image-preview', 'profile-preview-container');
+    resetProfileAdjustment = setupUploadZone('profile-image-file-input', 'profile-upload-drop-zone', 'profile-image-preview', 'profile-preview-container');
     const profileInput = document.getElementById('profile-image-file-input');
     if (profileInput) {
         profileInput.addEventListener('cropComplete', (e) => {
@@ -718,7 +718,9 @@ export function setupUploadZone(inputId, dropZoneId, previewImgId, previewWrappe
     const previewImg = previewImgId ? document.getElementById(previewImgId) : null;
     const previewWrapper = previewWrapperId ? document.getElementById(previewWrapperId) : null;
 
-    if (!input || !dropZone) return;
+    if (!input || !dropZone) return null;
+
+    let resetPreview = null;
 
     dropZone.addEventListener('click', (e) => {
         if (e.target !== input) {
@@ -772,7 +774,14 @@ export function setupUploadZone(inputId, dropZoneId, previewImgId, previewWrappe
                     const reader = new FileReader();
                     reader.onload = (event) => {
                         if (previewImg) previewImg.src = event.target.result;
-                        if (previewWrapper) previewWrapper.classList.remove('hidden');
+                        if (previewWrapper) {
+                            previewWrapper.classList.remove('hidden');
+                            // Setup/Reset preview adjustment
+                            if (!resetPreview) {
+                                resetPreview = setupImageAdjustment(previewWrapperId, previewImgId, null, { readonly: true });
+                            }
+                            if (resetPreview) resetPreview(offset);
+                        }
                     };
                     reader.readAsDataURL(file);
                     input.dataset.cropOffset = offset;
@@ -789,6 +798,10 @@ export function setupUploadZone(inputId, dropZoneId, previewImgId, previewWrappe
     input.addEventListener('change', (e) => {
         handleFiles(e.target.files);
     });
+
+    return (offset) => {
+        if (resetPreview) resetPreview(offset);
+    };
 }
 window.setupUploadZone = setupUploadZone;
 
@@ -833,7 +846,8 @@ window.setupUploadZone = setupUploadZone;
 /**
  * Oppsett for dra-for-å-justere utsnitt (vertikal offset)
  */
-export function setupImageAdjustment(previewWrapperId, previewImgId, onOffsetChange) {
+export function setupImageAdjustment(previewWrapperId, previewImgId, onOffsetChange, options = {}) {
+    const { readonly = false } = options;
     const wrapper = document.getElementById(previewWrapperId);
     if (!wrapper) return;
 
@@ -848,33 +862,21 @@ export function setupImageAdjustment(previewWrapperId, previewImgId, onOffsetCha
     let currentTopPercent = 0; // Top position of viewport in % of image height
 
     const updateUI = () => {
-        // Enforce bounds: viewport must stay within image
-        const wrapperHeight = wrapper.offsetHeight;
         const imgHeight = img.offsetHeight;
         const viewportHeight = viewport.offsetHeight;
 
-        // Max top in pixels relative to image top (but wrapper might scroll or be bigger)
-        // Actually, viewport is absolute in wrapper.
+        if (imgHeight === 0 || viewportHeight === 0) return;
+
         const maxTopPx = imgHeight - viewportHeight;
         const topPx = (currentTopPercent / 100) * imgHeight;
+        const finalTopPx = Math.max(0, Math.min(topPx, maxTopPx));
 
-        let finalTopPx = Math.max(0, Math.min(topPx, maxTopPx));
-
-        // Update viewport position
+        // Update viewport position relative to image
         viewport.style.top = `${finalTopPx}px`;
 
         // Update overlay mask (clip-path)
-        const vTop = finalTopPx;
-        const vBottom = finalTopPx + viewportHeight;
-        const vLeft = 0;
-        const vRight = wrapper.offsetWidth;
-
-        // SVG-like path for clip-path: outer rectangle, then inner hole (viewport)
-        // clip-path: polygon(0% 0%, 0% 100%, 100% 100%, 100% 0%, 0% 0%, [hole starts here])
-        // To make a hole, we need to draw the inner rectangle as well.
-        // Simplified: using percentages for better responsiveness
-        const topPct = (vTop / imgHeight) * 100;
-        const bottomPct = (vBottom / imgHeight) * 100;
+        const topPct = (finalTopPx / imgHeight) * 100;
+        const bottomPct = ((finalTopPx + viewportHeight) / imgHeight) * 100;
 
         overlay.style.clipPath = `polygon(
             0% 0%, 0% 100%, 100% 100%, 100% 0%, 0% 0%, 
@@ -885,23 +887,26 @@ export function setupImageAdjustment(previewWrapperId, previewImgId, onOffsetCha
     };
 
     const startDrag = (e) => {
-        if (e.target !== viewport) return; // Only drag the viewport
+        // Find if we clicked the viewport or something inside it
+        if (!viewport.contains(e.target)) return;
+        
         isDragging = true;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
         const rect = viewport.getBoundingClientRect();
         startY = clientY - rect.top;
-        wrapper.style.cursor = 'grabbing';
+        document.body.style.cursor = 'grabbing';
+        
+        // Prevent scrolling while dragging on mobile
+        if (e.type === 'touchstart') e.preventDefault();
     };
 
     const doDrag = (e) => {
         if (!isDragging) return;
-        e.preventDefault();
-
+        
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        const wrapperRect = img.getBoundingClientRect(); // Relative to image
+        const imgRect = img.getBoundingClientRect();
 
-        let newTopPx = clientY - wrapperRect.top - startY;
-
+        let newTopPx = clientY - imgRect.top - startY;
         const maxTopPx = img.offsetHeight - viewport.offsetHeight;
         newTopPx = Math.max(0, Math.min(newTopPx, maxTopPx));
 
@@ -911,16 +916,22 @@ export function setupImageAdjustment(previewWrapperId, previewImgId, onOffsetCha
 
     const endDrag = () => {
         isDragging = false;
-        wrapper.style.cursor = 'default';
+        document.body.style.cursor = 'default';
     };
 
-    viewport.addEventListener('mousedown', startDrag);
-    window.addEventListener('mousemove', doDrag);
-    window.addEventListener('mouseup', endDrag);
+    if (!readonly) {
+        viewport.addEventListener('mousedown', startDrag);
+        window.addEventListener('mousemove', doDrag);
+        window.addEventListener('mouseup', endDrag);
 
-    viewport.addEventListener('touchstart', startDrag, { passive: false });
-    window.addEventListener('touchmove', doDrag, { passive: false });
-    window.addEventListener('touchend', endDrag);
+        viewport.addEventListener('touchstart', startDrag, { passive: false });
+        window.addEventListener('touchmove', doDrag, { passive: false });
+        window.addEventListener('touchend', endDrag);
+    } else {
+        viewport.style.cursor = 'default';
+        const hint = wrapper.querySelector('.crop-hint');
+        if (hint) hint.classList.add('hidden');
+    }
 
     // Initial setup when image loads
     img.onload = () => {
