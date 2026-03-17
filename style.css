@@ -139,6 +139,9 @@ body {
 
 body.modal-open {
   overflow: hidden;
+  height: 100vh;
+  touch-action: none;
+  -webkit-overflow-scrolling: none;
 }
 
 img {
