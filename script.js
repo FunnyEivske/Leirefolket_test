@@ -533,7 +533,7 @@ function attachEventListeners() {
 
                     showCustomAlert(`Bruker ${name} er nå opprettet som ${role === 'admin' ? 'administrator' : 'medlem'}!`);
                 }
-                closeUserModal();
+                closeMembersModal();
             } catch (error) {
                 console.error("Error creating user:", error);
                 let msg = "Kunne ikke opprette bruker: " + error.message;
@@ -2795,7 +2795,7 @@ async function initiateSoftDelete(userId) {
             deletionRequestedAt: serverTimestamp()
         });
         showCustomAlert("Brukeren er nå satt til sletting.");
-        closeUserModal();
+        closeMembersModal();
         loadMembersList();
         loadPendingDeletionsList();
     } catch (error) {
