@@ -123,12 +123,12 @@ function handleImageFileSelect(e) {
         }
 
         // Åpne beskjærings-modalen (kvadratisk utsnitt for profilbilde)
-        openUniversalCropModal(file, 'square', async (offset) => {
+        openUniversalCropModal(file, 'square', async (offset, state) => {
             uploadStatus.textContent = 'Behandler bilde...';
             
             try {
                 // Beskjær og komprimer bildet lokalt før opplasting
-                const croppedBase64 = await cropAndCompressUniversal(file, offset, {
+                const croppedBase64 = await cropAndCompressUniversal(file, state || offset, {
                     targetWidth: 500,
                     targetHeight: 500,
                     quality: 0.9

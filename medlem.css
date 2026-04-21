@@ -1327,10 +1327,6 @@ div[id$="-modal"]:not(.hidden) .card {
 body.modal-open {
   overflow: hidden !important;
   height: 100vh;
-  position: relative;
-  /* Prevent touch move on some mobile browsers */
-  touch-action: none;
-  -webkit-overflow-scrolling: none;
 }
 
 /* 
@@ -1985,71 +1981,67 @@ textarea {
 
 .crop-viewport {
   position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 100%;
-  height: auto;
-  max-width: 100%;
-  max-height: 100%;
+  left: 0;
+  top: 0;
+  width: 100px; /* Initial size, will be updated by JS */
+  height: 100px;
   border: 2px solid var(--color-primary);
-  box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0);
+  box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.4); /* Mask effect */
   z-index: 20;
-  cursor: ns-resize;
+  cursor: grab;
   background: transparent;
-  pointer-events: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
+  pointer-events: auto; /* Enable for handles and dragging */
 }
 
+.crop-viewport:active {
+    cursor: grabbing;
+}
+
+/* Grid lines inside viewport */
 .crop-grid {
     position: absolute;
     inset: 0;
+    pointer-events: none;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     grid-template-rows: repeat(3, 1fr);
-    pointer-events: none;
-    opacity: 0.6;
 }
 
 .grid-line {
     position: absolute;
-    background-color: rgba(255, 255, 255, 0.4);
-    box-shadow: 0 0 2px rgba(0, 0, 0, 0.3);
+    background-color: rgba(255, 255, 255, 0.5);
 }
 
-.line-v {
-    width: 1px;
-    height: 100%;
-    top: 0;
-}
-
+.line-v { width: 1px; height: 100%; top: 0; }
 .line-v:nth-child(1) { left: 33.33%; }
 .line-v:nth-child(2) { left: 66.66%; }
 
-.line-h {
-    height: 1px;
-    width: 100%;
-    left: 0;
-}
-
+.line-h { height: 1px; width: 100%; left: 0; }
 .line-h:nth-child(3) { top: 33.33%; }
 .line-h:nth-child(4) { top: 66.66%; }
 
-.crop-viewport.square {
-  aspect-ratio: 1 / 1;
-  width: 100%; /* Will be constrained by max-height 100% */
+/* Resize Handles */
+.crop-resizer {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background-color: var(--color-primary);
+    border: 2px solid white;
+    border-radius: 50%;
+    z-index: 30;
 }
 
-.crop-viewport.banner {
-  aspect-ratio: 2.5 / 1;
-  width: 100%;
-}
+.top-left { top: -6px; left: -6px; cursor: nwse-resize; }
+.top-right { top: -6px; right: -6px; cursor: nesw-resize; }
+.bottom-left { bottom: -6px; left: -6px; cursor: nesw-resize; }
+.bottom-right { bottom: -6px; right: -6px; cursor: nwse-resize; }
 
-.crop-viewport.post {
-  aspect-ratio: 2 / 1;
-  width: 100%;
+.crop-viewport.square { aspect-ratio: 1 / 1; }
+.crop-viewport.banner { aspect-ratio: 2.5 / 1; }
+.crop-viewport.post { aspect-ratio: 2 / 1; }
+
+.crop-overlay {
+    display: none; /* We use box-shadow on viewport for masking now */
 }
 
 .crop-hint {

@@ -853,135 +853,199 @@ window.setupUploadZone = setupUploadZone;
  * Oppsett for dra-for-å-justere utsnitt (vertikal offset)
  */
 export function setupImageAdjustment(previewWrapperId, previewImgId, onOffsetChange, options = {}) {
-    const { readonly = false } = options;
     const wrapper = document.getElementById(previewWrapperId);
-    if (!wrapper) return;
+    if (!wrapper) return null;
 
     const img = wrapper.querySelector('img');
     const viewport = wrapper.querySelector('.crop-viewport');
-    const overlay = wrapper.querySelector('.crop-overlay');
-
-    if (!wrapper || !img || !viewport) return;
+    const readonly = options.readonly || false;
 
     let isDragging = false;
-    let startY = 0;
-    let currentTopPercent = 0; // Top position of viewport in % of image height
+    let isResizing = false;
+    let resizeHandle = null;
 
-    const updateUI = () => {
-        const imgHeight = img.offsetHeight;
-        const viewportHeight = viewport.offsetHeight;
+    let startX, startY;
+    let startLeft, startTop, startWidth, startHeight;
 
-        if (imgHeight === 0 || viewportHeight === 0) return;
-
-        const maxTopPx = imgHeight - viewportHeight;
-        const topPx = (currentTopPercent / 100) * imgHeight;
-        const finalTopPx = Math.max(0, Math.min(topPx, maxTopPx));
-
-        // Update viewport position relative to image
-        viewport.style.top = `${finalTopPx}px`;
-
-        // Update overlay mask (clip-path)
-        const topPct = (finalTopPx / imgHeight) * 100;
-        const bottomPct = ((finalTopPx + viewportHeight) / imgHeight) * 100;
-
-        overlay.style.clipPath = `polygon(
-            0% 0%, 0% 100%, 100% 100%, 100% 0%, 0% 0%, 
-            0% ${topPct}%, 100% ${topPct}%, 100% ${bottomPct}%, 0% ${bottomPct}%, 0% ${topPct}%
-        )`;
-
-        if (onOffsetChange) onOffsetChange(currentTopPercent);
+    // State in percentages of image dimensions
+    let cropState = {
+        top: 0,
+        left: 0,
+        width: 80, // Default 80% width
+        height: 80
     };
 
-    const startDrag = (e) => {
-        isDragging = true;
+    const updateUI = () => {
+        const imgW = img.offsetWidth;
+        const imgH = img.offsetHeight;
+        if (imgW === 0 || imgH === 0) return;
+
+        // Apply percentages to pixels
+        viewport.style.top = `${(cropState.top / 100) * imgH}px`;
+        viewport.style.left = `${(cropState.left / 100) * imgW}px`;
+        viewport.style.width = `${(cropState.width / 100) * imgW}px`;
+        viewport.style.height = `${(cropState.height / 100) * imgH}px`;
+
+        if (onOffsetChange) {
+            onOffsetChange(cropState.top, cropState);
+        }
+    };
+
+    const initSize = () => {
+        const imgW = img.offsetWidth;
+        const imgH = img.offsetHeight;
+        if (imgW === 0 || imgH === 0) return;
+
+        // Initial square crop centered and fitted
+        if (imgW > imgH) {
+            cropState.height = 80;
+            cropState.width = (imgH * 0.8 / imgW) * 100;
+        } else {
+            cropState.width = 80;
+            cropState.height = (imgW * 0.8 / imgH) * 100;
+        }
+        cropState.top = (100 - cropState.height) / 2;
+        cropState.left = (100 - cropState.width) / 2;
+        updateUI();
+    };
+
+    const handleStart = (e) => {
+        if (readonly) return;
+        
         const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        const viewportRect = viewport.getBoundingClientRect();
         
-        // Use coordinates since viewport might have pointer-events: none
-        const isInside = (
-            clientX >= viewportRect.left &&
-            clientX <= viewportRect.right &&
-            clientY >= viewportRect.top &&
-            clientY <= viewportRect.bottom
-        );
-
-        if (isInside) {
-            startY = clientY - viewportRect.top;
+        const target = e.target;
+        if (target.classList.contains('crop-resizer')) {
+            isResizing = true;
+            resizeHandle = target;
+        } else if (viewport.contains(target)) {
+            isDragging = true;
         } else {
-            // Snap viewport center to click
-            startY = viewportRect.height / 2;
-            doDrag(e);
+            return; // Clicked outside
         }
+
+        startX = clientX;
+        startY = clientY;
         
-        document.body.style.cursor = 'grabbing';
-        
-        // Prevent scrolling while dragging on mobile
+        const imgW = img.offsetWidth;
+        const imgH = img.offsetHeight;
+        startLeft = (cropState.left / 100) * imgW;
+        startTop = (cropState.top / 100) * imgH;
+        startWidth = (cropState.width / 100) * imgW;
+        startHeight = (cropState.height / 100) * imgH;
+
+        document.body.style.cursor = isResizing ? getComputedStyle(target).cursor : 'grabbing';
         if (e.type === 'touchstart') e.preventDefault();
     };
 
-    const doDrag = (e) => {
-        if (!isDragging) return;
-        
+    const handleMove = (e) => {
+        if (!isDragging && !isResizing) return;
+
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        const imgRect = img.getBoundingClientRect();
+        const dx = clientX - startX;
+        const dy = clientY - startY;
 
-        let newTopPx = clientY - imgRect.top - startY;
-        const maxTopPx = img.offsetHeight - viewport.offsetHeight;
-        newTopPx = Math.max(0, Math.min(newTopPx, maxTopPx));
+        const imgW = img.offsetWidth;
+        const imgH = img.offsetHeight;
 
-        currentTopPercent = (newTopPx / img.offsetHeight) * 100;
-        
-        // Use requestAnimationFrame for smoother performance
+        if (isDragging) {
+            let newLeft = startLeft + dx;
+            let newTop = startTop + dy;
+
+            newLeft = Math.max(0, Math.min(newLeft, imgW - startWidth));
+            newTop = Math.max(0, Math.min(newTop, imgH - startHeight));
+
+            cropState.left = (newLeft / imgW) * 100;
+            cropState.top = (newTop / imgH) * 100;
+        } else if (isResizing) {
+            let newWidth = startWidth;
+            let newHeight = startHeight;
+            let newTop = startTop;
+            let newLeft = startLeft;
+
+            if (resizeHandle.classList.contains('bottom-right')) {
+                newWidth = startWidth + dx;
+                newHeight = startHeight + dy;
+            } else if (resizeHandle.classList.contains('bottom-left')) {
+                newWidth = startWidth - dx;
+                newHeight = startHeight + dy;
+                newLeft = startLeft + dx;
+            } else if (resizeHandle.classList.contains('top-right')) {
+                newWidth = startWidth + dx;
+                newHeight = startHeight - dy;
+                newTop = startTop + dy;
+            } else if (resizeHandle.classList.contains('top-left')) {
+                newWidth = startWidth - dx;
+                newHeight = startHeight - dy;
+                newTop = startTop + dy;
+                newLeft = startLeft + dx;
+            }
+
+            // Maintain Square Aspect Ratio
+            const aspectRatio = startWidth / startHeight;
+            if (Math.abs(dx) > Math.abs(dy)) {
+                newHeight = newWidth / aspectRatio;
+            } else {
+                newWidth = newHeight * aspectRatio;
+            }
+
+            // Constraints
+            const minSize = 40;
+            if (newWidth < minSize || newHeight < minSize) return;
+            if (newLeft < 0 || newTop < 0 || (newLeft + newWidth) > imgW || (newTop + newHeight) > imgH) return;
+
+            cropState.width = (newWidth / imgW) * 100;
+            cropState.height = (newHeight / imgH) * 100;
+            cropState.left = (newLeft / imgW) * 100;
+            cropState.top = (newTop / imgH) * 100;
+        }
+
         requestAnimationFrame(updateUI);
     };
 
-    const endDrag = () => {
+    const handleEnd = () => {
         isDragging = false;
+        isResizing = false;
         document.body.style.cursor = 'default';
     };
 
-    // Store cleanup function on the wrapper to prevent listener leaks
     if (wrapper._cropCleanup) wrapper._cropCleanup();
-    
     const cleanup = () => {
-        wrapper.removeEventListener('mousedown', startDrag);
-        window.removeEventListener('mousemove', doDrag);
-        window.removeEventListener('mouseup', endDrag);
-        wrapper.removeEventListener('touchstart', startDrag);
-        window.removeEventListener('touchmove', doDrag);
-        window.removeEventListener('touchend', endDrag);
+        wrapper.removeEventListener('mousedown', handleStart);
+        window.removeEventListener('mousemove', handleMove);
+        window.removeEventListener('mouseup', handleEnd);
+        wrapper.removeEventListener('touchstart', handleStart);
+        window.removeEventListener('touchmove', handleMove);
+        window.removeEventListener('touchend', handleEnd);
     };
     wrapper._cropCleanup = cleanup;
 
     if (!readonly) {
-        // We listen for start on the whole wrapper/area for better UX
-        wrapper.addEventListener('mousedown', startDrag);
-        window.addEventListener('mousemove', doDrag);
-        window.addEventListener('mouseup', endDrag);
-
-        wrapper.addEventListener('touchstart', startDrag, { passive: false });
-        window.addEventListener('touchmove', doDrag, { passive: false });
-        window.addEventListener('touchend', endDrag);
+        wrapper.addEventListener('mousedown', handleStart);
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('mouseup', handleEnd);
+        wrapper.addEventListener('touchstart', handleStart, { passive: false });
+        window.addEventListener('touchmove', handleMove, { passive: false });
+        window.addEventListener('touchend', handleEnd);
     } else {
+        viewport.querySelectorAll('.crop-resizer').forEach(r => r.classList.add('hidden'));
         viewport.style.cursor = 'default';
-        wrapper.style.cursor = 'default';
-        const hint = wrapper.querySelector('.crop-hint');
-        if (hint) hint.classList.add('hidden');
     }
 
-    // Initial setup when image loads
     if (img.complete) {
-        setTimeout(updateUI, 100);
+        initSize();
     } else {
-        img.onload = () => {
-            setTimeout(updateUI, 100);
-        };
+        img.onload = initSize;
     }
 
-    // Reset function
-    return (topPercent = 0) => {
-        currentTopPercent = topPercent;
+    return (topPercent = 0, state = null) => {
+        if (state) {
+            cropState = { ...state };
+        } else {
+            cropState.top = topPercent;
+        }
         updateUI();
     };
 }
@@ -990,12 +1054,15 @@ window.setupImageAdjustment = setupImageAdjustment;
 /**
  * Universell beskjæring og komprimering basert på vertikal offset
  */
-export async function cropAndCompressUniversal(file, topPercent, options = {}) {
+export async function cropAndCompressUniversal(file, cropData, options = {}) {
     const {
         targetWidth = 1000,
         targetHeight = 400,
         quality = 0.8
     } = options;
+
+    const cropState = typeof cropData === 'object' && cropData !== null ? cropData : null;
+    const topPercent = typeof cropData === 'number' ? cropData : (cropState ? cropState.top : 0);
 
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -1008,24 +1075,25 @@ export async function cropAndCompressUniversal(file, topPercent, options = {}) {
                 canvas.height = targetHeight;
                 const ctx = canvas.getContext('2d');
 
-                // The logic: 
-                // topPercent is where the TOP of the viewport is relative to the image height.
-                // We want to crop from that Y-coordinate.
-
-                // First, imagine the image is resized to targetWidth.
-                const scale = targetWidth / img.width;
-                const scaledImgHeight = img.height * scale;
-
-                // The source Y coordinate in original image pixels
-                const sourceY = (topPercent / 100) * img.height;
-
-                // The source height in original image pixels (maintaining aspect ratio)
-                // targetHeight / targetWidth = sourceHeight / img.width
-                const sourceHeight = (targetHeight / targetWidth) * img.width;
+                let sx, sy, sw, sh;
+                
+                if (cropState) {
+                    // Precision crop based on percentage state
+                    sx = (cropState.left / 100) * img.width;
+                    sy = (cropState.top / 100) * img.height;
+                    sw = (cropState.width / 100) * img.width;
+                    sh = (cropState.height / 100) * img.height;
+                } else {
+                    // Legacy vertical-only crop
+                    sx = 0;
+                    sy = (topPercent / 100) * img.height;
+                    sw = img.width;
+                    sh = (targetHeight / targetWidth) * img.width;
+                }
 
                 ctx.drawImage(
                     img,
-                    0, sourceY, img.width, sourceHeight, // Source rect
+                    sx, sy, sw, sh,      // Source rect
                     0, 0, targetWidth, targetHeight     // Target rect
                 );
 
