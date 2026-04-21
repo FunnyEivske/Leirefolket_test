@@ -923,20 +923,36 @@ p {
   .dashboard-grid {
     display: grid;
     grid-template-columns: 300px minmax(0, 1fr) 300px;
+    grid-template-areas: "left center right";
     gap: 2rem;
     align-items: start;
     padding-top: 1rem;
     padding-bottom: 2rem;
   }
 
-  .dashboard-sidebar,
-  .dashboard-sidebar-right {
+  .dashboard-sidebar { 
+    grid-area: left;
     position: sticky;
     top: 5.5rem;
-    /* Matches Header 4.5rem + Grid padding 1rem */
+    align-self: start !important;
+  }
+  
+  .dashboard-main { 
+    grid-area: center;
+    align-self: start !important;
+  }
+  
+  .dashboard-sidebar-right { 
+    grid-area: right;
+    position: sticky;
+    top: 5.5rem;
+    align-self: start !important;
+  }
+
+  .dashboard-sidebar,
+  .dashboard-sidebar-right {
     height: fit-content;
     margin-top: 0 !important;
-    align-self: start;
   }
 }
 
