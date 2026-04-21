@@ -1963,6 +1963,14 @@ textarea {
   background-color: var(--color-bg-dark);
   /* Matches site dark elements */
   margin-top: 1rem;
+  touch-action: none; /* Prevents scrolling while dragging */
+}
+
+.crop-area {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    cursor: ns-resize;
 }
 
 .crop-overlay {
@@ -1985,7 +1993,7 @@ textarea {
   z-index: 20;
   cursor: ns-resize;
   background: transparent;
-  pointer-events: auto;
+  pointer-events: none; /* Click through to crop-area */
 }
 
 .crop-viewport::after {

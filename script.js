@@ -585,7 +585,7 @@ export function openUniversalCropModal(file, aspectRatioClass, callback) {
                 currentCropOffset = offset;
             });
             if (currentCropReset) currentCropReset(0);
-        }, 300);
+        }, 400); // Slightly longer timeout for modal animation
     };
     reader.readAsDataURL(file);
 }
@@ -887,13 +887,19 @@ export function setupImageAdjustment(previewWrapperId, previewImgId, onOffsetCha
     };
 
     const startDrag = (e) => {
-        // Find if we clicked the viewport or something inside it
-        if (!viewport.contains(e.target)) return;
-        
         isDragging = true;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        const rect = viewport.getBoundingClientRect();
-        startY = clientY - rect.top;
+        const viewportRect = viewport.getBoundingClientRect();
+        
+        // If clicking inside viewport, maintain relative offset
+        if (viewport.contains(e.target)) {
+            startY = clientY - viewportRect.top;
+        } else {
+            // If clicking outside, snap viewport center to click
+            startY = viewportRect.height / 2;
+            doDrag(e); // Trigger immediate update
+        }
+        
         document.body.style.cursor = 'grabbing';
         
         // Prevent scrolling while dragging on mobile
@@ -911,7 +917,9 @@ export function setupImageAdjustment(previewWrapperId, previewImgId, onOffsetCha
         newTopPx = Math.max(0, Math.min(newTopPx, maxTopPx));
 
         currentTopPercent = (newTopPx / img.offsetHeight) * 100;
-        updateUI();
+        
+        // Use requestAnimationFrame for smoother performance
+        requestAnimationFrame(updateUI);
     };
 
     const endDrag = () => {
@@ -919,24 +927,43 @@ export function setupImageAdjustment(previewWrapperId, previewImgId, onOffsetCha
         document.body.style.cursor = 'default';
     };
 
+    // Store cleanup function on the wrapper to prevent listener leaks
+    if (wrapper._cropCleanup) wrapper._cropCleanup();
+    
+    const cleanup = () => {
+        wrapper.removeEventListener('mousedown', startDrag);
+        window.removeEventListener('mousemove', doDrag);
+        window.removeEventListener('mouseup', endDrag);
+        wrapper.removeEventListener('touchstart', startDrag);
+        window.removeEventListener('touchmove', doDrag);
+        window.removeEventListener('touchend', endDrag);
+    };
+    wrapper._cropCleanup = cleanup;
+
     if (!readonly) {
-        viewport.addEventListener('mousedown', startDrag);
+        // We listen for start on the whole wrapper/area for better UX
+        wrapper.addEventListener('mousedown', startDrag);
         window.addEventListener('mousemove', doDrag);
         window.addEventListener('mouseup', endDrag);
 
-        viewport.addEventListener('touchstart', startDrag, { passive: false });
+        wrapper.addEventListener('touchstart', startDrag, { passive: false });
         window.addEventListener('touchmove', doDrag, { passive: false });
         window.addEventListener('touchend', endDrag);
     } else {
         viewport.style.cursor = 'default';
+        wrapper.style.cursor = 'default';
         const hint = wrapper.querySelector('.crop-hint');
         if (hint) hint.classList.add('hidden');
     }
 
     // Initial setup when image loads
-    img.onload = () => {
-        setTimeout(updateUI, 100); // Small delay to ensure layout
-    };
+    if (img.complete) {
+        setTimeout(updateUI, 100);
+    } else {
+        img.onload = () => {
+            setTimeout(updateUI, 100);
+        };
+    }
 
     // Reset function
     return (topPercent = 0) => {
