@@ -2297,7 +2297,7 @@ textarea {
 }
 /* Glasur Gruppe Styles */
 .badge-accent {
-  background: #e67e22; /* Warm orange for glaze/fire */
+  background: var(--color-primary); /* Match site theme */
   color: white;
   border-radius: var(--radius-sm);
   font-weight: 700;
@@ -2305,12 +2305,12 @@ textarea {
 }
 
 .btn-accent {
-  background: #e67e22;
+  background: var(--color-primary);
   color: white;
 }
 
 .btn-accent:hover {
-  background: #d35400;
+  background: var(--color-primary-hover);
   transform: translateY(-2px);
   box-shadow: var(--shadow-md);
 }
