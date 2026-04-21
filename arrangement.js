@@ -23,6 +23,8 @@ const postsSection = document.getElementById('posts-section');
 const eventsSection = document.getElementById('events-section');
 const tabPosts = document.getElementById('tab-posts');
 const tabEvents = document.getElementById('tab-events');
+const tabGlaze = document.getElementById('tab-glaze');
+const glazeSection = document.getElementById('glaze-section');
 
 const newEventBtn = document.getElementById('new-event-btn');
 const newEventForm = document.getElementById('new-event-form');
@@ -38,19 +40,29 @@ const arrangementsPath = `/artifacts/${appId}/public/data/arrangements`;
 
 // --- TAB LOGIKK ---
 function switchTab(tab) {
-    if (tab === 'posts') {
-        postsSection.classList.remove('hidden');
-        eventsSection.classList.add('hidden');
+    // Standard sections and tabs
+    const sections = [
+        { id: 'posts', section: postsSection, tab: tabPosts },
+        { id: 'events', section: eventsSection, tab: tabEvents },
+        { id: 'glaze', section: glazeSection, tab: tabGlaze }
+    ];
 
-        tabPosts.classList.replace('btn-secondary', 'btn-primary');
-        tabEvents.classList.replace('btn-primary', 'btn-secondary');
-    } else {
-        postsSection.classList.add('hidden');
-        eventsSection.classList.remove('hidden');
-
-        tabEvents.classList.replace('btn-secondary', 'btn-primary');
-        tabPosts.classList.replace('btn-primary', 'btn-secondary');
-    }
+    sections.forEach(s => {
+        if (!s.section || !s.tab) return;
+        
+        if (s.id === tab) {
+            s.section.classList.remove('hidden');
+            s.tab.classList.replace('btn-secondary', 'btn-primary');
+            
+            // Trigger specific loading logic if needed
+            if (tab === 'glaze' && typeof window.setupGlazeListener === 'function') {
+                window.setupGlazeListener();
+            }
+        } else {
+            s.section.classList.add('hidden');
+            s.tab.classList.replace('btn-primary', 'btn-secondary');
+        }
+    });
 }
 
 // --- HJELPEFUNKSJONER ---
@@ -524,6 +536,7 @@ userReady.then(() => {
     // Tab event listeners
     tabPosts.addEventListener('click', () => switchTab('posts'));
     tabEvents.addEventListener('click', () => switchTab('events'));
+    if (tabGlaze) tabGlaze.addEventListener('click', () => switchTab('glaze'));
 
     // Admin listeners
     // newEventBtn is handled in script.js for modal toggling

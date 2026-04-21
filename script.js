@@ -109,6 +109,8 @@ let adminMembersBtn, createUserForm, createUserBtn, editUserIdInput, userMemberS
 let adminMembersModal, adminMembersModalOverlay, closeMembersModalBtn, closeMembersFooterBtn, adminMembersList, tabActiveMembers, tabPendingDeletions, tabArchive, tabAddMember, activeMembersSection, pendingDeletionsSection, archiveSection, addMemberSection, adminPendingList, adminArchiveList, adminSoftDeleteBtn;
 let adminControlModal, adminControlModalOverlay, closeAdminControlModalBtn, closeAdminControlFooterBtn, adminPanelGalleryBtn, adminPanelStatusBtn, adminPanelMembersBtn;
 let expandAllUsersBtn, collapseAllUsersBtn, activeImagesGrid, activeImageCount;
+let glazePostModal, glazePostModalOverlay, closeGlazePostModalBtn, cancelGlazePostModalBtn, newGlazePostBtn, glazePostForm, glazePostTitle, glazePostContent, glazePostSubmitBtn, glazePostError;
+let glazeUploadDropZone, glazeImageInput, glazeImagePreviewContainer, glazeImagePreview, removeGlazeImageBtn;
 let tosModal, tosCheckbox, acceptTosBtn, declineTosBtn;
 let messageModal, messageModalText, messageModalClose, messageModalOverlay;
 let confirmModal, confirmModalText, confirmModalOk, confirmModalCancel, confirmModalOverlay;
@@ -149,6 +151,23 @@ function initUI() {
     uploadModal = document.getElementById('upload-modal');
     uploadModalOverlay = document.getElementById('upload-modal-overlay');
     closeUploadModalBtn = document.getElementById('close-upload-modal');
+
+    // Glaze Post Elements
+    glazePostModal = document.getElementById('glaze-post-modal');
+    glazePostModalOverlay = document.getElementById('glaze-post-modal-overlay');
+    closeGlazePostModalBtn = document.getElementById('close-glaze-post-modal');
+    cancelGlazePostModalBtn = document.getElementById('cancel-glaze-post-modal');
+    newGlazePostBtn = document.getElementById('new-glaze-post-btn');
+    glazePostForm = document.getElementById('new-glaze-post-form');
+    glazePostTitle = document.getElementById('glaze-post-title');
+    glazePostContent = document.getElementById('glaze-post-content');
+    glazePostSubmitBtn = document.getElementById('glaze-post-submit-button');
+    glazePostError = document.getElementById('glaze-post-error');
+    glazeUploadDropZone = document.getElementById('glaze-upload-drop-zone');
+    glazeImageInput = document.getElementById('glaze-image-input');
+    glazeImagePreviewContainer = document.getElementById('glaze-image-preview-container');
+    glazeImagePreview = document.getElementById('glaze-image-preview');
+    removeGlazeImageBtn = document.getElementById('remove-glaze-image');
     uploadForm = document.getElementById('upload-form');
     uploadFilesInput = document.getElementById('upload-files-input');
     uploadDropZone = document.getElementById('upload-drop-zone');
@@ -1661,6 +1680,8 @@ function updateUI(user, profile) {
             profileRoleText.textContent = 'Sekretær';
         } else if (authState.role === 'styremedlem') {
             profileRoleText.textContent = 'Styremedlem';
+        } else if (authState.role === 'glazeMaster') {
+            profileRoleText.textContent = 'Glasur/Brann';
         } else {
             profileRoleText.textContent = 'Medlem';
         }
@@ -1731,7 +1752,9 @@ function updateUI(user, profile) {
         adminPublishCard.classList.toggle('hidden', !user);
         updateScrollLock();
 
-        const canPublish = authState.role === 'admin' || authState.role === 'sekretær' || authState.role === 'contributor';
+        const isAdmin = authState.role === 'admin' || authState.role === 'sekretær' || authState.role === 'contributor';
+        const isGlazeMaster = authState.role === 'admin' || authState.role === 'glazeMaster';
+        const canPublish = isAdmin || isGlazeMaster;
 
         // Oppdater tittel basert på rolle
         if (publishCardTitle) {
@@ -1739,9 +1762,12 @@ function updateUI(user, profile) {
         }
 
         // Vis/skjul knapper basert på tilgang
-        if (newPostBtn) newPostBtn.classList.toggle('hidden', !canPublish);
-        if (newEventBtn) newEventBtn.classList.toggle('hidden', !canPublish);
-        if (adminPublishSeparator) adminPublishSeparator.classList.toggle('hidden', !canPublish);
+        if (newPostBtn) newPostBtn.classList.toggle('hidden', !isAdmin);
+        if (newEventBtn) newEventBtn.classList.toggle('hidden', !isAdmin);
+        if (newGlazePostBtn) newGlazePostBtn.classList.toggle('hidden', !isGlazeMaster);
+        
+        const showSeparator = isAdmin || isGlazeMaster;
+        if (adminPublishSeparator) adminPublishSeparator.classList.toggle('hidden', !showSeparator);
     }
 
     // Vis/skjul Administrasjon-knapp i profilkort (KUN for admin)

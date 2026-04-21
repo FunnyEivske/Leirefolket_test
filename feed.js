@@ -26,6 +26,10 @@ const postError = document.getElementById('post-error');
 const postSubmitButton = document.getElementById('post-submit-button');
 const feedContainer = document.getElementById('feed-container');
 const feedLoading = document.getElementById('feed-loading');
+
+// Glaze Feed Elements
+const glazeFeedContainer = document.getElementById('glaze-feed-container');
+const glazeFeedLoading = document.getElementById('glaze-feed-loading');
 const loadMoreContainer = document.getElementById('load-more-container');
 const loadMoreBtn = document.getElementById('load-more-btn');
 
@@ -48,11 +52,16 @@ const postModal = document.getElementById('post-modal');
 
 let currentLimit = 5;
 let feedUnsubscribe = null;
+let glazeUnsubscribe = null;
 
 // Image Offset State for Posts
 let postImageOffset = 0;
 let resetPostAdjustment = null;
 let editingPostId = null; // Tracks which post is being edited
+
+// Glaze Post State
+let glazeImageOffset = 0;
+let resetGlazeAdjustment = null;
 
 // Initialisering for Universal Cropping
 userReady.then(() => {
@@ -74,6 +83,15 @@ userReady.then(() => {
     if (detailComment && !detailComment.dataset.taggingInitialized) {
         new TaggingSystem(detailComment, getSearchableUsers);
         detailComment.dataset.taggingInitialized = 'true';
+    }
+
+    // Glaze image handling
+    const glazeImageInput = document.getElementById('glaze-image-input');
+    if (glazeImageInput) {
+        glazeImageInput.addEventListener('cropComplete', (e) => {
+            glazeImageOffset = e.detail.offset;
+            console.log("Glaze crop complete. Offset:", glazeImageOffset);
+        });
     }
 });
 
@@ -129,9 +147,14 @@ function setCachedFeed(posts) {
 /**
  * Renders feed items to the container.
  */
-function renderFeed(posts) {
-    if (feedLoading) feedLoading.classList.add('hidden');
-    feedContainer.innerHTML = '';
+function renderFeed(posts, containerId = 'feed-container') {
+    const container = document.getElementById(containerId);
+    const loadingEl = document.getElementById(containerId + '-loading');
+    
+    if (loadingEl) loadingEl.classList.add('hidden');
+    if (!container) return;
+    
+    container.innerHTML = '';
 
     if (posts.length === 0) {
         feedContainer.innerHTML = '<p class="text-center" style="color: var(--color-text-muted);">Ingen innlegg ennå.</p>';
@@ -165,10 +188,12 @@ function renderFeed(posts) {
                            </div>`
             }
                 <div>
-                    <p style="font-weight: 600; margin: 0; color: var(--color-secondary);">${safeAuthorName}</p>
+                    <p style="font-weight: 600; margin: 0; color: var(--color-secondary);">
+                        ${safeAuthorName}
+                    </p>
                     <p style="font-size: 0.85rem; margin: 0; color: var(--color-text-muted);">${displayDate}</p>
                 </div>
-                ${authState.role === 'admin' ? `
+                ${(authState.role === 'admin' || (post.category === 'glaze' && authState.role === 'glazeMaster')) ? `
                     <div style="margin-left: auto; display: flex; gap: 0.25rem;">
                         <button class="btn btn-ghost btn-sm post-edit-btn" data-id="${post.id}" title="Rediger innlegg" style="padding: 0.25rem; font-size: 1.1rem; line-height: 1;">✏️</button>
                         <button class="btn btn-ghost btn-sm post-delete-btn" data-id="${post.id}" title="Slett innlegg" style="padding: 0.25rem; font-size: 1.1rem; line-height: 1;">🗑️</button>
@@ -215,7 +240,7 @@ function renderFeed(posts) {
                 </div>
             </div>
         `;
-        feedContainer.appendChild(postElement);
+        container.appendChild(postElement);
 
         // Setup individual listeners for counts/previews
         setupPostStatsListeners(post.id);
@@ -229,11 +254,13 @@ function renderFeed(posts) {
     });
 
     // Event Delegation for buttons
-    setupFeedEventListeners();
+    // Removed call here as we'll attach to the generic containers
 }
 
-function setupFeedEventListeners() {
-    feedContainer.onclick = (e) => {
+function setupFeedUIEventListeners(container) {
+    if (!container) return;
+    
+    container.onclick = (e) => {
         const target = e.target;
 
         // Like Button
@@ -272,13 +299,6 @@ function setupFeedEventListeners() {
         }
     };
 
-    feedContainer.onkeydown = (e) => {
-        if (e.key === 'Enter' && e.target.classList.contains('quick-comment-input')) {
-            const input = e.target;
-            const text = input.value.trim();
-            if (text) {
-                handleAddComment(input.dataset.id, text);
-                input.value = '';
             }
         }
     };
@@ -291,7 +311,9 @@ function setupFeedListener(limitCount = 5) {
     if (feedUnsubscribe) feedUnsubscribe();
 
     const feedCollectionRef = collection(db, feedCollectionPath);
-    const q = query(feedCollectionRef, orderBy("createdAt", "desc"), limit(limitCount));
+    // Filter out glaze posts from main feed
+    // We use category == 'general' or just handle it if category is missing
+    const q = query(feedCollectionRef, orderBy("createdAt", "desc"), limit(limitCount * 2)); // Fetch more to allow filtering
 
     // 1. Vis fra cache først
     const cached = getCachedFeed();
@@ -313,19 +335,23 @@ function setupFeedListener(limitCount = 5) {
             });
         });
 
+        // Filter for main feed
+        const filteredPosts = posts.filter(p => p.category !== 'glaze').slice(0, limitCount);
+
         // Oppdater cache (kun for standard limit så den ikke vokser uendelig)
         if (limitCount === 5) {
-            setCachedFeed(posts);
+            setCachedFeed(filteredPosts);
         }
 
         // Håndter "Last flere"-knapp
-        if (snapshot.size < limitCount) {
+        if (filteredPosts.length < limitCount && posts.length < limitCount * 2) {
             if (loadMoreContainer) loadMoreContainer.classList.add('hidden');
         } else {
             if (loadMoreContainer) loadMoreContainer.classList.remove('hidden');
         }
 
-        renderFeed(posts);
+        renderFeed(filteredPosts, 'feed-container');
+        setupFeedUIEventListeners(feedContainer);
 
     }, (error) => {
         console.error("Error fetching feed:", error);
@@ -383,7 +409,7 @@ async function handleEditPost(postId) {
  */
 async function handlePostSubmit(e) {
     e.preventDefault();
-    if ((authState.role !== 'admin' && authState.role !== 'contributor') || !authState.user) {
+    if ((authState.role !== 'admin' && authState.role !== 'contributor' && authState.role !== 'sekretær' && authState.role !== 'styremedlem') || !authState.user) {
         if (postError) postError.textContent = 'Du har ikke tilgang til å publisere.';
         return;
     }
@@ -430,6 +456,7 @@ async function handlePostSubmit(e) {
             content: content,
             imageUrl: imageUrl,
             imageOffset: imageOffset,
+            category: 'general', // Explicitly set general category
             updatedAt: serverTimestamp()
         };
 
@@ -458,7 +485,7 @@ async function handlePostSubmit(e) {
         }
 
         // Tøm skjemaet og tilbakestill
-        newPostForm.reset();
+        if (newPostForm) newPostForm.reset();
         if (postImagePreviewContainer) postImagePreviewContainer.classList.add('hidden');
         if (postImagePreview) postImagePreview.src = '';
         if (postUploadDropZone) postUploadDropZone.classList.remove('hidden');
@@ -478,6 +505,91 @@ async function handlePostSubmit(e) {
         if (postSubmitButton) {
             postSubmitButton.disabled = false;
             postSubmitButton.textContent = originalBtnText;
+        }
+    }
+}
+
+/**
+ * Håndterer publisering av nytt glasur-innlegg.
+ */
+async function handleGlazePostSubmit(e) {
+    e.preventDefault();
+    const isGlazeMaster = authState.role === 'admin' || authState.role === 'glazeMaster';
+    if (!isGlazeMaster || !authState.user) {
+        showCustomAlert("Du har ikke tilgang til å publisere her.");
+        return;
+    }
+
+    const glazePostSubmitBtn = document.getElementById('glaze-post-submit-button');
+    const glazePostError = document.getElementById('glaze-post-error');
+    const glazePostForm = document.getElementById('new-glaze-post-form');
+    const glazePostModal = document.getElementById('glaze-post-modal');
+
+    if (glazePostError) glazePostError.textContent = '';
+    const originalBtnText = glazePostSubmitBtn ? glazePostSubmitBtn.textContent : 'Publiser';
+    if (glazePostSubmitBtn) {
+        glazePostSubmitBtn.disabled = true;
+        glazePostSubmitBtn.textContent = 'Publiserer...';
+    }
+
+    const title = document.getElementById('glaze-post-title').value;
+    const content = document.getElementById('glaze-post-content').value;
+    const imageFile = document.getElementById('glaze-image-input')?.files[0];
+
+    const authorName = authState.profile?.displayName || (authState.user?.email ? authState.user.email.split('@')[0] : 'Medlem');
+    const authorPhotoURL = authState.profile?.photoURL || null;
+
+    try {
+        let imageUrl = null;
+
+        if (imageFile) {
+            imageUrl = await cropAndCompressUniversal(imageFile, glazeImageOffset, {
+                targetWidth: 1000,
+                targetHeight: 500
+            });
+        }
+
+        const postData = {
+            title: title,
+            content: content,
+            imageUrl: imageUrl,
+            category: 'glaze',
+            authorId: authState.user.uid,
+            authorName: authorName,
+            authorPhotoURL: authorPhotoURL,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp(),
+            likesCount: 0,
+            commentsCount: 0
+        };
+
+        const feedCollectionRef = collection(db, feedCollectionPath);
+        const newPostRef = await addDoc(feedCollectionRef, postData);
+        
+        await notifyMentionedUsers(content, newPostRef.id, `${feedCollectionPath}/${newPostRef.id}`, `${authorName} publiserte en ny glasur-test`);
+
+        showCustomAlert("Glasur-innlegget ble publisert!");
+
+        // Reset form
+        glazePostForm.reset();
+        const previewContainer = document.getElementById('glaze-image-preview-container');
+        const previewImg = document.getElementById('glaze-image-preview');
+        const dropZone = document.getElementById('glaze-upload-drop-zone');
+        
+        if (previewContainer) previewContainer.classList.add('hidden');
+        if (previewImg) previewImg.src = '';
+        if (dropZone) dropZone.classList.remove('hidden');
+        glazeImageOffset = 0;
+
+        if (glazePostModal) toggleModal(glazePostModal, false);
+
+    } catch (error) {
+        console.error("Error saving glaze post:", error);
+        showCustomAlert("Det oppsto en feil: " + error.message);
+    } finally {
+        if (glazePostSubmitBtn) {
+            glazePostSubmitBtn.disabled = false;
+            glazePostSubmitBtn.textContent = originalBtnText;
         }
     }
 }
@@ -628,7 +740,8 @@ async function handleAddComment(postId, text) {
 }
 
 async function handleDeletePost(postId) {
-    if (authState.role !== 'admin') return;
+    const isGlazeMaster = authState.role === 'admin' || authState.role === 'glazeMaster';
+    if (!isGlazeMaster) return;
     const confirmed = await showCustomConfirm("Er du sikker på at du vil slette dette innlegget? Dette kan ikke angres.");
     if (confirmed) {
         try {
@@ -639,6 +752,31 @@ async function handleDeletePost(postId) {
             showCustomAlert("Kunne ikke slette innlegget.");
         }
     }
+}
+
+/**
+ * Sanntidslytter for Glasur-gruppe feeden.
+ */
+window.setupGlazeListener = function() {
+    if (glazeUnsubscribe) return; // Allerede aktiv
+
+    const feedCollectionRef = collection(db, feedCollectionPath);
+    const q = query(feedCollectionRef, where('category', '==', 'glaze'), orderBy("createdAt", "desc"), limit(10));
+
+    glazeUnsubscribe = onSnapshot(q, (snapshot) => {
+        const posts = [];
+        snapshot.forEach(doc => {
+            posts.push({ id: doc.id, ...doc.data() });
+        });
+
+        renderFeed(posts, 'glaze-feed-container');
+        setupFeedUIEventListeners(glazeFeedContainer);
+        
+    }, (error) => {
+        console.error("Error fetching glaze feed:", error);
+        if (glazeFeedLoading) glazeFeedLoading.classList.add('hidden');
+        glazeFeedContainer.innerHTML = '<p class="text-error">Kunne ikke laste glasur-gruppe.</p>';
+    });
 }
 
 async function handleDeleteComment(postId, commentId) {
@@ -692,6 +830,39 @@ if (document.getElementById('feed-container')) {
             newPostForm.addEventListener('submit', handlePostSubmit);
             // Setup tagging for the new post form content field
             setupPostTagging();
+        }
+
+        // --- GLAZE POST INITIALIZATION ---
+        const newGlazePostBtn = document.getElementById('new-glaze-post-btn');
+        const glazePostModal = document.getElementById('glaze-post-modal');
+        const closeGlazePostModalBtn = document.getElementById('close-glaze-post-modal');
+        const cancelGlazePostModalBtn = document.getElementById('cancel-glaze-post-modal');
+        const glazePostForm = document.getElementById('new-glaze-post-form');
+        const glazeUploadDropZone = document.getElementById('glaze-upload-drop-zone');
+        const glazeImageInput = document.getElementById('glaze-image-input');
+        const removeGlazeImageBtn = document.getElementById('remove-glaze-image');
+
+        if (newGlazePostBtn) {
+            newGlazePostBtn.onclick = () => toggleModal(glazePostModal, true);
+        }
+        if (closeGlazePostModalBtn) closeGlazePostModalBtn.onclick = () => toggleModal(glazePostModal, false);
+        if (cancelGlazePostModalBtn) cancelGlazePostModalBtn.onclick = () => toggleModal(glazePostModal, false);
+        if (glazePostForm) glazePostForm.addEventListener('submit', handleGlazePostSubmit);
+
+        if (typeof window.setupUploadZone === 'function' && glazeImageInput) {
+            window.setupUploadZone('glaze-image-input', 'glaze-upload-drop-zone', 'glaze-image-preview', 'glaze-image-preview-container');
+        }
+
+        if (removeGlazeImageBtn) {
+            removeGlazeImageBtn.onclick = () => {
+                if (glazeImageInput) glazeImageInput.value = '';
+                const previewContainer = document.getElementById('glaze-image-preview-container');
+                const previewImg = document.getElementById('glaze-image-preview');
+                if (previewContainer) previewContainer.classList.add('hidden');
+                if (previewImg) previewImg.src = '';
+                if (glazeUploadDropZone) glazeUploadDropZone.classList.remove('hidden');
+                glazeImageOffset = 0;
+            };
         }
 
         // --- NEW POST IMAGE HANDLING ---

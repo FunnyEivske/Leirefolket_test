@@ -1561,17 +1561,13 @@ body.modal-open {
   background-color: var(--color-bg-surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
-  overflow: hidden;
   margin-bottom: 2rem; /* Buffer at bottom */
   overscroll-behavior: contain;
 }
 
-/* Ensure the body within a modal card is the scrollable part */
+/* Ensure the body within a modal card is flexible but let the container handle scroll */
 .modal-content .card-body {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-  /* Important for flex scrolling */
+  /* Removed flex: 1 and overflow-y: auto to allow the whole modal container to scroll naturally */
 }
 
 /* Hide scrollbar ONLY for the document editor as requested */
@@ -2298,4 +2294,23 @@ textarea {
 
 .notif-item:last-child {
   border-bottom: none;
-}
+}
+/* Glasur Gruppe Styles */
+.badge-accent {
+  background: #e67e22; /* Warm orange for glaze/fire */
+  color: white;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.btn-accent {
+  background: #e67e22;
+  color: white;
+}
+
+.btn-accent:hover {
+  background: #d35400;
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
