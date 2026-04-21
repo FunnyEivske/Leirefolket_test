@@ -781,6 +781,12 @@ export function setupUploadZone(inputId, dropZoneId, previewImgId, previewWrappe
                                 resetPreview = setupImageAdjustment(previewWrapperId, previewImgId, null, { readonly: true });
                             }
                             if (resetPreview) resetPreview(offset);
+                            
+                            // Hide upload zone to save space in the modal
+                            if (dropZoneId === 'profile-upload-drop-zone') {
+                                const dropZone = document.getElementById(dropZoneId);
+                                if (dropZone) dropZone.classList.add('hidden');
+                            }
                         }
                     };
                     reader.readAsDataURL(file);
@@ -888,16 +894,24 @@ export function setupImageAdjustment(previewWrapperId, previewImgId, onOffsetCha
 
     const startDrag = (e) => {
         isDragging = true;
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches ? e.touches[0].clientY : e.clientY;
         const viewportRect = viewport.getBoundingClientRect();
         
-        // If clicking inside viewport, maintain relative offset
-        if (viewport.contains(e.target)) {
+        // Use coordinates since viewport might have pointer-events: none
+        const isInside = (
+            clientX >= viewportRect.left &&
+            clientX <= viewportRect.right &&
+            clientY >= viewportRect.top &&
+            clientY <= viewportRect.bottom
+        );
+
+        if (isInside) {
             startY = clientY - viewportRect.top;
         } else {
-            // If clicking outside, snap viewport center to click
+            // Snap viewport center to click
             startY = viewportRect.height / 2;
-            doDrag(e); // Trigger immediate update
+            doDrag(e);
         }
         
         document.body.style.cursor = 'grabbing';

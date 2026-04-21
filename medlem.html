@@ -330,7 +330,7 @@
                                 <input type="file" id="profile-image-file-input" accept="image/png, image/jpeg">
                             </div>
                              <!-- Profile Image Preview -->
-                             <div id="profile-preview-container" class="hidden crop-preview-wrapper">
+                             <div id="profile-preview-container" class="hidden crop-preview-wrapper profile-mini-preview">
                                  <div class="crop-area">
                                      <img id="profile-image-preview" src="" class="crop-image">
                                      <div class="crop-overlay"></div>
@@ -1021,7 +1021,14 @@
             <div class="crop-area">
                 <img id="modal-crop-image" src="" class="crop-image">
                 <div class="crop-overlay"></div>
-                <div id="modal-crop-viewport" class="crop-viewport"></div>
+                <div id="modal-crop-viewport" class="crop-viewport">
+                    <div class="crop-grid">
+                        <div class="grid-line line-v"></div>
+                        <div class="grid-line line-v"></div>
+                        <div class="grid-line line-h"></div>
+                        <div class="grid-line line-h"></div>
+                    </div>
+                </div>
                 <div class="crop-hint">Dra for å justere</div>
             </div>
         </div>
