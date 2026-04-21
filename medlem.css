@@ -820,6 +820,7 @@ p {
   padding: 1rem 0;
   width: 100%;
   max-width: 100%;
+  align-items: start;
 }
 
 .dashboard-sidebar,
@@ -832,6 +833,7 @@ p {
   min-width: 0;
   margin-top: 0 !important;
   padding-top: 0 !important;
+  align-self: start;
 }
 
 .dashboard-main {
@@ -934,6 +936,7 @@ p {
     /* Matches Header 4.5rem + Grid padding 1rem */
     height: fit-content;
     margin-top: 0 !important;
+    align-self: start;
   }
 }
 
