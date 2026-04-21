@@ -1326,7 +1326,6 @@ div[id$="-modal"]:not(.hidden) .card {
 /* Modal Scroll Lock - Unified */
 body.modal-open {
   overflow: hidden !important;
-  height: 100vh;
 }
 
 /* 

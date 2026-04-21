@@ -24,7 +24,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- GLOBAL STATE --- //
-let profileImageOffset = 0;
+let profileImageState = null;
 let resetProfileAdjustment = null;
 
 export let authState = {
@@ -443,7 +443,7 @@ function attachEventListeners() {
     const profileInput = document.getElementById('profile-image-file-input');
     if (profileInput) {
         profileInput.addEventListener('cropComplete', (e) => {
-            profileImageOffset = e.detail.offset;
+            profileImageState = e.detail.state;
         });
     }
 
@@ -454,7 +454,7 @@ function attachEventListeners() {
     if (applyUniversalCropBtn) {
         applyUniversalCropBtn.addEventListener('click', () => {
             if (currentCropCallback) {
-                currentCropCallback(currentCropOffset);
+                currentCropCallback(currentCropOffset, currentCropState);
             }
             toggleModal(universalCropModal, false);
         });
@@ -581,8 +581,9 @@ export function openUniversalCropModal(file, aspectRatioClass, callback) {
         // Initialize adjustment for the modal
         // We use a small timeout to ensure modal is visible and dimensions are correct
         setTimeout(() => {
-            currentCropReset = setupImageAdjustment('modal-crop-preview-wrapper', 'modal-crop-image', (offset) => {
+            currentCropReset = setupImageAdjustment('modal-crop-preview-wrapper', 'modal-crop-image', (offset, state) => {
                 currentCropOffset = offset;
+                currentCropState = state;
             });
             if (currentCropReset) currentCropReset(0);
         }, 400); // Slightly longer timeout for modal animation
@@ -770,7 +771,7 @@ export function setupUploadZone(inputId, dropZoneId, previewImgId, previewWrappe
                     if (previewWrapper.classList.contains('post')) aspectClass = 'post';
                 }
 
-                openUniversalCropModal(file, aspectClass, (offset) => {
+                openUniversalCropModal(file, aspectClass, (offset, state) => {
                     const reader = new FileReader();
                     reader.onload = (event) => {
                         if (previewImg) previewImg.src = event.target.result;
@@ -780,7 +781,7 @@ export function setupUploadZone(inputId, dropZoneId, previewImgId, previewWrappe
                             if (!resetPreview) {
                                 resetPreview = setupImageAdjustment(previewWrapperId, previewImgId, null, { readonly: true });
                             }
-                            if (resetPreview) resetPreview(offset);
+                            if (resetPreview) resetPreview(offset, state);
                             
                             // Hide upload zone to save space in the modal
                             if (dropZoneId === 'profile-upload-drop-zone') {
@@ -791,7 +792,8 @@ export function setupUploadZone(inputId, dropZoneId, previewImgId, previewWrappe
                     };
                     reader.readAsDataURL(file);
                     input.dataset.cropOffset = offset;
-                    input.dispatchEvent(new CustomEvent('cropComplete', { detail: { offset } }));
+                    input.dataset.cropState = JSON.stringify(state);
+                    input.dispatchEvent(new CustomEvent('cropComplete', { detail: { offset, state } }));
                 });
             }
         }
@@ -805,8 +807,8 @@ export function setupUploadZone(inputId, dropZoneId, previewImgId, previewWrappe
         handleFiles(e.target.files);
     });
 
-    return (offset) => {
-        if (resetPreview) resetPreview(offset);
+    return (offset, state) => {
+        if (resetPreview) resetPreview(offset, state);
     };
 }
 window.setupUploadZone = setupUploadZone;
@@ -1896,7 +1898,7 @@ async function handleProfileSave(e) {
     if (statusMsg) statusMsg.textContent = '';
 
     const newDisplayName = displayNameInput.value.trim();
-    let newPhotoURL = profileImageUrlInput.value.trim();
+    let newPhotoURL = authState.profile?.photoURL || '';
     const file = profileImageFileInput.files[0];
 
     console.log("Values to save:", { newDisplayName, newPhotoURL, file });
@@ -1910,10 +1912,10 @@ async function handleProfileSave(e) {
             if (!allowedTypes.includes(file.type)) {
                 throw new Error("Kun JPG og PNG-filer er tillatt.");
             }
-            console.log("Processing file with offset:", profileImageOffset);
+            console.log("Processing file with state:", profileImageState);
             statusMsg.textContent = 'Behandler bilde...';
 
-            newPhotoURL = await cropAndCompressUniversal(file, profileImageOffset, {
+            newPhotoURL = await cropAndCompressUniversal(file, profileImageState, {
                 targetWidth: 400,
                 targetHeight: 400, // Profilbilde er kvadratisk
                 previewHeight: 200
@@ -1948,7 +1950,7 @@ async function handleProfileSave(e) {
             profileImageFileInput.value = '';
             if (profilePreviewContainer) profilePreviewContainer.classList.add('hidden');
             if (profilePreviewImg) profilePreviewImg.src = '';
-            profileImageOffset = 0;
+            profileImageState = null;
             if (resetProfileAdjustment) resetProfileAdjustment(0);
         }, 1500);
 
