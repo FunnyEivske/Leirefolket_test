@@ -298,10 +298,6 @@ function setupFeedUIEventListeners(container) {
             return;
         }
     };
-
-            }
-        }
-    };
 }
 
 /**
