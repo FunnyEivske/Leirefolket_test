@@ -51,6 +51,7 @@ let currentVedtektId = null;
 let currentVedtektData = null;
 let currentCropCallback = null;
 let currentCropOffset = 0;
+let currentCropState = null;
 let currentCropReset = null;
 
 // Helper functions for page identification
