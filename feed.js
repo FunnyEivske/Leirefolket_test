@@ -1,4 +1,4 @@
-import { db, appId } from './firebase.js';
+import { db, storage, appId } from './firebase.js';
 import { authState, userReady, toggleModal, showCustomAlert, showCustomConfirm, setupImageAdjustment, cropAndCompressUniversal, resizeAndConvertToBase64, getSearchableUsers, getAllCachedUsers } from './script.js';
 import { TaggingSystem, parseMentionsForDisplay } from './tagging.js';
 import {
@@ -19,6 +19,7 @@ import {
     serverTimestamp,
     runTransaction
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
 // --- UI-ELEMENTER ---
 const newPostContainer = document.getElementById('new-post-container');
@@ -55,10 +56,25 @@ let currentLimit = 5;
 let feedUnsubscribe = null;
 let glazeUnsubscribe = null;
 
+// --- STORAGE HELPER ---
+async function uploadBase64ToStorage(base64String, path) {
+    try {
+        const response = await fetch(base64String);
+        const blob = await response.blob();
+        const fileRef = ref(storage, path);
+        const snapshot = await uploadBytes(fileRef, blob);
+        return await getDownloadURL(snapshot.ref);
+    } catch (error) {
+        console.error("Storage upload failed:", error);
+        return null;
+    }
+}
+
 // Image Offset State for Posts
 let postImageOffset = 0;
 let resetPostAdjustment = null;
 let editingPostId = null; // Tracks which post is being edited
+let editingGlazePostId = null; // Tracks which glaze post is being edited
 
 // Glaze Post State
 let glazeImageOffset = 0;
@@ -178,6 +194,42 @@ function renderFeed(posts, containerId = 'feed-container') {
             ? formatTimestamp({ toDate: () => new Date(post.createdAt.seconds * 1000) })
             : (post._cachedDate || 'Ukjent dato');
 
+        let imageHtml = '';
+        if (post.imageUrls && post.imageUrls.length > 0) {
+            const urls = post.imageUrls;
+            if (urls.length === 1) {
+                imageHtml = `<div class="feed-item-image" style="margin-top: 1rem; border-radius: var(--radius-md); overflow: hidden; cursor: pointer;">
+                    <img src="${urls[0]}" alt="${safeTitle}" style="width: 100%; display: block; object-fit: cover; max-height: 500px;" onclick="window.openLightbox('${urls[0]}', '${safeTitle}')">
+                </div>`;
+            } else if (urls.length === 2) {
+                imageHtml = `<div class="feed-item-image-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 1rem; border-radius: var(--radius-md); overflow: hidden;">
+                    <img src="${urls[0]}" alt="Bilde 1" style="width: 100%; height: 300px; object-fit: cover; cursor: pointer;" onclick="window.openLightbox('${urls[0]}', '${safeTitle}')">
+                    <img src="${urls[1]}" alt="Bilde 2" style="width: 100%; height: 300px; object-fit: cover; cursor: pointer;" onclick="window.openLightbox('${urls[1]}', '${safeTitle}')">
+                </div>`;
+            } else {
+                const extraCount = urls.length - 3;
+                const fullGridHtml = urls.map((u, i) => `<img src="${u}" style="width: 100%; height: 200px; object-fit: cover; cursor: pointer;" onclick="window.openLightbox('${u}', '${safeTitle}')">`).join('');
+                
+                imageHtml = `
+                <div id="grid-collapsed-${post.id}" class="feed-item-image-grid" style="display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 150px 150px; gap: 0.5rem; margin-top: 1rem; border-radius: var(--radius-md); overflow: hidden;">
+                    <img src="${urls[0]}" alt="Bilde 1" style="width: 100%; height: 100%; object-fit: cover; grid-row: span 2; cursor: pointer;" onclick="window.openLightbox('${urls[0]}', '${safeTitle}')">
+                    <img src="${urls[1]}" alt="Bilde 2" style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;" onclick="window.openLightbox('${urls[1]}', '${safeTitle}')">
+                    <div style="position: relative; width: 100%; height: 100%; cursor: pointer;" onclick="document.getElementById('grid-collapsed-${post.id}').style.display='none'; document.getElementById('grid-expanded-${post.id}').style.display='grid';">
+                        <img src="${urls[2]}" alt="Bilde 3" style="width: 100%; height: 100%; object-fit: cover;">
+                        ${extraCount > 0 ? `<div style="position: absolute; inset: 0; background: rgba(0,0,0,0.5); color: white; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold;">+${extraCount}</div>` : ''}
+                    </div>
+                </div>
+                <div id="grid-expanded-${post.id}" class="feed-item-image-grid" style="display: none; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.5rem; margin-top: 1rem; border-radius: var(--radius-md); overflow: hidden;">
+                    ${fullGridHtml}
+                </div>`;
+            }
+        } else if (postImageUrl) {
+            imageHtml = `
+            <div class="feed-item-image" style="margin-top: 1rem; border-radius: var(--radius-md); overflow: hidden; cursor: pointer;">
+                <img src="${postImageUrl}" alt="${safeTitle}" style="width: 100%; display: block; object-fit: cover; max-height: 500px;" onclick="window.openLightbox('${postImageUrl}', '${safeTitle}')">
+            </div>`;
+        }
+
         postElement.innerHTML = `
             <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
                 ${safePhotoURL
@@ -203,11 +255,7 @@ function renderFeed(posts, containerId = 'feed-container') {
             </div>
             <h3 style="margin-top: 0;">${safeTitle}</h3>
             <div class="feed-item-content">${parsedContentForDisplay.html}</div>
-            ${postImageUrl ? `
-                <div class="feed-item-image" style="margin-top: 1rem; border-radius: var(--radius-md); overflow: hidden; cursor: pointer;">
-                    <img src="${postImageUrl}" alt="${safeTitle}" style="width: 100%; display: block; object-fit: cover; max-height: 500px;" onclick="window.openLightbox('${postImageUrl}', '${safeTitle}')">
-                </div>
-            ` : ''}
+            ${imageHtml}
 
             <!-- Actions -->
             <div class="post-actions">
@@ -371,30 +419,72 @@ async function handleEditPost(postId) {
         }
 
         const postData = postDoc.data();
-        editingPostId = postId;
+        
+        if (postData.category === 'glaze') {
+            editingGlazePostId = postId;
+            document.getElementById('glaze-post-title').value = postData.title || '';
+            document.getElementById('glaze-post-content').value = postData.content || '';
+            
+            const glazeModalTitle = document.getElementById('glaze-post-modal') ? document.getElementById('glaze-post-modal').querySelector('h3') : null;
+            if (glazeModalTitle) glazeModalTitle.textContent = 'Rediger glasur-innlegg';
+            const glazePostSubmitBtn = document.getElementById('glaze-post-submit-button');
+            if (glazePostSubmitBtn) glazePostSubmitBtn.textContent = 'Lagre endringer';
 
-        // Fyll ut skjemaet
-        document.getElementById('post-title').value = postData.title || '';
-        document.getElementById('post-content').value = postData.content || '';
-
-        const modalTitle = postModal ? postModal.querySelector('h3') : null;
-        if (modalTitle) modalTitle.textContent = 'Rediger innlegg';
-        if (postSubmitButton) postSubmitButton.textContent = 'Lagre endringer';
-
-        // Håndter bilde-forhåndsvisning hvis det finnes
-        if (postData.imageUrl) {
-            if (postImagePreview) postImagePreview.src = postData.imageUrl;
-            if (postImagePreviewContainer) postImagePreviewContainer.classList.remove('hidden');
-            if (postUploadDropZone) postUploadDropZone.classList.add('hidden');
-            postImageOffset = postData.imageOffset || 0;
-            if (resetPostAdjustment) resetPostAdjustment(postImageOffset);
+            const previewContainer = document.getElementById('glaze-image-preview-container');
+            const dropZone = document.getElementById('glaze-upload-drop-zone');
+            
+            if ((postData.imageUrls && postData.imageUrls.length > 0) || postData.imageUrl) {
+                if (previewContainer) {
+                    previewContainer.innerHTML = '';
+                    previewContainer.classList.remove('hidden');
+                    
+                    const urlsToRender = postData.imageUrls && postData.imageUrls.length > 0 ? postData.imageUrls : [postData.imageUrl];
+                    urlsToRender.forEach(url => {
+                        const img = document.createElement('img');
+                        img.src = url;
+                        img.style.width = '100%';
+                        img.style.height = '80px';
+                        img.style.objectFit = 'cover';
+                        img.style.borderRadius = 'var(--radius-md)';
+                        previewContainer.appendChild(img);
+                    });
+                }
+                if (dropZone) dropZone.classList.add('hidden');
+                const removeBtn = document.getElementById('remove-glaze-image');
+                if (removeBtn) removeBtn.classList.remove('hidden');
+            } else {
+                if (previewContainer) {
+                    previewContainer.innerHTML = '';
+                    previewContainer.classList.add('hidden');
+                }
+                if (dropZone) dropZone.classList.remove('hidden');
+            }
+            
+            const glazePostModal = document.getElementById('glaze-post-modal');
+            if (glazePostModal) toggleModal(glazePostModal, true);
         } else {
-            if (postImagePreviewContainer) postImagePreviewContainer.classList.add('hidden');
-            if (postUploadDropZone) postUploadDropZone.classList.remove('hidden');
-            postImageOffset = 0;
-        }
+            editingPostId = postId;
 
-        if (postModal) toggleModal(postModal, true);
+            // Fyll ut skjemaet
+            document.getElementById('post-title').value = postData.title || '';
+            document.getElementById('post-content').value = postData.content || '';
+
+            const modalTitle = postModal ? postModal.querySelector('h3') : null;
+            if (modalTitle) modalTitle.textContent = 'Rediger innlegg';
+            if (postSubmitButton) postSubmitButton.textContent = 'Lagre endringer';
+
+            // Håndter bilde-forhåndsvisning hvis det finnes
+            if (postData.imageUrl) {
+                if (postImagePreview) postImagePreview.src = postData.imageUrl;
+                if (postImagePreviewContainer) postImagePreviewContainer.classList.remove('hidden');
+                if (postUploadDropZone) postUploadDropZone.classList.add('hidden');
+            } else {
+                if (postImagePreviewContainer) postImagePreviewContainer.classList.add('hidden');
+                if (postUploadDropZone) postUploadDropZone.classList.remove('hidden');
+            }
+
+            if (postModal) toggleModal(postModal, true);
+        }
     } catch (error) {
         console.error("Error fetching post for edit:", error);
         showCustomAlert("Kunne ikke hente innlegget: " + error.message);
@@ -441,7 +531,9 @@ async function handlePostSubmit(e) {
 
         if (imageFile) {
             // Bare endre størrelse uten å croppe (for å bevare original ratio)
-            imageUrl = await resizeAndConvertToBase64(imageFile, 1200);
+            const base64Data = await resizeAndConvertToBase64(imageFile, 1200);
+            const fileName = `post_${Date.now()}_${imageFile.name}`;
+            imageUrl = await uploadBase64ToStorage(base64Data, `feed_images/${fileName}`);
             imageOffset = 0; // Resettes hvis bildet er nytt
         }
 
@@ -528,49 +620,82 @@ async function handleGlazePostSubmit(e) {
 
     const title = document.getElementById('glaze-post-title').value;
     const content = document.getElementById('glaze-post-content').value;
-    const imageFile = document.getElementById('glaze-image-input')?.files[0];
+    const imageInput = document.getElementById('glaze-image-input');
+    const imageFiles = imageInput ? imageInput.files : [];
 
     const authorName = authState.profile?.displayName || (authState.user?.email ? authState.user.email.split('@')[0] : 'Medlem');
     const authorPhotoURL = authState.profile?.photoURL || null;
 
     try {
-        let imageUrl = null;
+        let imageUrls = [];
+        let existingImageUrl = null;
 
-        if (imageFile) {
-            imageUrl = await resizeAndConvertToBase64(imageFile, 1200);
+        if (editingGlazePostId && imageFiles.length === 0) {
+            const postDoc = await getDoc(doc(db, feedCollectionPath, editingGlazePostId));
+            if (postDoc.exists()) {
+                imageUrls = postDoc.data().imageUrls || [];
+                existingImageUrl = postDoc.data().imageUrl || null;
+            }
+        }
+
+        if (imageFiles && imageFiles.length > 0) {
+            for (let i = 0; i < Math.min(imageFiles.length, 30); i++) {
+                const base64Data = await resizeAndConvertToBase64(imageFiles[i], 1200);
+                const fileName = `glaze_${Date.now()}_${i}_${imageFiles[i].name}`;
+                const storageUrl = await uploadBase64ToStorage(base64Data, `glaze_images/${fileName}`);
+                if (storageUrl) {
+                    imageUrls.push(storageUrl);
+                }
+            }
+            existingImageUrl = imageUrls.length > 0 ? imageUrls[0] : null;
         }
 
         const postData = {
             title: title,
             content: content,
-            imageUrl: imageUrl,
+            imageUrl: existingImageUrl,
+            imageUrls: imageUrls.length > 0 ? imageUrls : null,
             category: 'glaze',
-            authorId: authState.user.uid,
-            authorName: authorName,
-            authorPhotoURL: authorPhotoURL,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-            likesCount: 0,
-            commentsCount: 0
+            updatedAt: serverTimestamp()
         };
 
-        const feedCollectionRef = collection(db, feedCollectionPath);
-        const newPostRef = await addDoc(feedCollectionRef, postData);
-        
-        await notifyMentionedUsers(content, newPostRef.id, `${feedCollectionPath}/${newPostRef.id}`, `${authorName} publiserte en ny glasur-test`);
+        let postId = editingGlazePostId;
 
-        showCustomAlert("Glasur-innlegget ble publisert!");
+        if (editingGlazePostId) {
+            await updateDoc(doc(db, feedCollectionPath, editingGlazePostId), postData);
+            showCustomAlert("Glasur-innlegget ble oppdatert!");
+        } else {
+            postData.authorId = authState.user.uid;
+            postData.authorName = authorName;
+            postData.authorPhotoURL = authorPhotoURL;
+            postData.createdAt = serverTimestamp();
+            postData.likesCount = 0;
+            postData.commentsCount = 0;
+
+            const feedCollectionRef = collection(db, feedCollectionPath);
+            const newPostRef = await addDoc(feedCollectionRef, postData);
+            postId = newPostRef.id;
+            
+            await notifyMentionedUsers(content, postId, `${feedCollectionPath}/${postId}`, `${authorName} publiserte en ny glasur-test`);
+            showCustomAlert("Glasur-innlegget ble publisert!");
+        }
 
         // Reset form
         glazePostForm.reset();
         const previewContainer = document.getElementById('glaze-image-preview-container');
         const previewImg = document.getElementById('glaze-image-preview');
         const dropZone = document.getElementById('glaze-upload-drop-zone');
+        const removeBtn = document.getElementById('remove-glaze-image');
         
-        if (previewContainer) previewContainer.classList.add('hidden');
+        if (previewContainer) {
+            previewContainer.innerHTML = '';
+            previewContainer.classList.add('hidden');
+        }
         if (previewImg) previewImg.src = '';
         if (dropZone) dropZone.classList.remove('hidden');
+        if (removeBtn) removeBtn.classList.add('hidden');
         glazeImageOffset = 0;
+        editingGlazePostId = null;
 
         if (glazePostModal) toggleModal(glazePostModal, false);
 
@@ -834,25 +959,70 @@ if (document.getElementById('feed-container')) {
         const removeGlazeImageBtn = document.getElementById('remove-glaze-image');
 
         if (newGlazePostBtn) {
-            newGlazePostBtn.onclick = () => toggleModal(glazePostModal, true);
+            newGlazePostBtn.onclick = () => {
+                editingGlazePostId = null;
+                if (glazePostForm) glazePostForm.reset();
+                
+                const glazeModalTitle = glazePostModal ? glazePostModal.querySelector('h3') : null;
+                if (glazeModalTitle) glazeModalTitle.textContent = 'Nytt glasur-innlegg';
+                const glazePostSubmitBtn = document.getElementById('glaze-post-submit-button');
+                if (glazePostSubmitBtn) glazePostSubmitBtn.textContent = 'Publiser';
+                
+                const previewContainer = document.getElementById('glaze-image-preview-container');
+                if (previewContainer) {
+                    previewContainer.innerHTML = '';
+                    previewContainer.classList.add('hidden');
+                }
+                if (removeGlazeImageBtn) removeGlazeImageBtn.classList.add('hidden');
+                if (glazeUploadDropZone) glazeUploadDropZone.classList.remove('hidden');
+                
+                toggleModal(glazePostModal, true);
+            };
         }
         if (closeGlazePostModalBtn) closeGlazePostModalBtn.onclick = () => toggleModal(glazePostModal, false);
         if (cancelGlazePostModalBtn) cancelGlazePostModalBtn.onclick = () => toggleModal(glazePostModal, false);
         if (glazePostForm) glazePostForm.addEventListener('submit', handleGlazePostSubmit);
 
-        if (typeof window.setupUploadZone === 'function' && glazeImageInput) {
-            window.setupUploadZone('glaze-image-input', 'glaze-upload-drop-zone', 'glaze-image-preview', 'glaze-image-preview-container');
+        if (glazeImageInput) {
+            glazeImageInput.addEventListener('change', (e) => {
+                const files = e.target.files;
+                const previewContainer = document.getElementById('glaze-image-preview-container');
+                const dropZone = document.getElementById('glaze-upload-drop-zone');
+                
+                if (files.length > 0) {
+                    previewContainer.innerHTML = '';
+                    previewContainer.classList.remove('hidden');
+                    if (removeGlazeImageBtn) removeGlazeImageBtn.classList.remove('hidden');
+                    if (dropZone) dropZone.classList.add('hidden');
+                    
+                    Array.from(files).forEach(file => {
+                        if (!file.type.startsWith('image/')) return;
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            const img = document.createElement('img');
+                            img.src = event.target.result;
+                            img.style.width = '100%';
+                            img.style.height = '80px';
+                            img.style.objectFit = 'cover';
+                            img.style.borderRadius = 'var(--radius-md)';
+                            previewContainer.appendChild(img);
+                        };
+                        reader.readAsDataURL(file);
+                    });
+                }
+            });
         }
 
         if (removeGlazeImageBtn) {
             removeGlazeImageBtn.onclick = () => {
                 if (glazeImageInput) glazeImageInput.value = '';
                 const previewContainer = document.getElementById('glaze-image-preview-container');
-                const previewImg = document.getElementById('glaze-image-preview');
-                if (previewContainer) previewContainer.classList.add('hidden');
-                if (previewImg) previewImg.src = '';
+                if (previewContainer) {
+                    previewContainer.innerHTML = '';
+                    previewContainer.classList.add('hidden');
+                }
+                if (removeGlazeImageBtn) removeGlazeImageBtn.classList.add('hidden');
                 if (glazeUploadDropZone) glazeUploadDropZone.classList.remove('hidden');
-                glazeImageOffset = 0;
             };
         }
 

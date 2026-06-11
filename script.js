@@ -795,9 +795,28 @@ export function setupUploadZone(inputId, dropZoneId, previewImgId, previewWrappe
                 if (aspectClass === 'free') {
                     const reader = new FileReader();
                     reader.onload = (event) => {
-                        if (previewImg) previewImg.src = event.target.result;
+                        if (previewImg) {
+                            previewImg.src = event.target.result;
+                            // Ensure the image fits nicely and doesn't break the modal
+                            previewImg.style.maxWidth = '100%';
+                            previewImg.style.maxHeight = '400px';
+                            previewImg.style.objectFit = 'contain';
+                            previewImg.style.borderRadius = 'var(--radius-md)';
+                        }
                         if (previewWrapper) {
                             previewWrapper.classList.remove('hidden');
+                            // Re-enable scrolling when touching the image
+                            previewWrapper.style.touchAction = 'auto';
+                            previewWrapper.style.height = 'auto';
+                            previewWrapper.style.maxHeight = 'none';
+                            previewWrapper.style.overflow = 'visible';
+                            
+                            const cropArea = previewWrapper.querySelector('.crop-area');
+                            if (cropArea) {
+                                cropArea.style.cursor = 'default';
+                                cropArea.style.height = 'auto';
+                            }
+                            
                             if (dropZoneId === 'profile-upload-drop-zone') {
                                 const dropZone = document.getElementById(dropZoneId);
                                 if (dropZone) dropZone.classList.add('hidden');

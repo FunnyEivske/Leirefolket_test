@@ -758,16 +758,12 @@
                                 <p class="text-sm font-semibold mb-1">Last opp bilde</p>
                                 <p class="text-xs text-muted">Dra hit eller klikk</p>
                             </div>
-                            <input type="file" id="glaze-image-input" accept="image/png, image/jpeg">
+                            <input type="file" id="glaze-image-input" accept="image/png, image/jpeg" multiple>
                         </div>
-                        <div id="glaze-image-preview-container" class="hidden crop-preview-wrapper post">
-                            <div class="crop-area">
-                                <img id="glaze-image-preview" src="" class="crop-image">
-                                <div class="crop-overlay"></div>
-                                <div class="crop-viewport post"></div>
-                                <button type="button" id="remove-glaze-image" style="position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.5); color: white; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 40;">&times;</button>
-                            </div>
+                        <div id="glaze-image-preview-container" class="hidden" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 0.5rem; margin-top: 1rem; position: relative;">
+                            <!-- Previews will be injected here -->
                         </div>
+                        <button type="button" id="remove-glaze-image" class="hidden" style="margin-top: 0.5rem; background: rgba(0,0,0,0.5); color: white; border: none; border-radius: var(--radius-md); padding: 0.25rem 0.5rem; cursor: pointer; font-size: 0.8rem;">Fjern alle bilder</button>
                     </div>
                     <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
                         <button type="button" id="cancel-glaze-post-modal" class="btn btn-secondary">Avbryt</button>
