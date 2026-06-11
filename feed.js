@@ -1,5 +1,5 @@
 import { db, appId } from './firebase.js';
-import { authState, userReady, toggleModal, showCustomAlert, showCustomConfirm, setupImageAdjustment, cropAndCompressUniversal, getSearchableUsers, getAllCachedUsers } from './script.js';
+import { authState, userReady, toggleModal, showCustomAlert, showCustomConfirm, setupImageAdjustment, cropAndCompressUniversal, resizeAndConvertToBase64, getSearchableUsers, getAllCachedUsers } from './script.js';
 import { TaggingSystem, parseMentionsForDisplay } from './tagging.js';
 import {
     collection,
@@ -7,6 +7,7 @@ import {
     onSnapshot,
     Timestamp,
     query,
+    where,
     orderBy,
     limit,
     doc,
@@ -439,12 +440,9 @@ async function handlePostSubmit(e) {
         }
 
         if (imageFile) {
-            // Bruk universell contextual cropping (offset i %)
-            imageUrl = await cropAndCompressUniversal(imageFile, postImageOffset, {
-                targetWidth: 1000,
-                targetHeight: 500 // 2:1 ratio for posts
-            });
-            imageOffset = 0; // Resettes hvis bildet er nytt (offset er bakt inn)
+            // Bare endre størrelse uten å croppe (for å bevare original ratio)
+            imageUrl = await resizeAndConvertToBase64(imageFile, 1200);
+            imageOffset = 0; // Resettes hvis bildet er nytt
         }
 
         const postData = {
@@ -539,10 +537,7 @@ async function handleGlazePostSubmit(e) {
         let imageUrl = null;
 
         if (imageFile) {
-            imageUrl = await cropAndCompressUniversal(imageFile, glazeImageOffset, {
-                targetWidth: 1000,
-                targetHeight: 500
-            });
+            imageUrl = await resizeAndConvertToBase64(imageFile, 1200);
         }
 
         const postData = {

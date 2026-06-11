@@ -1580,8 +1580,9 @@ body.modal-open {
   background-color: var(--color-bg-surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
-  margin-bottom: 2rem; /* Buffer at bottom */
-  overscroll-behavior: contain;
+  margin: 2rem auto; /* Buffer at top and bottom, center horizontally */
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 /* Ensure the body within a modal card is flexible but let the container handle scroll */
@@ -2052,7 +2053,7 @@ textarea {
 
 .crop-viewport.square { aspect-ratio: 1 / 1; }
 .crop-viewport.banner { aspect-ratio: 2.5 / 1; }
-.crop-viewport.post { aspect-ratio: 2 / 1; }
+.crop-viewport.post { aspect-ratio: auto; } /* Removed forced 2:1 ratio */
 
 .crop-overlay {
     display: none; /* We use box-shadow on viewport for masking now */

@@ -788,33 +788,54 @@ export function setupUploadZone(inputId, dropZoneId, previewImgId, previewWrappe
                 let aspectClass = 'square';
                 if (previewWrapper) {
                     if (previewWrapper.classList.contains('banner')) aspectClass = 'banner';
-                    if (previewWrapper.classList.contains('post')) aspectClass = 'post';
+                    if (previewWrapper.classList.contains('post')) aspectClass = 'free'; // Change post to free to skip crop
+                    if (previewWrapper.classList.contains('free')) aspectClass = 'free';
                 }
 
-                openUniversalCropModal(file, aspectClass, (offset, state) => {
+                if (aspectClass === 'free') {
                     const reader = new FileReader();
                     reader.onload = (event) => {
                         if (previewImg) previewImg.src = event.target.result;
                         if (previewWrapper) {
                             previewWrapper.classList.remove('hidden');
-                            // Setup/Reset preview adjustment
-                            if (!resetPreview) {
-                                resetPreview = setupImageAdjustment(previewWrapperId, previewImgId, null, { readonly: true });
-                            }
-                            if (resetPreview) resetPreview(offset, state);
-                            
-                            // Hide upload zone to save space in the modal
                             if (dropZoneId === 'profile-upload-drop-zone') {
                                 const dropZone = document.getElementById(dropZoneId);
                                 if (dropZone) dropZone.classList.add('hidden');
                             }
+                            const cropViewport = previewWrapper.querySelector('.crop-viewport');
+                            if (cropViewport) cropViewport.style.display = 'none'; // Hide viewport box
                         }
                     };
                     reader.readAsDataURL(file);
-                    input.dataset.cropOffset = offset;
-                    input.dataset.cropState = JSON.stringify(state);
-                    input.dispatchEvent(new CustomEvent('cropComplete', { detail: { offset, state } }));
-                });
+                    input.dataset.cropOffset = 0;
+                    input.dataset.cropState = null;
+                    input.dispatchEvent(new CustomEvent('cropComplete', { detail: { offset: 0, state: null } }));
+                } else {
+                    openUniversalCropModal(file, aspectClass, (offset, state) => {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            if (previewImg) previewImg.src = event.target.result;
+                            if (previewWrapper) {
+                                previewWrapper.classList.remove('hidden');
+                                // Setup/Reset preview adjustment
+                                if (!resetPreview) {
+                                    resetPreview = setupImageAdjustment(previewWrapperId, previewImgId, null, { readonly: true });
+                                }
+                                if (resetPreview) resetPreview(offset, state);
+                                
+                                // Hide upload zone to save space in the modal
+                                if (dropZoneId === 'profile-upload-drop-zone') {
+                                    const dropZone = document.getElementById(dropZoneId);
+                                    if (dropZone) dropZone.classList.add('hidden');
+                                }
+                            }
+                        };
+                        reader.readAsDataURL(file);
+                        input.dataset.cropOffset = offset;
+                        input.dataset.cropState = JSON.stringify(state);
+                        input.dispatchEvent(new CustomEvent('cropComplete', { detail: { offset, state } }));
+                    });
+                }
             }
         }
     };
