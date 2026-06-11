@@ -1556,11 +1556,9 @@ body.modal-open {
   inset: 0;
   z-index: 2000;
   display: flex;
-  align-items: flex-start; /* Align to top for scrolling */
+  align-items: center;
   justify-content: center;
-  padding: 1.5rem 1rem;
-  overflow-y: auto; /* Allow container to scroll */
-  -webkit-overflow-scrolling: touch;
+  padding: 1rem;
 }
 
 .modal-overlay {
@@ -1580,9 +1578,9 @@ body.modal-open {
   background-color: var(--color-bg-surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
-  margin: 2rem auto; /* Buffer at top and bottom, center horizontally */
-  max-height: 90vh;
+  max-height: calc(100dvh - 2rem);
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Ensure the body within a modal card is flexible but let the container handle scroll */

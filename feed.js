@@ -347,6 +347,25 @@ function setupFeedUIEventListeners(container) {
             return;
         }
     };
+
+    container.onkeydown = (e) => {
+        const target = e.target;
+        if (target.classList.contains('quick-comment-input') && e.key === 'Enter') {
+            e.preventDefault();
+            const text = target.value;
+            const postId = target.dataset.id;
+            if (text.trim() && postId) {
+                target.value = '';
+                handleAddComment(postId, text);
+                
+                // Ensure comments container is visible when commenting
+                const commentsContainer = document.getElementById(`comments-container-${postId}`);
+                if (commentsContainer && commentsContainer.classList.contains('hidden')) {
+                    toggleComments(postId);
+                }
+            }
+        }
+    };
 }
 
 /**
