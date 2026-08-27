@@ -2064,11 +2064,16 @@ async function loadSidebarMembersList() {
             .map(doc => ({ id: doc.id, ...doc.data() }))
             .filter(userData => userData.status !== 'pending_deletion');
 
-        // Filtrer til kun styremedlemmer for sidepanelet
+        // Filtrer til kun faktiske styremedlemmer for sidepanelet (ekskluder IT-administratorer)
         const boardMembers = allMembers.filter(userData => {
             const orgRole = (userData.organizationRole || '').toLowerCase();
             const role = (userData.role || '').toLowerCase();
-            return orgRole.includes('styremedlem') || role === 'styremedlem' || role === 'admin' || role === 'sekretær';
+
+            if (orgRole.includes('it administrator') || orgRole.startsWith('it ') || role === 'it administrator') {
+                return false;
+            }
+
+            return orgRole.includes('styremedlem') || role === 'styremedlem' || role === 'sekretær';
         });
 
         // Sorter styremedlemmer etter prioritet og deretter navn
@@ -2076,8 +2081,7 @@ async function loadSidebarMembersList() {
             'styremedlem - leder': 1,
             'styremedlem - økonomiansvarlig': 2,
             'styremedlem - sekretær': 3,
-            'styremedlem': 4,
-            'it administrator': 5
+            'styremedlem': 4
         };
 
         boardMembers.sort((a, b) => {
