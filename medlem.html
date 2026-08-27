@@ -161,6 +161,14 @@
                             </svg>
                             Nytt arrangement
                         </button>
+                        <!-- Glaze Post Button -->
+                        <button id="new-glaze-post-btn" class="btn btn-accent btn-full text-sm mb-2">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <path d="M12 5v14M5 12h14" />
+                            </svg>
+                            Nytt glasur-innlegg
+                        </button>
                         <hr id="admin-publish-separator" class="hidden"
                             style="margin: 1rem 0; border: 0; border-top: 1px solid var(--color-border);">
                         <!-- Referater Button -->
@@ -218,9 +226,10 @@
             <div class="dashboard-main">
                 <div class="card mb-6">
                     <div class="card-body" style="padding: 0.75rem;">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.5rem;">
                             <button id="tab-posts" class="btn btn-primary text-sm">Innlegg</button>
                             <button id="tab-events" class="btn btn-secondary text-sm">Arrangementer</button>
+                            <button id="tab-glaze" class="btn btn-secondary text-sm">Glasur gruppe</button>
                         </div>
                     </div>
                 </div>
@@ -244,8 +253,6 @@
 
                 <!-- Arrangementer Section -->
                 <section id="events-section" class="hidden">
-
-
                     <div id="upcoming-events-container"
                         style="display: flex; flex-direction: column; gap: 1.5rem; margin-top: 1.5rem;">
                         <div class="text-center py-10 text-muted">Laster arrangementer...</div>
@@ -265,6 +272,14 @@
                             style="display: flex; flex-direction: column; gap: 1rem; opacity: 0.7;">
                             <!-- Tidligere arrangementer her -->
                         </div>
+                    </div>
+                </section>
+
+                <!-- Glasur Gruppe Section -->
+                <section id="glaze-section" class="hidden">
+                    <div id="glaze-feed-container"
+                        style="display: flex; flex-direction: column; gap: 1.5rem;">
+                        <div id="glaze-feed-loading" class="text-center py-10 text-muted">Laster glasur-gruppe...</div>
                     </div>
                 </section>
 
@@ -335,7 +350,7 @@
                                 <input type="file" id="profile-image-file-input" accept="image/png, image/jpeg">
                             </div>
                             <!-- Profile Image Preview -->
-                            <div id="profile-preview-container" class="hidden crop-preview-wrapper">
+                            <div id="profile-preview-container" class="hidden crop-preview-wrapper profile-mini-preview">
                                 <div class="crop-area">
                                     <img id="profile-image-preview" src="" class="crop-image">
                                     <div class="crop-overlay"></div>
@@ -714,6 +729,57 @@
         </div>
     </div>
 
+    <!-- Nytt Glasur-innlegg Modal -->
+    <div id="glaze-post-modal" class="hidden modal-container">
+        <div id="glaze-post-modal-overlay" class="modal-overlay"></div>
+        <div class="card modal-content maxWidth-600">
+            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <h3 class="text-lg" style="margin-bottom: 0;">Nytt glasur-innlegg</h3>
+                <button id="close-glaze-post-modal" class="btn btn-ghost" style="padding: 0.5rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M18 6L6 18M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <div class="card-body">
+                <form id="new-glaze-post-form">
+                    <div class="form-group">
+                        <label class="form-label">Tittel</label>
+                        <input type="text" id="glaze-post-title" class="form-input" placeholder="f.eks. Ny blå glasur testet" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Beskrivelse / Oppskrift</label>
+                        <textarea id="glaze-post-content" class="form-input" style="min-height: 150px;" placeholder="Skriv om glasurer, brenning eller resultater..." required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Legg til bilde (Valgfritt)</label>
+                        <div id="glaze-upload-drop-zone" class="upload-drop-zone" style="min-height: 120px; padding: 1rem;">
+                            <div class="drop-zone-content">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="mb-2" style="opacity: 0.5;">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+                                    <circle cx="8.5" cy="8.5" r="1.5" />
+                                    <polyline points="21 15 16 10 5 21" />
+                                </svg>
+                                <p class="text-sm font-semibold mb-1">Last opp bilde</p>
+                                <p class="text-xs text-muted">Dra hit eller klikk</p>
+                            </div>
+                            <input type="file" id="glaze-image-input" accept="image/png, image/jpeg" multiple>
+                        </div>
+                        <div id="glaze-image-preview-container" class="hidden" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 0.5rem; margin-top: 1rem; position: relative;">
+                            <!-- Previews will be injected here -->
+                        </div>
+                        <button type="button" id="remove-glaze-image" class="hidden" style="margin-top: 0.5rem; background: rgba(0,0,0,0.5); color: white; border: none; border-radius: var(--radius-md); padding: 0.25rem 0.5rem; cursor: pointer; font-size: 0.8rem;">Fjern alle bilder</button>
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
+                        <button type="button" id="cancel-glaze-post-modal" class="btn btn-secondary">Avbryt</button>
+                        <button type="submit" id="glaze-post-submit-button" class="btn btn-primary">Publiser glasur-innlegg</button>
+                    </div>
+                    <p id="glaze-post-error" class="form-error"></p>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Nytt Arrangement Modal -->
     <div id="event-modal" class="hidden modal-container">
         <div id="event-modal-overlay" class="modal-overlay"></div>
@@ -1029,7 +1095,19 @@
                     <div class="crop-area">
                         <img id="modal-crop-image" src="" class="crop-image">
                         <div class="crop-overlay"></div>
-                        <div id="modal-crop-viewport" class="crop-viewport"></div>
+                        <div id="modal-crop-viewport" class="crop-viewport">
+                            <div class="crop-grid">
+                                <div class="grid-line line-v"></div>
+                                <div class="grid-line line-v"></div>
+                                <div class="grid-line line-h"></div>
+                                <div class="grid-line line-h"></div>
+                            </div>
+                            <!-- Resize Handles -->
+                            <div class="crop-resizer top-left"></div>
+                            <div class="crop-resizer top-right"></div>
+                            <div class="crop-resizer bottom-left"></div>
+                            <div class="crop-resizer bottom-right"></div>
+                        </div>
                         <div class="crop-hint">Dra for å justere</div>
                     </div>
                 </div>

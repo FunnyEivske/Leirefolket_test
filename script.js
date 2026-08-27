@@ -24,7 +24,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 // --- GLOBAL STATE --- //
-let profileImageOffset = 0;
+let profileImageState = null;
 let resetProfileAdjustment = null;
 
 export let authState = {
@@ -51,6 +51,7 @@ let currentVedtektId = null;
 let currentVedtektData = null;
 let currentCropCallback = null;
 let currentCropOffset = 0;
+let currentCropState = null;
 let currentCropReset = null;
 
 // Helper functions for page identification
@@ -108,6 +109,8 @@ let adminMembersBtn, createUserForm, createUserBtn, editUserIdInput, userMemberS
 let adminMembersModal, adminMembersModalOverlay, closeMembersModalBtn, closeMembersFooterBtn, adminMembersList, tabActiveMembers, tabPendingDeletions, tabArchive, tabAddMember, activeMembersSection, pendingDeletionsSection, archiveSection, addMemberSection, adminPendingList, adminArchiveList, adminSoftDeleteBtn;
 let adminControlModal, adminControlModalOverlay, closeAdminControlModalBtn, closeAdminControlFooterBtn, adminPanelGalleryBtn, adminPanelStatusBtn, adminPanelMembersBtn;
 let expandAllUsersBtn, collapseAllUsersBtn, activeImagesGrid, activeImageCount;
+let glazePostModal, glazePostModalOverlay, closeGlazePostModalBtn, cancelGlazePostModalBtn, newGlazePostBtn, glazePostForm, glazePostTitle, glazePostContent, glazePostSubmitBtn, glazePostError;
+let glazeUploadDropZone, glazeImageInput, glazeImagePreviewContainer, glazeImagePreview, removeGlazeImageBtn;
 let tosModal, tosCheckbox, acceptTosBtn, declineTosBtn;
 let messageModal, messageModalText, messageModalClose, messageModalOverlay;
 let confirmModal, confirmModalText, confirmModalOk, confirmModalCancel, confirmModalOverlay;
@@ -148,6 +151,23 @@ function initUI() {
     uploadModal = document.getElementById('upload-modal');
     uploadModalOverlay = document.getElementById('upload-modal-overlay');
     closeUploadModalBtn = document.getElementById('close-upload-modal');
+
+    // Glaze Post Elements
+    glazePostModal = document.getElementById('glaze-post-modal');
+    glazePostModalOverlay = document.getElementById('glaze-post-modal-overlay');
+    closeGlazePostModalBtn = document.getElementById('close-glaze-post-modal');
+    cancelGlazePostModalBtn = document.getElementById('cancel-glaze-post-modal');
+    newGlazePostBtn = document.getElementById('new-glaze-post-btn');
+    glazePostForm = document.getElementById('new-glaze-post-form');
+    glazePostTitle = document.getElementById('glaze-post-title');
+    glazePostContent = document.getElementById('glaze-post-content');
+    glazePostSubmitBtn = document.getElementById('glaze-post-submit-button');
+    glazePostError = document.getElementById('glaze-post-error');
+    glazeUploadDropZone = document.getElementById('glaze-upload-drop-zone');
+    glazeImageInput = document.getElementById('glaze-image-input');
+    glazeImagePreviewContainer = document.getElementById('glaze-image-preview-container');
+    glazeImagePreview = document.getElementById('glaze-image-preview');
+    removeGlazeImageBtn = document.getElementById('remove-glaze-image');
     uploadForm = document.getElementById('upload-form');
     uploadFilesInput = document.getElementById('upload-files-input');
     uploadDropZone = document.getElementById('upload-drop-zone');
@@ -443,7 +463,7 @@ function attachEventListeners() {
     const profileInput = document.getElementById('profile-image-file-input');
     if (profileInput) {
         profileInput.addEventListener('cropComplete', (e) => {
-            profileImageOffset = e.detail.offset;
+            profileImageState = e.detail.state;
         });
     }
 
@@ -454,7 +474,7 @@ function attachEventListeners() {
     if (applyUniversalCropBtn) {
         applyUniversalCropBtn.addEventListener('click', () => {
             if (currentCropCallback) {
-                currentCropCallback(currentCropOffset);
+                currentCropCallback(currentCropOffset, currentCropState);
             }
             toggleModal(universalCropModal, false);
         });
@@ -581,11 +601,12 @@ export function openUniversalCropModal(file, aspectRatioClass, callback) {
         // Initialize adjustment for the modal
         // We use a small timeout to ensure modal is visible and dimensions are correct
         setTimeout(() => {
-            currentCropReset = setupImageAdjustment('modal-crop-preview-wrapper', 'modal-crop-image', (offset) => {
+            currentCropReset = setupImageAdjustment('modal-crop-preview-wrapper', 'modal-crop-image', (offset, state) => {
                 currentCropOffset = offset;
+                currentCropState = state;
             });
             if (currentCropReset) currentCropReset(0);
-        }, 300);
+        }, 400); // Slightly longer timeout for modal animation
     };
     reader.readAsDataURL(file);
 }
@@ -767,26 +788,73 @@ export function setupUploadZone(inputId, dropZoneId, previewImgId, previewWrappe
                 let aspectClass = 'square';
                 if (previewWrapper) {
                     if (previewWrapper.classList.contains('banner')) aspectClass = 'banner';
-                    if (previewWrapper.classList.contains('post')) aspectClass = 'post';
+                    if (previewWrapper.classList.contains('post')) aspectClass = 'free'; // Change post to free to skip crop
+                    if (previewWrapper.classList.contains('free')) aspectClass = 'free';
                 }
 
-                openUniversalCropModal(file, aspectClass, (offset) => {
+                if (aspectClass === 'free') {
                     const reader = new FileReader();
                     reader.onload = (event) => {
-                        if (previewImg) previewImg.src = event.target.result;
+                        if (previewImg) {
+                            previewImg.src = event.target.result;
+                            // Ensure the image fits nicely and doesn't break the modal
+                            previewImg.style.maxWidth = '100%';
+                            previewImg.style.maxHeight = '400px';
+                            previewImg.style.objectFit = 'contain';
+                            previewImg.style.borderRadius = 'var(--radius-md)';
+                        }
                         if (previewWrapper) {
                             previewWrapper.classList.remove('hidden');
-                            // Setup/Reset preview adjustment
-                            if (!resetPreview) {
-                                resetPreview = setupImageAdjustment(previewWrapperId, previewImgId, null, { readonly: true });
+                            // Re-enable scrolling when touching the image
+                            previewWrapper.style.touchAction = 'auto';
+                            previewWrapper.style.height = 'auto';
+                            previewWrapper.style.maxHeight = 'none';
+                            previewWrapper.style.overflow = 'visible';
+                            
+                            const cropArea = previewWrapper.querySelector('.crop-area');
+                            if (cropArea) {
+                                cropArea.style.cursor = 'default';
+                                cropArea.style.height = 'auto';
                             }
-                            if (resetPreview) resetPreview(offset);
+                            
+                            if (dropZoneId === 'profile-upload-drop-zone') {
+                                const dropZone = document.getElementById(dropZoneId);
+                                if (dropZone) dropZone.classList.add('hidden');
+                            }
+                            const cropViewport = previewWrapper.querySelector('.crop-viewport');
+                            if (cropViewport) cropViewport.style.display = 'none'; // Hide viewport box
                         }
                     };
                     reader.readAsDataURL(file);
-                    input.dataset.cropOffset = offset;
-                    input.dispatchEvent(new CustomEvent('cropComplete', { detail: { offset } }));
-                });
+                    input.dataset.cropOffset = 0;
+                    input.dataset.cropState = null;
+                    input.dispatchEvent(new CustomEvent('cropComplete', { detail: { offset: 0, state: null } }));
+                } else {
+                    openUniversalCropModal(file, aspectClass, (offset, state) => {
+                        const reader = new FileReader();
+                        reader.onload = (event) => {
+                            if (previewImg) previewImg.src = event.target.result;
+                            if (previewWrapper) {
+                                previewWrapper.classList.remove('hidden');
+                                // Setup/Reset preview adjustment
+                                if (!resetPreview) {
+                                    resetPreview = setupImageAdjustment(previewWrapperId, previewImgId, null, { readonly: true });
+                                }
+                                if (resetPreview) resetPreview(offset, state);
+                                
+                                // Hide upload zone to save space in the modal
+                                if (dropZoneId === 'profile-upload-drop-zone') {
+                                    const dropZone = document.getElementById(dropZoneId);
+                                    if (dropZone) dropZone.classList.add('hidden');
+                                }
+                            }
+                        };
+                        reader.readAsDataURL(file);
+                        input.dataset.cropOffset = offset;
+                        input.dataset.cropState = JSON.stringify(state);
+                        input.dispatchEvent(new CustomEvent('cropComplete', { detail: { offset, state } }));
+                    });
+                }
             }
         }
     };
@@ -799,8 +867,8 @@ export function setupUploadZone(inputId, dropZoneId, previewImgId, previewWrappe
         handleFiles(e.target.files);
     });
 
-    return (offset) => {
-        if (resetPreview) resetPreview(offset);
+    return (offset, state) => {
+        if (resetPreview) resetPreview(offset, state);
     };
 }
 window.setupUploadZone = setupUploadZone;
@@ -847,100 +915,199 @@ window.setupUploadZone = setupUploadZone;
  * Oppsett for dra-for-å-justere utsnitt (vertikal offset)
  */
 export function setupImageAdjustment(previewWrapperId, previewImgId, onOffsetChange, options = {}) {
-    const { readonly = false } = options;
     const wrapper = document.getElementById(previewWrapperId);
-    if (!wrapper) return;
+    if (!wrapper) return null;
 
     const img = wrapper.querySelector('img');
     const viewport = wrapper.querySelector('.crop-viewport');
-    const overlay = wrapper.querySelector('.crop-overlay');
-
-    if (!wrapper || !img || !viewport) return;
+    const readonly = options.readonly || false;
 
     let isDragging = false;
-    let startY = 0;
-    let currentTopPercent = 0; // Top position of viewport in % of image height
+    let isResizing = false;
+    let resizeHandle = null;
+
+    let startX, startY;
+    let startLeft, startTop, startWidth, startHeight;
+
+    // State in percentages of image dimensions
+    let cropState = {
+        top: 0,
+        left: 0,
+        width: 80, // Default 80% width
+        height: 80
+    };
 
     const updateUI = () => {
-        const imgHeight = img.offsetHeight;
-        const viewportHeight = viewport.offsetHeight;
+        const imgW = img.offsetWidth;
+        const imgH = img.offsetHeight;
+        if (imgW === 0 || imgH === 0) return;
 
-        if (imgHeight === 0 || viewportHeight === 0) return;
+        // Apply percentages to pixels
+        viewport.style.top = `${(cropState.top / 100) * imgH}px`;
+        viewport.style.left = `${(cropState.left / 100) * imgW}px`;
+        viewport.style.width = `${(cropState.width / 100) * imgW}px`;
+        viewport.style.height = `${(cropState.height / 100) * imgH}px`;
 
-        const maxTopPx = imgHeight - viewportHeight;
-        const topPx = (currentTopPercent / 100) * imgHeight;
-        const finalTopPx = Math.max(0, Math.min(topPx, maxTopPx));
-
-        // Update viewport position relative to image
-        viewport.style.top = `${finalTopPx}px`;
-
-        // Update overlay mask (clip-path)
-        const topPct = (finalTopPx / imgHeight) * 100;
-        const bottomPct = ((finalTopPx + viewportHeight) / imgHeight) * 100;
-
-        overlay.style.clipPath = `polygon(
-            0% 0%, 0% 100%, 100% 100%, 100% 0%, 0% 0%, 
-            0% ${topPct}%, 100% ${topPct}%, 100% ${bottomPct}%, 0% ${bottomPct}%, 0% ${topPct}%
-        )`;
-
-        if (onOffsetChange) onOffsetChange(currentTopPercent);
+        if (onOffsetChange) {
+            onOffsetChange(cropState.top, cropState);
+        }
     };
 
-    const startDrag = (e) => {
-        // Find if we clicked the viewport or something inside it
-        if (!viewport.contains(e.target)) return;
-        
-        isDragging = true;
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        const rect = viewport.getBoundingClientRect();
-        startY = clientY - rect.top;
-        document.body.style.cursor = 'grabbing';
-        
-        // Prevent scrolling while dragging on mobile
-        if (e.type === 'touchstart') e.preventDefault();
-    };
+    const initSize = () => {
+        const imgW = img.offsetWidth;
+        const imgH = img.offsetHeight;
+        if (imgW === 0 || imgH === 0) return;
 
-    const doDrag = (e) => {
-        if (!isDragging) return;
-        
-        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-        const imgRect = img.getBoundingClientRect();
-
-        let newTopPx = clientY - imgRect.top - startY;
-        const maxTopPx = img.offsetHeight - viewport.offsetHeight;
-        newTopPx = Math.max(0, Math.min(newTopPx, maxTopPx));
-
-        currentTopPercent = (newTopPx / img.offsetHeight) * 100;
+        // Initial square crop centered and fitted
+        if (imgW > imgH) {
+            cropState.height = 80;
+            cropState.width = (imgH * 0.8 / imgW) * 100;
+        } else {
+            cropState.width = 80;
+            cropState.height = (imgW * 0.8 / imgH) * 100;
+        }
+        cropState.top = (100 - cropState.height) / 2;
+        cropState.left = (100 - cropState.width) / 2;
         updateUI();
     };
 
-    const endDrag = () => {
+    const handleStart = (e) => {
+        if (readonly) return;
+        
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        
+        const target = e.target;
+        if (target.classList.contains('crop-resizer')) {
+            isResizing = true;
+            resizeHandle = target;
+        } else if (viewport.contains(target)) {
+            isDragging = true;
+        } else {
+            return; // Clicked outside
+        }
+
+        startX = clientX;
+        startY = clientY;
+        
+        const imgW = img.offsetWidth;
+        const imgH = img.offsetHeight;
+        startLeft = (cropState.left / 100) * imgW;
+        startTop = (cropState.top / 100) * imgH;
+        startWidth = (cropState.width / 100) * imgW;
+        startHeight = (cropState.height / 100) * imgH;
+
+        document.body.style.cursor = isResizing ? getComputedStyle(target).cursor : 'grabbing';
+        if (e.type === 'touchstart') e.preventDefault();
+    };
+
+    const handleMove = (e) => {
+        if (!isDragging && !isResizing) return;
+
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        const dx = clientX - startX;
+        const dy = clientY - startY;
+
+        const imgW = img.offsetWidth;
+        const imgH = img.offsetHeight;
+
+        if (isDragging) {
+            let newLeft = startLeft + dx;
+            let newTop = startTop + dy;
+
+            newLeft = Math.max(0, Math.min(newLeft, imgW - startWidth));
+            newTop = Math.max(0, Math.min(newTop, imgH - startHeight));
+
+            cropState.left = (newLeft / imgW) * 100;
+            cropState.top = (newTop / imgH) * 100;
+        } else if (isResizing) {
+            let newWidth = startWidth;
+            let newHeight = startHeight;
+            let newTop = startTop;
+            let newLeft = startLeft;
+
+            if (resizeHandle.classList.contains('bottom-right')) {
+                newWidth = startWidth + dx;
+                newHeight = startHeight + dy;
+            } else if (resizeHandle.classList.contains('bottom-left')) {
+                newWidth = startWidth - dx;
+                newHeight = startHeight + dy;
+                newLeft = startLeft + dx;
+            } else if (resizeHandle.classList.contains('top-right')) {
+                newWidth = startWidth + dx;
+                newHeight = startHeight - dy;
+                newTop = startTop + dy;
+            } else if (resizeHandle.classList.contains('top-left')) {
+                newWidth = startWidth - dx;
+                newHeight = startHeight - dy;
+                newTop = startTop + dy;
+                newLeft = startLeft + dx;
+            }
+
+            // Maintain Square Aspect Ratio
+            const aspectRatio = startWidth / startHeight;
+            if (Math.abs(dx) > Math.abs(dy)) {
+                newHeight = newWidth / aspectRatio;
+            } else {
+                newWidth = newHeight * aspectRatio;
+            }
+
+            // Constraints
+            const minSize = 40;
+            if (newWidth < minSize || newHeight < minSize) return;
+            if (newLeft < 0 || newTop < 0 || (newLeft + newWidth) > imgW || (newTop + newHeight) > imgH) return;
+
+            cropState.width = (newWidth / imgW) * 100;
+            cropState.height = (newHeight / imgH) * 100;
+            cropState.left = (newLeft / imgW) * 100;
+            cropState.top = (newTop / imgH) * 100;
+        }
+
+        requestAnimationFrame(updateUI);
+    };
+
+    const handleEnd = () => {
         isDragging = false;
+        isResizing = false;
         document.body.style.cursor = 'default';
     };
 
-    if (!readonly) {
-        viewport.addEventListener('mousedown', startDrag);
-        window.addEventListener('mousemove', doDrag);
-        window.addEventListener('mouseup', endDrag);
+    if (wrapper._cropCleanup) wrapper._cropCleanup();
+    const cleanup = () => {
+        wrapper.removeEventListener('mousedown', handleStart);
+        window.removeEventListener('mousemove', handleMove);
+        window.removeEventListener('mouseup', handleEnd);
+        wrapper.removeEventListener('touchstart', handleStart);
+        window.removeEventListener('touchmove', handleMove);
+        window.removeEventListener('touchend', handleEnd);
+    };
+    wrapper._cropCleanup = cleanup;
 
-        viewport.addEventListener('touchstart', startDrag, { passive: false });
-        window.addEventListener('touchmove', doDrag, { passive: false });
-        window.addEventListener('touchend', endDrag);
+    if (!readonly) {
+        wrapper.addEventListener('mousedown', handleStart);
+        window.addEventListener('mousemove', handleMove);
+        window.addEventListener('mouseup', handleEnd);
+        wrapper.addEventListener('touchstart', handleStart, { passive: false });
+        window.addEventListener('touchmove', handleMove, { passive: false });
+        window.addEventListener('touchend', handleEnd);
     } else {
+        viewport.querySelectorAll('.crop-resizer').forEach(r => r.classList.add('hidden'));
         viewport.style.cursor = 'default';
-        const hint = wrapper.querySelector('.crop-hint');
-        if (hint) hint.classList.add('hidden');
     }
 
-    // Initial setup when image loads
-    img.onload = () => {
-        setTimeout(updateUI, 100); // Small delay to ensure layout
-    };
+    if (img.complete) {
+        initSize();
+    } else {
+        img.onload = initSize;
+    }
 
-    // Reset function
-    return (topPercent = 0) => {
-        currentTopPercent = topPercent;
+    return (topPercent = 0, state = null) => {
+        if (state) {
+            cropState = { ...state };
+        } else {
+            cropState.top = topPercent;
+        }
         updateUI();
     };
 }
@@ -949,12 +1116,15 @@ window.setupImageAdjustment = setupImageAdjustment;
 /**
  * Universell beskjæring og komprimering basert på vertikal offset
  */
-export async function cropAndCompressUniversal(file, topPercent, options = {}) {
+export async function cropAndCompressUniversal(file, cropData, options = {}) {
     const {
         targetWidth = 1000,
         targetHeight = 400,
         quality = 0.8
     } = options;
+
+    const cropState = typeof cropData === 'object' && cropData !== null ? cropData : null;
+    const topPercent = typeof cropData === 'number' ? cropData : (cropState ? cropState.top : 0);
 
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
@@ -967,24 +1137,25 @@ export async function cropAndCompressUniversal(file, topPercent, options = {}) {
                 canvas.height = targetHeight;
                 const ctx = canvas.getContext('2d');
 
-                // The logic: 
-                // topPercent is where the TOP of the viewport is relative to the image height.
-                // We want to crop from that Y-coordinate.
-
-                // First, imagine the image is resized to targetWidth.
-                const scale = targetWidth / img.width;
-                const scaledImgHeight = img.height * scale;
-
-                // The source Y coordinate in original image pixels
-                const sourceY = (topPercent / 100) * img.height;
-
-                // The source height in original image pixels (maintaining aspect ratio)
-                // targetHeight / targetWidth = sourceHeight / img.width
-                const sourceHeight = (targetHeight / targetWidth) * img.width;
+                let sx, sy, sw, sh;
+                
+                if (cropState) {
+                    // Precision crop based on percentage state
+                    sx = (cropState.left / 100) * img.width;
+                    sy = (cropState.top / 100) * img.height;
+                    sw = (cropState.width / 100) * img.width;
+                    sh = (cropState.height / 100) * img.height;
+                } else {
+                    // Legacy vertical-only crop
+                    sx = 0;
+                    sy = (topPercent / 100) * img.height;
+                    sw = img.width;
+                    sh = (targetHeight / targetWidth) * img.width;
+                }
 
                 ctx.drawImage(
                     img,
-                    0, sourceY, img.width, sourceHeight, // Source rect
+                    sx, sy, sw, sh,      // Source rect
                     0, 0, targetWidth, targetHeight     // Target rect
                 );
 
@@ -1549,6 +1720,8 @@ function updateUI(user, profile) {
             profileRoleText.textContent = 'Sekretær';
         } else if (authState.role === 'styremedlem') {
             profileRoleText.textContent = 'Styremedlem';
+        } else if (authState.role === 'glazeMaster') {
+            profileRoleText.textContent = 'Glasur/Brann';
         } else {
             profileRoleText.textContent = 'Medlem';
         }
@@ -1619,7 +1792,9 @@ function updateUI(user, profile) {
         adminPublishCard.classList.toggle('hidden', !user);
         updateScrollLock();
 
-        const canPublish = authState.role === 'admin' || authState.role === 'sekretær' || authState.role === 'contributor';
+        const isAdmin = authState.role === 'admin' || authState.role === 'sekretær' || authState.role === 'contributor';
+        const isGlazeMaster = authState.role === 'admin' || authState.role === 'glazeMaster';
+        const canPublish = isAdmin || isGlazeMaster;
 
         // Oppdater tittel basert på rolle
         if (publishCardTitle) {
@@ -1627,9 +1802,12 @@ function updateUI(user, profile) {
         }
 
         // Vis/skjul knapper basert på tilgang
-        if (newPostBtn) newPostBtn.classList.toggle('hidden', !canPublish);
-        if (newEventBtn) newEventBtn.classList.toggle('hidden', !canPublish);
-        if (adminPublishSeparator) adminPublishSeparator.classList.toggle('hidden', !canPublish);
+        if (newPostBtn) newPostBtn.classList.toggle('hidden', !isAdmin);
+        if (newEventBtn) newEventBtn.classList.toggle('hidden', !isAdmin);
+        if (newGlazePostBtn) newGlazePostBtn.classList.toggle('hidden', !isGlazeMaster);
+        
+        const showSeparator = isAdmin || isGlazeMaster;
+        if (adminPublishSeparator) adminPublishSeparator.classList.toggle('hidden', !showSeparator);
     }
 
     // Vis/skjul Administrasjon-knapp i profilkort (KUN for admin)
@@ -1787,7 +1965,7 @@ async function handleProfileSave(e) {
     if (statusMsg) statusMsg.textContent = '';
 
     const newDisplayName = displayNameInput.value.trim();
-    let newPhotoURL = profileImageUrlInput.value.trim();
+    let newPhotoURL = authState.profile?.photoURL || '';
     const file = profileImageFileInput.files[0];
 
     console.log("Values to save:", { newDisplayName, newPhotoURL, file });
@@ -1801,10 +1979,10 @@ async function handleProfileSave(e) {
             if (!allowedTypes.includes(file.type)) {
                 throw new Error("Kun JPG og PNG-filer er tillatt.");
             }
-            console.log("Processing file with offset:", profileImageOffset);
+            console.log("Processing file with state:", profileImageState);
             statusMsg.textContent = 'Behandler bilde...';
 
-            newPhotoURL = await cropAndCompressUniversal(file, profileImageOffset, {
+            newPhotoURL = await cropAndCompressUniversal(file, profileImageState, {
                 targetWidth: 400,
                 targetHeight: 400, // Profilbilde er kvadratisk
                 previewHeight: 200
@@ -1839,7 +2017,7 @@ async function handleProfileSave(e) {
             profileImageFileInput.value = '';
             if (profilePreviewContainer) profilePreviewContainer.classList.add('hidden');
             if (profilePreviewImg) profilePreviewImg.src = '';
-            profileImageOffset = 0;
+            profileImageState = null;
             if (resetProfileAdjustment) resetProfileAdjustment(0);
         }, 1500);
 

@@ -1,6 +1,6 @@
 // Importer nødvendige funksjoner
 import { db, auth, appId, authReady } from './firebase.js';
-import { authState } from './script.js'; // Importer den delte authState
+import { authState, openUniversalCropModal, cropAndCompressUniversal } from './script.js'; // Importer den delte authState og beskjæringsverktøy
 import {
     doc,
     setDoc
@@ -112,7 +112,7 @@ async function handleProfileSave(e) {
 function handleImageFileSelect(e) {
     const file = e.target.files[0];
     if (file) {
-        // Valider filtype og størrelse (valgfritt, men anbefalt)
+        // Valider filtype og størrelse
         if (!['image/jpeg', 'image/png'].includes(file.type)) {
             uploadStatus.textContent = 'Ugyldig filtype (kun JPG/PNG).';
             return;
@@ -122,22 +122,35 @@ function handleImageFileSelect(e) {
             return;
         }
 
-        // Vis en forhåndsvisning
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            imagePreview.src = event.target.result;
-        };
-        reader.readAsDataURL(file);
-
-        // Start opplasting
-        uploadProfileImage(file);
+        // Åpne beskjærings-modalen (kvadratisk utsnitt for profilbilde)
+        openUniversalCropModal(file, 'square', async (offset, state) => {
+            uploadStatus.textContent = 'Behandler bilde...';
+            
+            try {
+                // Beskjær og komprimer bildet lokalt før opplasting
+                const croppedBase64 = await cropAndCompressUniversal(file, state || offset, {
+                    targetWidth: 500,
+                    targetHeight: 500,
+                    quality: 0.9
+                });
+                
+                // Vis forhåndsvisning av det beskjærte bildet
+                imagePreview.src = croppedBase64;
+                
+                // Start opplasting
+                uploadProfileImage(croppedBase64, file.name);
+            } catch (error) {
+                console.error("Beskjæring feilet:", error);
+                uploadStatus.textContent = 'Feil ved bildebehandling.';
+            }
+        });
     }
 }
 
 /**
  * Laster opp bilde til Firebase Storage og lagrer URL i Firestore
  */
-async function uploadProfileImage(file) {
+async function uploadProfileImage(imageData, originalName) {
     if (!authState.user) {
         uploadStatus.textContent = 'Må være logget inn.';
         return;
@@ -145,12 +158,20 @@ async function uploadProfileImage(file) {
 
     uploadStatus.textContent = 'Laster opp bilde...';
     // Oppretter en unik filsti
-    const filePath = `profile-images/${authState.user.uid}/${Date.now()}-${file.name}`;
+    const filePath = `profile-images/${authState.user.uid}/${Date.now()}-${originalName}`;
     const fileRef = ref(storage, filePath);
 
     try {
-        // 1. Last opp filen
-        const snapshot = await uploadBytes(fileRef, file);
+        // 1. Last opp filen (håndterer både File-objekt og Base64-streng)
+        let snapshot;
+        if (typeof imageData === 'string' && imageData.startsWith('data:')) {
+            // Konverter Base64 til Blob
+            const response = await fetch(imageData);
+            const blob = await response.blob();
+            snapshot = await uploadBytes(fileRef, blob);
+        } else {
+            snapshot = await uploadBytes(fileRef, imageData);
+        }
 
         // 2. Få nedlastings-URL
         const downloadURL = await getDownloadURL(snapshot.ref);

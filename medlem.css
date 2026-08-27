@@ -820,6 +820,7 @@ p {
   padding: 1rem 0;
   width: 100%;
   max-width: 100%;
+  align-items: start;
 }
 
 .dashboard-sidebar,
@@ -832,6 +833,7 @@ p {
   min-width: 0;
   margin-top: 0 !important;
   padding-top: 0 !important;
+  align-self: start;
 }
 
 .dashboard-main {
@@ -921,17 +923,34 @@ p {
   .dashboard-grid {
     display: grid;
     grid-template-columns: 300px minmax(0, 1fr) 300px;
+    grid-template-areas: "left center right";
     gap: 2rem;
     align-items: start;
     padding-top: 1rem;
     padding-bottom: 2rem;
   }
 
-  .dashboard-sidebar,
-  .dashboard-sidebar-right {
+  .dashboard-sidebar { 
+    grid-area: left;
     position: sticky;
     top: 5.5rem;
-    /* Matches Header 4.5rem + Grid padding 1rem */
+    align-self: start !important;
+  }
+  
+  .dashboard-main { 
+    grid-area: center;
+    align-self: start !important;
+  }
+  
+  .dashboard-sidebar-right { 
+    grid-area: right;
+    position: sticky;
+    top: 5.5rem;
+    align-self: start !important;
+  }
+
+  .dashboard-sidebar,
+  .dashboard-sidebar-right {
     height: fit-content;
     margin-top: 0 !important;
   }
@@ -1326,11 +1345,6 @@ div[id$="-modal"]:not(.hidden) .card {
 /* Modal Scroll Lock - Unified */
 body.modal-open {
   overflow: hidden !important;
-  height: 100vh;
-  position: relative;
-  /* Prevent touch move on some mobile browsers */
-  touch-action: none;
-  -webkit-overflow-scrolling: none;
 }
 
 /* 
@@ -1542,11 +1556,9 @@ body.modal-open {
   inset: 0;
   z-index: 2000;
   display: flex;
-  align-items: flex-start; /* Align to top for scrolling */
+  align-items: center;
   justify-content: center;
-  padding: 1.5rem 1rem;
-  overflow-y: auto; /* Allow container to scroll */
-  -webkit-overflow-scrolling: touch;
+  padding: 1rem;
 }
 
 .modal-overlay {
@@ -1566,17 +1578,14 @@ body.modal-open {
   background-color: var(--color-bg-surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-xl);
-  overflow: hidden;
-  margin-bottom: 2rem; /* Buffer at bottom */
-  overscroll-behavior: contain;
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
-/* Ensure the body within a modal card is the scrollable part */
+/* Ensure the body within a modal card is flexible but let the container handle scroll */
 .modal-content .card-body {
-  flex: 1;
-  overflow-y: auto;
-  min-height: 0;
-  /* Important for flex scrolling */
+  /* Removed flex: 1 and overflow-y: auto to allow the whole modal container to scroll naturally */
 }
 
 /* Hide scrollbar ONLY for the document editor as requested */
@@ -1963,6 +1972,14 @@ textarea {
   background-color: var(--color-bg-dark);
   /* Matches site dark elements */
   margin-top: 1rem;
+  touch-action: none; /* Prevents scrolling while dragging */
+}
+
+.crop-area {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    cursor: ns-resize;
 }
 
 .crop-overlay {
@@ -1978,34 +1995,66 @@ textarea {
 .crop-viewport {
   position: absolute;
   left: 0;
-  width: 100%;
+  top: 0;
+  width: 100px; /* Initial size, will be updated by JS */
+  height: 100px;
   border: 2px solid var(--color-primary);
-  box-shadow: 0 0 0 1000px rgba(0, 0, 0, 0);
-  /* Fallback shadow transparency */
+  box-shadow: 0 0 0 2000px rgba(0, 0, 0, 0.4); /* Mask effect */
   z-index: 20;
-  cursor: ns-resize;
+  cursor: grab;
   background: transparent;
-  pointer-events: auto;
+  pointer-events: auto; /* Enable for handles and dragging */
 }
 
-.crop-viewport::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-  pointer-events: none;
+.crop-viewport:active {
+    cursor: grabbing;
 }
 
-.crop-viewport.square {
-  aspect-ratio: 1 / 1;
+/* Grid lines inside viewport */
+.crop-grid {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
 }
 
-.crop-viewport.banner {
-  aspect-ratio: 2.5 / 1;
+.grid-line {
+    position: absolute;
+    background-color: rgba(255, 255, 255, 0.5);
 }
 
-.crop-viewport.post {
-  aspect-ratio: 2 / 1;
+.line-v { width: 1px; height: 100%; top: 0; }
+.line-v:nth-child(1) { left: 33.33%; }
+.line-v:nth-child(2) { left: 66.66%; }
+
+.line-h { height: 1px; width: 100%; left: 0; }
+.line-h:nth-child(3) { top: 33.33%; }
+.line-h:nth-child(4) { top: 66.66%; }
+
+/* Resize Handles */
+.crop-resizer {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    background-color: var(--color-primary);
+    border: 2px solid white;
+    border-radius: 50%;
+    z-index: 30;
+}
+
+.top-left { top: -6px; left: -6px; cursor: nwse-resize; }
+.top-right { top: -6px; right: -6px; cursor: nesw-resize; }
+.bottom-left { bottom: -6px; left: -6px; cursor: nesw-resize; }
+.bottom-right { bottom: -6px; right: -6px; cursor: nwse-resize; }
+
+.crop-viewport.square { aspect-ratio: 1 / 1; }
+.crop-viewport.banner { aspect-ratio: 2.5 / 1; }
+.crop-viewport.post { aspect-ratio: auto; } /* Removed forced 2:1 ratio */
+
+.crop-overlay {
+    display: none; /* We use box-shadow on viewport for masking now */
 }
 
 .crop-hint {
@@ -2020,6 +2069,38 @@ textarea {
   font-size: 0.75rem;
   z-index: 30;
   pointer-events: none;
+}
+
+/* --- Profile Mini Preview --- */
+.profile-mini-preview {
+    width: 120px !important;
+    height: 120px !important;
+    border-radius: 50% !important;
+    margin: 1.5rem auto !important;
+    border: 4px solid var(--color-bg-body) !important;
+    box-shadow: var(--shadow-lg) !important;
+    max-height: 120px !important;
+    background-color: var(--color-bg-subtle) !important;
+    overflow: hidden !important;
+}
+
+.profile-mini-preview .crop-viewport {
+    border: none !important;
+    box-shadow: none !important;
+    width: 100% !important;
+    height: 100% !important;
+    left: 0 !important;
+    transform: none !important;
+}
+
+.profile-mini-preview .crop-overlay {
+    display: none !important; /* No need for overlay in circular mini preview */
+}
+
+.profile-mini-preview .crop-area {
+    cursor: default !important;
+    width: 100% !important;
+    height: 100% !important;
 }
 
 /* --- Admin Galleri Spesifikk --- */
@@ -2231,4 +2312,23 @@ textarea {
 
 .notif-item:last-child {
   border-bottom: none;
-}
+}
+/* Glasur Gruppe Styles */
+.badge-accent {
+  background: var(--color-primary); /* Match site theme */
+  color: white;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.btn-accent {
+  background: var(--color-primary);
+  color: white;
+}
+
+.btn-accent:hover {
+  background: var(--color-primary-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
