@@ -167,7 +167,7 @@
                                 stroke-width="2">
                                 <path d="M12 5v14M5 12h14" />
                             </svg>
-                            Nytt glasur-innlegg
+                            Nytt innlegg - Ferdige branner
                         </button>
                         <hr id="admin-publish-separator" class="hidden"
                             style="margin: 1rem 0; border: 0; border-top: 1px solid var(--color-border);">
@@ -730,12 +730,12 @@
         </div>
     </div>
 
-    <!-- Nytt Glasur-innlegg Modal -->
+    <!-- Nytt Innlegg Modal (Ferdige branner) -->
     <div id="glaze-post-modal" class="hidden modal-container">
         <div id="glaze-post-modal-overlay" class="modal-overlay"></div>
         <div class="card modal-content maxWidth-600">
             <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
-                <h3 class="text-lg" style="margin-bottom: 0;">Nytt glasur-innlegg</h3>
+                <h3 class="text-lg" style="margin-bottom: 0;">Nytt innlegg - Ferdige branner</h3>
                 <button id="close-glaze-post-modal" class="btn btn-ghost" style="padding: 0.5rem;">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M18 6L6 18M6 6l12 12" />
@@ -746,11 +746,11 @@
                 <form id="new-glaze-post-form">
                     <div class="form-group">
                         <label class="form-label">Tittel</label>
-                        <input type="text" id="glaze-post-title" class="form-input" placeholder="f.eks. Ny blå glasur testet" required>
+                        <input type="text" id="glaze-post-title" class="form-input" placeholder="f.eks. Glasurbrenning 1240°C fullført" required>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Beskrivelse / Oppskrift</label>
-                        <textarea id="glaze-post-content" class="form-input" style="min-height: 150px;" placeholder="Skriv om glasurer, brenning eller resultater..." required></textarea>
+                        <label class="form-label">Beskrivelse</label>
+                        <textarea id="glaze-post-content" class="form-input" style="min-height: 150px;" placeholder="Skriv om brenningen, temperatur eller resultater..." required></textarea>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Legg til bilde (Valgfritt)</label>
@@ -773,7 +773,7 @@
                     </div>
                     <div style="display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem;">
                         <button type="button" id="cancel-glaze-post-modal" class="btn btn-secondary">Avbryt</button>
-                        <button type="submit" id="glaze-post-submit-button" class="btn btn-primary">Publiser glasur-innlegg</button>
+                        <button type="submit" id="glaze-post-submit-button" class="btn btn-primary">Publiser innlegg</button>
                     </div>
                     <p id="glaze-post-error" class="form-error"></p>
                 </form>

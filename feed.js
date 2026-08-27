@@ -445,7 +445,7 @@ async function handleEditPost(postId) {
             document.getElementById('glaze-post-content').value = postData.content || '';
             
             const glazeModalTitle = document.getElementById('glaze-post-modal') ? document.getElementById('glaze-post-modal').querySelector('h3') : null;
-            if (glazeModalTitle) glazeModalTitle.textContent = 'Rediger glasur-innlegg';
+            if (glazeModalTitle) glazeModalTitle.textContent = 'Rediger innlegg - Ferdige branner';
             const glazePostSubmitBtn = document.getElementById('glaze-post-submit-button');
             if (glazePostSubmitBtn) glazePostSubmitBtn.textContent = 'Lagre endringer';
 
@@ -682,7 +682,7 @@ async function handleGlazePostSubmit(e) {
 
         if (editingGlazePostId) {
             await updateDoc(doc(db, feedCollectionPath, editingGlazePostId), postData);
-            showCustomAlert("Glasur-innlegget ble oppdatert!");
+            showCustomAlert("Innlegget ble oppdatert!");
         } else {
             postData.authorId = authState.user.uid;
             postData.authorName = authorName;
@@ -695,8 +695,8 @@ async function handleGlazePostSubmit(e) {
             const newPostRef = await addDoc(feedCollectionRef, postData);
             postId = newPostRef.id;
             
-            await notifyMentionedUsers(content, postId, `${feedCollectionPath}/${postId}`, `${authorName} publiserte en ny glasur-test`);
-            showCustomAlert("Glasur-innlegget ble publisert!");
+            await notifyMentionedUsers(content, postId, `${feedCollectionPath}/${postId}`, `${authorName} publiserte et nytt innlegg under Ferdige branner`);
+            showCustomAlert("Innlegget ble publisert!");
         }
 
         // Reset form
@@ -983,7 +983,7 @@ if (document.getElementById('feed-container')) {
                 if (glazePostForm) glazePostForm.reset();
                 
                 const glazeModalTitle = glazePostModal ? glazePostModal.querySelector('h3') : null;
-                if (glazeModalTitle) glazeModalTitle.textContent = 'Nytt glasur-innlegg';
+                if (glazeModalTitle) glazeModalTitle.textContent = 'Nytt innlegg - Ferdige branner';
                 const glazePostSubmitBtn = document.getElementById('glaze-post-submit-button');
                 if (glazePostSubmitBtn) glazePostSubmitBtn.textContent = 'Publiser';
                 
