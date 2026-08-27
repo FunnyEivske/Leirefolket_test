@@ -445,7 +445,7 @@ async function handleEditPost(postId) {
             document.getElementById('glaze-post-content').value = postData.content || '';
             
             const glazeModalTitle = document.getElementById('glaze-post-modal') ? document.getElementById('glaze-post-modal').querySelector('h3') : null;
-            if (glazeModalTitle) glazeModalTitle.textContent = 'Rediger innlegg - Ferdige branner';
+            if (glazeModalTitle) glazeModalTitle.textContent = 'Rediger - Ferdige branner';
             const glazePostSubmitBtn = document.getElementById('glaze-post-submit-button');
             if (glazePostSubmitBtn) glazePostSubmitBtn.textContent = 'Lagre endringer';
 
@@ -983,7 +983,7 @@ if (document.getElementById('feed-container')) {
                 if (glazePostForm) glazePostForm.reset();
                 
                 const glazeModalTitle = glazePostModal ? glazePostModal.querySelector('h3') : null;
-                if (glazeModalTitle) glazeModalTitle.textContent = 'Nytt innlegg - Ferdige branner';
+                if (glazeModalTitle) glazeModalTitle.textContent = 'Ferdige branner';
                 const glazePostSubmitBtn = document.getElementById('glaze-post-submit-button');
                 if (glazePostSubmitBtn) glazePostSubmitBtn.textContent = 'Publiser';
                 
