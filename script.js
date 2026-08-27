@@ -1737,8 +1737,6 @@ function updateUI(user, profile) {
             profileRoleText.textContent = 'Sekretær';
         } else if (authState.role === 'styremedlem') {
             profileRoleText.textContent = 'Styremedlem';
-        } else if (authState.role === 'glazeMaster') {
-            profileRoleText.textContent = 'Glasur/Brann';
         } else {
             profileRoleText.textContent = 'Medlem';
         }
