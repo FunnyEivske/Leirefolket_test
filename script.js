@@ -333,6 +333,23 @@ function attachEventListeners() {
         loginForm.addEventListener('submit', handleLogin);
     }
     if (forgotPasswordBtn) forgotPasswordBtn.addEventListener('click', handleForgotPassword);
+    const togglePasswordBtn = document.getElementById('toggle-password-btn');
+    if (togglePasswordBtn) {
+        togglePasswordBtn.addEventListener('click', () => {
+            const passwordInput = document.getElementById('login-password');
+            const eyeIcon = document.getElementById('eye-icon');
+            const eyeOffIcon = document.getElementById('eye-off-icon');
+            if (passwordInput) {
+                const isPassword = passwordInput.type === 'password';
+                passwordInput.type = isPassword ? 'text' : 'password';
+                if (eyeIcon && eyeOffIcon) {
+                    eyeIcon.classList.toggle('hidden', isPassword);
+                    eyeOffIcon.classList.toggle('hidden', !isPassword);
+                }
+                togglePasswordBtn.setAttribute('aria-label', isPassword ? 'Skjul passord' : 'Vis passord');
+            }
+        });
+    }
     if (dropdownLogoutButton) dropdownLogoutButton.addEventListener('click', handleLogout);
     if (mobileLogoutButton) mobileLogoutButton.addEventListener('click', handleLogout);
     if (logoutButton) logoutButton.addEventListener('click', handleLogout);
