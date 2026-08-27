@@ -609,8 +609,14 @@ p {
 }
 
 .footer-address {
+  margin-bottom: 0.25rem;
+  color: var(--palette-white);
+}
+
+.footer-orgnr {
   margin-bottom: 1rem;
   color: var(--palette-white);
+  font-size: 0.9rem;
 }
 
 .social-links {
