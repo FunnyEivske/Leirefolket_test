@@ -2064,19 +2064,25 @@ async function loadSidebarMembersList() {
             .map(doc => ({ id: doc.id, ...doc.data() }))
             .filter(userData => userData.status !== 'pending_deletion');
 
-        // Sort by role priority, then by name
+        // Filtrer til kun styremedlemmer for sidepanelet
+        const boardMembers = allMembers.filter(userData => {
+            const orgRole = (userData.organizationRole || '').toLowerCase();
+            const role = (userData.role || '').toLowerCase();
+            return orgRole.includes('styremedlem') || role === 'styremedlem' || role === 'admin' || role === 'sekretær';
+        });
+
+        // Sorter styremedlemmer etter prioritet og deretter navn
         const rolePriority = {
             'styremedlem - leder': 1,
             'styremedlem - økonomiansvarlig': 2,
             'styremedlem - sekretær': 3,
             'styremedlem': 4,
-            'medlem': 5,
-            'it administrator': 10
+            'it administrator': 5
         };
 
-        allMembers.sort((a, b) => {
-            const priorityA = rolePriority[a.organizationRole?.toLowerCase()] || 5;
-            const priorityB = rolePriority[b.organizationRole?.toLowerCase()] || 5;
+        boardMembers.sort((a, b) => {
+            const priorityA = rolePriority[a.organizationRole?.toLowerCase()] || 4;
+            const priorityB = rolePriority[b.organizationRole?.toLowerCase()] || 4;
 
             if (priorityA !== priorityB) {
                 return priorityA - priorityB;
@@ -2084,9 +2090,7 @@ async function loadSidebarMembersList() {
             return (a.displayName || '').localeCompare(b.displayName || '');
         });
 
-        const visibleMembers = allMembers.slice(0, sidebarMembersLimit);
-
-        visibleMembers.forEach(userData => {
+        boardMembers.forEach(userData => {
             const div = document.createElement('div');
             div.style.display = 'flex';
             div.style.alignItems = 'center';
@@ -2111,8 +2115,7 @@ async function loadSidebarMembersList() {
                 }
             }
 
-
-            let orgRoleStr = userData.organizationRole || 'Medlem';
+            let orgRoleStr = userData.organizationRole || 'Styremedlem';
             if (orgRoleStr.toLowerCase().startsWith('it ')) {
                 orgRoleStr = 'IT ' + orgRoleStr.slice(3).charAt(0).toUpperCase() + orgRoleStr.slice(4).toLowerCase();
             } else {
@@ -2130,28 +2133,17 @@ async function loadSidebarMembersList() {
             sidebarMembersList.appendChild(div);
         });
 
-        if (allMembers.length === 0) {
-            sidebarMembersList.innerHTML = '<p class="text-muted text-sm">Ingen medlemmer funnet.</p>';
-        } else if (allMembers.length > sidebarMembersLimit) {
-            const moreBtn = document.createElement('button');
-            moreBtn.className = 'btn btn-ghost btn-sm btn-full mt-2';
-            moreBtn.style.fontSize = '0.75rem';
-            moreBtn.textContent = 'Vis flere';
-            moreBtn.onclick = () => {
-                // Øk grensen med 10 av gangen
-                sidebarMembersLimit += 10;
-                loadSidebarMembersList();
-            };
-            sidebarMembersList.appendChild(moreBtn);
-        } else {
-            // Alle er lastet inn i sidebaren, nå kan vi vise knappen for å se alle i modallen
-            const allBtn = document.createElement('button');
-            allBtn.className = 'btn btn-ghost btn-sm btn-full mt-2';
-            allBtn.style.fontSize = '0.75rem';
-            allBtn.textContent = 'Se alle medlemmer';
-            allBtn.onclick = () => openMembersModal();
-            sidebarMembersList.appendChild(allBtn);
+        if (boardMembers.length === 0) {
+            sidebarMembersList.innerHTML = '<p class="text-muted text-sm">Ingen styremedlemmer funnet.</p>';
         }
+
+        // Knappen "Se alle medlemmer" som åpner medlemsmodallen
+        const allBtn = document.createElement('button');
+        allBtn.className = 'btn btn-ghost btn-sm btn-full mt-2';
+        allBtn.style.fontSize = '0.75rem';
+        allBtn.textContent = 'Se alle medlemmer';
+        allBtn.onclick = () => openMembersModal();
+        sidebarMembersList.appendChild(allBtn);
 
     } catch (error) {
         console.error("Error loading sidebar members:", error);
