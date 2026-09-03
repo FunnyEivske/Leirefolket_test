@@ -522,18 +522,27 @@ function attachEventListeners() {
             createUserBtn.disabled = true;
 
             try {
-                // Convert date string to Date object
-                let memberSinceDate = memberSince ? new Date(memberSince) : new Date();
+                // Convert date string to Date object (noon local time prevents timezone shifts)
+                let memberSinceDate = null;
+                if (memberSince) {
+                    const [y, m, d] = memberSince.split('-').map(Number);
+                    memberSinceDate = new Date(y, m - 1, d, 12, 0, 0);
+                }
 
                 if (editingId) {
                     // --- UPDATE EXISTING USER ---
-                    await setDoc(doc(db, 'users', editingId), {
+                    const updateData = {
                         displayName: name,
                         role: role,
                         organizationRole: orgRole,
-                        memberSince: memberSinceDate, // Admin controlled display date
                         status: 'active'
-                    }, { merge: true });
+                    };
+                    // Only update memberSince if admin specifically entered/changed a date
+                    if (memberSinceDate) {
+                        updateData.memberSince = memberSinceDate;
+                    }
+
+                    await setDoc(doc(db, 'users', editingId), updateData, { merge: true });
 
                     showCustomAlert(`Bruker ${name} er oppdatert!`);
                     loadMembersList(); // Refresh list if open
@@ -557,7 +566,7 @@ function attachEventListeners() {
                         photoURL: null,
                         role: role,
                         organizationRole: orgRole,
-                        memberSince: memberSinceDate, // Admin controlled display date
+                        memberSince: memberSinceDate || new Date(), // Admin controlled forening date (defaults to today if left blank)
                         startDate: serverTimestamp(), // Actual account creation
                         status: 'active',
                         createdAt: serverTimestamp(),
@@ -1227,10 +1236,13 @@ function setupUserListener(uid) {
             
         } else {
             // Hvis dokumentet ikke finnes (ny bruker), sett standardverdier
+            // Viktig: Bruk opprettelsesdato fra Auth hvis tilgjengelig, ikke innloggingstidspunktet
+            const authCreationDate = authState.user?.metadata?.creationTime ? new Date(authState.user.metadata.creationTime) : null;
             authState.profile = {
-                displayName: authState.user?.email?.split('@')[0] || 'Medlem',
-                photoURL: null,
-                memberSince: serverTimestamp(),
+                displayName: authState.user?.displayName || authState.user?.email?.split('@')[0] || 'Medlem',
+                photoURL: authState.user?.photoURL || null,
+                memberSince: authCreationDate || null, // Ikke overskriv med serverTimestamp() ved innlogging
+                startDate: authCreationDate || serverTimestamp(),
                 status: 'active'
             };
             authState.role = 'member';
@@ -1748,7 +1760,7 @@ function updateUI(user, profile) {
 
         // 1. Prioriter manuelt satt dato i Firestore (memberSince)
         // Håndter både Firestore Timestamp, Date object, og serialisert objekt fra localStorage
-        const rawDate = profile?.memberSince || profile?.startDate;
+        const rawDate = profile?.memberSince || profile?.startDate || profile?.createdAt;
         if (rawDate) {
             if (rawDate.toDate) {
                 startDate = rawDate.toDate();
@@ -2657,9 +2669,12 @@ async function loadMembersList() {
             div.className = 'admin-list-item';
 
             let dateStr = 'Ikke satt';
-            if (userData.memberSince) {
-                const date = userData.memberSince.toDate ? userData.memberSince.toDate() : new Date(userData.memberSince);
-                dateStr = date.toLocaleDateString('no-NO');
+            const rawDate = userData.memberSince || userData.startDate || userData.createdAt;
+            if (rawDate) {
+                const date = rawDate.toDate ? rawDate.toDate() : new Date(rawDate);
+                if (!isNaN(date.getTime())) {
+                    dateStr = date.toLocaleDateString('no-NO');
+                }
             }
 
 
@@ -2729,13 +2744,18 @@ async function openEditUserModal(userId) {
         document.getElementById('new-user-role').value = userData.role || 'member';
         if (userOrganizationRoleInput) userOrganizationRoleInput.value = userData.organizationRole || 'medlem';
 
-        if (userData.memberSince) {
-            const date = userData.memberSince.toDate ? userData.memberSince.toDate() : new Date(userData.memberSince);
-            // Format to YYYY-MM-DD for date input
-            const year = date.getFullYear();
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            userMemberSinceInput.value = `${year}-${month}-${day}`;
+        const existingDate = userData.memberSince || userData.startDate || userData.createdAt;
+        if (existingDate) {
+            const date = existingDate.toDate ? existingDate.toDate() : new Date(existingDate);
+            if (!isNaN(date.getTime())) {
+                // Format to YYYY-MM-DD for date input
+                const year = date.getFullYear();
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                userMemberSinceInput.value = `${year}-${month}-${day}`;
+            } else {
+                userMemberSinceInput.value = '';
+            }
         } else {
             userMemberSinceInput.value = '';
         }
